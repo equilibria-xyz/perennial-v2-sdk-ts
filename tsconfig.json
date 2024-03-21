@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "allowJs": false,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "target": "ES2021",
+    "lib": ["ES2022", "DOM"],
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@t/*": ["./src/types/*"],
+      "@abi/*": ["./src/abi/*"]
+    },
+    "module": "NodeNext",
+    "declaration": true,
+    "declarationMap": true,
+  },
+  "include": ["src/**/*", "lens/**/*", "hardhat.config.ts"],
+  "exclude": ["examples", "dist", "graph-codegen.ts"]
+}

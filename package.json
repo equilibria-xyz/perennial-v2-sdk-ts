@@ -1,0 +1,41 @@
+{
+  "name": "@perennial/sdk-ts",
+  "version": "0.0.1-beta5",
+  "description": "",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist && yarn gen:lens-artifact && yarn gen:gql-typings && yarn tsc",
+    "prepublishOnly": "yarn build",
+    "gen:lens-artifact": "yarn hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens2.abi.ts",
+    "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
+    "gen:gql-typings:watch": "graphql-codegen --watch --config graph-codegen.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@equilibria/perennial-v2": "1.0.0-rc4",
+    "@equilibria/perennial-v2-vault": "1.0.0-rc4",
+    "@equilibria/root": "^2.0.0-rc0",
+    "@graphql-codegen/cli": "^3.3.1",
+    "@graphql-codegen/client-preset": "^3.0.1",
+    "dotenv": "^16.3.1",
+    "esno": "^0.17.0",
+    "hardhat": "^2.17.0",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "typescript": "5.4.3"
+  },
+  "dependencies": {
+    "@perennial/pyth-evm-js": "^1.32.0-fork4",
+    "date-fns": "^2.30.0",
+    "graphql": "^16.6.0",
+    "graphql-request": "^6.0.0",
+    "prettier": "^3.1.1",
+    "viem": "2.8.14"
+  },
+  "resolutions": {
+    "@equilibria/perennial-v2": "1.0.0-rc4"
+  }
+}

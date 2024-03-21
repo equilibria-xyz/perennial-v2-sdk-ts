@@ -1,0 +1,26 @@
+# Auto-generated files and runtime files
+.pnp.cjs
+.pnp.loader.mjs
+
+# Package manager directories and files
+.yarn/
+yarn.lock
+
+# Configuration files
+.yarnrc.yml
+
+# Git ignore file
+.gitignore
+
+# Next.js build output (if applicable)
+.next/
+
+/lang/
+
+types/generated/
+types/gql/
+storybook-static/
+
+# TV Charting Libs
+public/tradingview
+types/tradingview
