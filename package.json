@@ -1,5 +1,5 @@
 {
-  "name": "@perennial/sdk-ts",
+  "name": "@perennial/sdk",
   "version": "0.0.1-beta5",
   "description": "",
   "main": "dist/src/index.js",
