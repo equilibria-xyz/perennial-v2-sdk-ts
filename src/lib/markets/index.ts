@@ -42,6 +42,22 @@ export class MarketsModule {
     this.config = config
   }
 
+  get read() {
+    return {
+      fetchMarketOraclesV2: this.fetchMarketOraclesV2,
+      fetchProtocolParameter: this.fetchProtocolParameter,
+      fetchMarketSnapshotsV2: this.fetchMarketSnapshotsV2,
+      getMarketTransactions: this.getMarketTransactions,
+      fetchActivePositionPnls: this.fetchActivePositionPnls,
+      fetchActivePositionHistory: this.fetchActivePositionHistory,
+      fetchHistoricalPositions: this.fetchHistoricalPositions,
+      fetchSubPositions: this.fetchSubPositions,
+      fetchOpenOrders: this.fetchOpenOrders,
+      fetchMarket24hrData: this.fetchMarket24hrData,
+      fetchMarket7dData: this.fetchMarket7dData,
+    }
+  }
+
   public fetchMarketOraclesV2 = () => {
     return fetchMarketOraclesV2(this.config.chainId, this.config.publicClient)
   }
