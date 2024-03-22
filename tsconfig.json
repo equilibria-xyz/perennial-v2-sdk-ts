@@ -18,6 +18,6 @@
     "declaration": true,
     "declarationMap": true,
   },
-  "include": ["src/**/*", "lens/**/*", "hardhat.config.ts"],
+  "include": ["src/**/*", "hardhat.config.ts"],
   "exclude": ["examples", "dist", "graph-codegen.ts"]
 }

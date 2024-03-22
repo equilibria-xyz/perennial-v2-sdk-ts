@@ -4,20 +4,19 @@
   "description": "",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "packageManager": "pnpm@8.15.5",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist && yarn gen:lens-artifact && yarn gen:gql-typings && yarn tsc",
-    "build:watch": "nodemon --exec 'yarn tsc' --watch src/ -e ts --ignore src/abi/",
-    "prepublishOnly": "yarn build",
-    "gen:lens-artifact": "yarn hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens2.abi.ts",
+    "build": "rimraf dist && pnpm run gen:lens-artifact && pnpm run gen:gql-typings && pnpm exec tsc",
+    "build:watch": "nodemon --exec 'pnpm exec tsc' --watch src/ -e ts --ignore src/abi/",
+    "prepublishOnly": "pnpm run build",
+    "gen:lens-artifact": "pnpm exec hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens.abi.ts",
     "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
     "format": "prettier --write",
     "format:check": "prettier --check",
     "lint": "eslint --ext .ts src/",
-    "prepush": "yarn tsc && yarn lint-staged",
-    "postinstall": "husky",
-    "prepack": "pinst --disable",
-    "postpack": "pinst --enable"
+    "prepush": "pnpm exec tsc && pnpm exec lint-staged",
+    "prepare": "husky"
   },
   "author": "",
   "license": "ISC",
@@ -27,6 +26,8 @@
     "@equilibria/root": "^2.0.0-rc0",
     "@graphql-codegen/cli": "^3.3.1",
     "@graphql-codegen/client-preset": "^3.0.1",
+    "@graphql-typed-document-node/core": "^3.2.0",
+    "@openzeppelin/contracts": "4.8.0",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
@@ -38,9 +39,9 @@
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "nodemon": "^3.1.0",
-    "pinst": "^3.0.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
+    "tslib": "^2.6.2",
     "typescript": "5.4.3"
   },
   "dependencies": {
@@ -51,8 +52,10 @@
     "prettier": "^3.2.5",
     "viem": "2.8.18"
   },
-  "resolutions": {
-    "@equilibria/perennial-v2": "1.0.0-rc4"
+  "pnpm": {
+    "overrides": {
+      "@equilibria/perennial-v2": "1.0.0-rc4"
+    }
   },
   "lint-staged": {
     "*.ts": [

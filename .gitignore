@@ -130,6 +130,8 @@ dist
 .pnp.*
 .DS_Store
 
+src/abi/Lens.abi.ts
+src/abi/VaultLens.abi.ts
 src/types/generated
 src/types/gql
 
