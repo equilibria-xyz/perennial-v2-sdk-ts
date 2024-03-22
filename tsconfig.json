@@ -14,12 +14,6 @@
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "skipLibCheck": true,
-    "paths": {
-      "@/*": ["./src/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@t/*": ["./src/types/*"],
-      "@abi/*": ["./src/abi/*"]
-    },
     "module": "NodeNext",
     "declaration": true,
     "declarationMap": true,

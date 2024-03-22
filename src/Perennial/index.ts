@@ -7,6 +7,7 @@ import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { VaultsModule } from '../lib/vaults'
+import { OperatorModule } from '../lib/operators'
 
 export type SDKConfig = {
   rpcUrl: string
@@ -25,6 +26,7 @@ export default class PerennialSDK {
   public contracts: ContractsModule
   public markets: MarketsModule
   public vaults: VaultsModule
+  public operator: OperatorModule
 
   constructor(config: SDKConfig) {
     this.config = config
@@ -56,9 +58,13 @@ export default class PerennialSDK {
       graphClient: this._graphClient,
       pythClient: this._pythClient,
     })
+    this.operator = new OperatorModule({
+      chainId: config.chainId,
+      publicClient: this._publicClient,
+      walletClient: config.walletClient,
+    })
 
     this._walletClient = config.walletClient
-    this._publicClient = this._publicClient
     this._currentChainId = config.chainId
   }
 
@@ -74,8 +80,7 @@ export default class PerennialSDK {
     return this._walletClient
   }
 
-  // TODO: Remove this type annotation when Viem fixes typings
-  get publicClient(): PublicClient {
+  get publicClient() {
     return this._publicClient
   }
 
