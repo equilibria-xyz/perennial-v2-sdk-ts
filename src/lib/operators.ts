@@ -110,6 +110,7 @@ export async function checkVaultFactoryApproval({
   ])
   return isVaultFactoryApproved
 }
+
 export class OperatorModule {
   private config: {
     chainId: SupportedChainId

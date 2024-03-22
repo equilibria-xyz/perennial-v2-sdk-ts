@@ -7,7 +7,7 @@ import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { VaultsModule } from '../lib/vaults'
-import { OperatorModule } from '@/lib/operators'
+import { OperatorModule } from '../lib/operators'
 
 export type SDKConfig = {
   rpcUrl: string

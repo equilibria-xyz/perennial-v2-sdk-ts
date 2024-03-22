@@ -28,7 +28,7 @@ import { notEmpty, sum } from '../../utils/arrayUtils'
 import { Big6Math } from '../../utils/big6Utils'
 import { Big18Math } from '../../utils/big18Utils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
-import { MarketOracles, fetchMarketOraclesV2 } from '../markets/chain'
+import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { getVaultContract } from '..'
 
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
@@ -65,7 +65,7 @@ export async function fetchVaultSnapshots({
   }
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
 
   const snapshotData = await fetchVaultSnapshotsAfterSettle({

@@ -34,7 +34,7 @@ export class VaultsModule {
 
   get read() {
     return {
-      fetchVaultSnapshots: ({
+      vaultSnapshots: ({
         address = zeroAddress,
         onSuccess,
         onError,

@@ -12,7 +12,7 @@ import { MultiInvoker2Action } from '../../types/perennial'
 import { Big6Math, bufferGasLimit, notEmpty, parseViemContractCustomError, sum } from '../../utils'
 import { buildCommitPrice, buildUpdateVault } from '../../utils/multiinvokerV2'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
-import { MarketOracles, fetchMarketOraclesV2 } from '../markets/chain'
+import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { VaultSnapshot2, VaultSnapshots, fetchVaultSnapshots } from './chain'
 import { getMultiInvokerV2Contract } from '..'
 
@@ -101,7 +101,7 @@ const buildPerformVaultUpdateTx = async ({
 
   const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
   if (!vaultSnapshots) {
     vaultSnapshots = await fetchVaultSnapshots({

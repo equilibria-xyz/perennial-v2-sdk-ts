@@ -37,9 +37,9 @@ export function fetchProtocolParameter(chainId: SupportedChainId = DefaultChain.
   return marketFactory.read.parameter()
 }
 
-export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOraclesV2>>>
+export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
-export async function fetchMarketOraclesV2(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
   const markets = chainAssetsWithAddress(chainId)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
     const market = getMarketContract(marketAddress, publicClient)
@@ -128,9 +128,9 @@ export type UserMarketSnapshot = ChainUserMarketSnapshot & {
   priceUpdate: Address
 }
 
-export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshotsV2>>>
+export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshots>>>
 // TODO: make market oracles an optional parameter so we can skip that fetch
-export async function fetchMarketSnapshotsV2({
+export async function fetchMarketSnapshots({
   publicClient,
   pythClient,
   chainId = DefaultChain.id,
@@ -152,7 +152,7 @@ export async function fetchMarketSnapshotsV2({
     return
   }
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
   const snapshotData = await fetchMarketSnapshotsAfterSettle({
     chainId,

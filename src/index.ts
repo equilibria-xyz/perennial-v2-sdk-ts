@@ -10,9 +10,8 @@ export {
   type MarketSnapshot,
   type UserMarketSnapshot,
   type MarketSnapshots,
-  fetchProtocolParameter,
-  fetchMarketOraclesV2,
-  fetchMarketSnapshotsV2,
+  fetchMarketOracles,
+  fetchMarketSnapshots,
 } from './lib/markets/chain'
 
 // Market - Graph

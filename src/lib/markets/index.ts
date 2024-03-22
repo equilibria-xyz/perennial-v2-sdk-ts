@@ -2,15 +2,9 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { chainIdToChainMap, interfaceFeeBps, MaxUint256, SupportedChainId } from '../../constants'
+import { chainIdToChainMap, SupportedChainId } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
-import {
-  MarketOracles,
-  MarketSnapshots,
-  fetchMarketOraclesV2,
-  fetchMarketSnapshotsV2,
-  fetchProtocolParameter,
-} from './chain'
+import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   Markets,
   fetchActivePositionHistory,
@@ -53,10 +47,7 @@ export class MarketsModule {
   get read() {
     return {
       marketOracles: () => {
-        return fetchMarketOraclesV2(this.config.chainId, this.config.publicClient)
-      },
-      protocolParameter: () => {
-        return fetchProtocolParameter(this.config.chainId, this.config.publicClient)
+        return fetchMarketOracles(this.config.chainId, this.config.publicClient)
       },
       marketSnapshots: ({
         marketOracles,
@@ -69,7 +60,7 @@ export class MarketsModule {
         onSuccess?: () => void
         onError?: () => void
       }) => {
-        return fetchMarketSnapshotsV2({
+        return fetchMarketSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,

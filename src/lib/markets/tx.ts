@@ -16,10 +16,10 @@ import {
 import { calcInterfaceFee } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
 import { getMultiInvokerV2Contract, getOracleContract, getPythFactoryContract, getUSDCContract } from '../contracts'
-import { MarketOracles, MarketSnapshots, fetchMarketOraclesV2, fetchMarketSnapshotsV2 } from './chain'
+import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'
-import { MultiInvoker2Abi, PythFactoryAbi } from '@/index'
+import { MultiInvoker2Abi, PythFactoryAbi } from '../..'
 
 type WithChainIdAndPublicClient = {
   chainId: SupportedChainId
@@ -70,11 +70,11 @@ export async function buildModifyPositionTx({
   const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
 
   if (!marketSnapshots) {
-    marketSnapshots = await fetchMarketSnapshotsV2({
+    marketSnapshots = await fetchMarketSnapshots({
       publicClient,
       chainId,
       address,
@@ -342,7 +342,7 @@ export async function buildPlaceOrderTx({
   }
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
 
   const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
