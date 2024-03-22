@@ -14,7 +14,7 @@ module.exports = {
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
   },
-  ignorePatterns: ['src/types/gql/*.ts'],
+  ignorePatterns: ['src/types/gql/*.ts', 'examples/**/*'],
   parser: '@typescript-eslint/parser',
   root: true,
   plugins: ['@typescript-eslint'],

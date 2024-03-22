@@ -11,10 +11,10 @@
     "prepublishOnly": "yarn build",
     "gen:lens-artifact": "yarn hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens2.abi.ts",
     "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
-    "gen:gql-typings:watch": "graphql-codegen --watch --config graph-codegen.ts",
     "format": "prettier --write",
+    "format:check": "prettier --check",
     "lint": "eslint --ext .ts src/",
-    "precommit": "yarn tsc && yarn lint-staged",
+    "prepush": "yarn tsc && yarn lint-staged",
     "postinstall": "husky",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable"
