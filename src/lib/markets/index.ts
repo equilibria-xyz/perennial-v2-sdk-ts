@@ -2,15 +2,9 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { SupportedChainId } from '../../constants'
+import { chainIdToChainMap, SupportedChainId } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
-import {
-  MarketOracles,
-  MarketSnapshots,
-  fetchMarketOraclesV2,
-  fetchMarketSnapshotsV2,
-  fetchProtocolParameter,
-} from './chain'
+import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   Markets,
   fetchActivePositionHistory,
@@ -21,242 +15,238 @@ import {
   fetchOpenOrders,
   fetchSubPositions,
 } from './graph'
-import { buildCancelOrderTxData, cancelOrder, getMarketTransactionBuilders, getMarketTransactions } from './tx'
+import {
+  buildCancelOrderTx,
+  buildModifyPositionTx,
+  BuildModifyPositionTxArgs,
+  buildPlaceOrderTx,
+  BuildPlaceOrderTxArgs,
+  buildSubmitVaaTx,
+  BuildSubmitVaaTxArgs,
+} from './tx'
 
 export class MarketsModule {
   private config: {
     chainId: SupportedChainId
     graphClient: GraphQLClient
     publicClient: PublicClient
-    walletClient?: WalletClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }
 
   constructor(config: {
     chainId: SupportedChainId
     publicClient: PublicClient
-    walletClient?: WalletClient
     graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }) {
     this.config = config
   }
 
-  public fetchMarketOraclesV2 = () => {
-    return fetchMarketOraclesV2(this.config.chainId, this.config.publicClient)
+  get read() {
+    return {
+      marketOracles: () => {
+        return fetchMarketOracles(this.config.chainId, this.config.publicClient)
+      },
+      marketSnapshots: ({
+        marketOracles,
+        address = zeroAddress,
+        onSuccess,
+        onError,
+      }: {
+        marketOracles?: MarketOracles
+        address?: Address
+        onSuccess?: () => void
+        onError?: () => void
+      }) => {
+        return fetchMarketSnapshots({
+          chainId: this.config.chainId,
+          publicClient: this.config.publicClient,
+          pythClient: this.config.pythClient,
+          address,
+          marketOracles,
+          onError,
+          onSuccess,
+        })
+      },
+      activePositionPnls: ({ marketSnapshots, address }: { marketSnapshots: MarketSnapshots; address: Address }) => {
+        return fetchActivePositionPnls({
+          chainId: this.config.chainId,
+          marketSnapshots,
+          address,
+          graphClient: this.config.graphClient,
+        })
+      },
+      activePositionHistory: ({
+        market,
+        address,
+        pageParam = 0,
+        pageSize = 100,
+      }: {
+        market: Address
+        address: Address
+        pageParam: number
+        pageSize: number
+      }) => {
+        return fetchActivePositionHistory({
+          market,
+          address,
+          pageParam,
+          pageSize,
+          graphClient: this.config.graphClient,
+        })
+      },
+      historicalPositions: ({
+        markets,
+        address,
+        pageSize = 10,
+        pageParam,
+        maker,
+      }: {
+        markets: Markets
+        address: Address
+        pageSize: number
+        pageParam?: { page: number; checkpoints?: MarketsAccountCheckpointsQuery }
+        maker?: boolean
+      }) => {
+        return fetchHistoricalPositions({
+          markets,
+          address,
+          graphClient: this.config.graphClient,
+          pageSize,
+          pageParam,
+          maker,
+        })
+      },
+      subPositions: ({
+        address,
+        market,
+        startVersion,
+        endVersion,
+        first,
+        skip,
+      }: {
+        address: Address
+        market: Address
+        startVersion: bigint
+        endVersion?: bigint
+        first: number
+        skip: number
+      }) => {
+        return fetchSubPositions({
+          graphClient: this.config.graphClient,
+          address,
+          market,
+          startVersion,
+          endVersion,
+          first,
+          skip,
+        })
+      },
+      openOrders: ({
+        markets,
+        address,
+        pageParam = 0,
+        pageSize = 100,
+        isMaker,
+      }: {
+        markets: Markets
+        address: Address
+        pageParam: number
+        pageSize: number
+        isMaker?: boolean
+      }) => {
+        return fetchOpenOrders({
+          graphClient: this.config.graphClient,
+          markets,
+          address,
+          pageParam,
+          pageSize,
+          isMaker,
+        })
+      },
+      market24hrData: ({ market }: { market: Address }) => {
+        return fetchMarket24hrData({
+          graphClient: this.config.graphClient,
+          market,
+        })
+      },
+      market7dData: ({ market }: { market: Address }) => {
+        return fetchMarket7dData({
+          graphClient: this.config.graphClient,
+          market,
+        })
+      },
+    }
   }
 
-  public fetchProtocolParameter = () => {
-    return fetchProtocolParameter(this.config.chainId, this.config.publicClient)
+  get build() {
+    return {
+      modifyPosition: (args: Omit<BuildModifyPositionTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
+        return buildModifyPositionTx({
+          publicClient: this.config.publicClient,
+          chainId: this.config.chainId,
+          pythClient: this.config.pythClient,
+          ...args,
+        })
+      },
+      submitVaa: (args: Omit<BuildSubmitVaaTxArgs, 'chainId' | 'pythClient'>) => {
+        return buildSubmitVaaTx({
+          chainId: this.config.chainId,
+          pythClient: this.config.pythClient,
+          ...args,
+        })
+      },
+      placeOrder: (args: Omit<BuildPlaceOrderTxArgs, 'chainId' | 'pythClient' | 'publicClient'>) => {
+        return buildPlaceOrderTx({
+          chainId: this.config.chainId,
+          pythClient: this.config.pythClient,
+          publicClient: this.config.publicClient,
+          ...args,
+        })
+      },
+      cancelOrder: (orderDetails: [Address, bigint][]) => {
+        return buildCancelOrderTx({
+          chainId: this.config.chainId,
+          orderDetails,
+        })
+      },
+    }
   }
 
-  public fetchMarketSnapshotsV2 = ({
-    marketOracles,
-    address = zeroAddress,
-    onSuccess,
-    onError,
-  }: {
-    marketOracles?: MarketOracles
-    address?: Address
-    onSuccess?: () => void
-    onError?: () => void
-  }) => {
-    return fetchMarketSnapshotsV2({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      pythClient: this.config.pythClient,
-      address,
-      marketOracles,
-      onError,
-      onSuccess,
-    })
-  }
+  get write() {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
 
-  public getMarketTransactions = ({
-    productAddress,
-    marketSnapshots,
-    marketOracles,
-  }: {
-    productAddress: Address
-    marketSnapshots?: MarketSnapshots
-    marketOracles?: MarketOracles
-  }) => {
-    return getMarketTransactions({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      walletClient: this.config.walletClient,
-      pythClient: this.config.pythClient,
-      productAddress,
-      marketSnapshots,
-      marketOracles,
-    })
-  }
+    const { chainId } = this.config
+    const address = walletClient.account
 
-  public cancelOrderTransaction = ({
-    orderDetails,
-    address,
-  }: {
-    address: Address
-    orderDetails: [Address, bigint][]
-    returnTxDataOnly?: boolean
-  }) => {
-    return cancelOrder({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      walletClient: this.config.walletClient,
-      orderDetails,
-      address,
-    })
-  }
+    const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
 
-  public fetchActivePositionPnls = ({
-    marketSnapshots,
-    address,
-  }: {
-    marketSnapshots: MarketSnapshots
-    address: Address
-  }) => {
-    return fetchActivePositionPnls({
-      chainId: this.config.chainId,
-      marketSnapshots,
-      address,
-      graphClient: this.config.graphClient,
-    })
-  }
-
-  public fetchActivePositionHistory = ({
-    market,
-    address,
-    pageParam = 0,
-    pageSize = 100,
-  }: {
-    market: Address
-    address: Address
-    pageParam: number
-    pageSize: number
-  }) => {
-    return fetchActivePositionHistory({
-      market,
-      address,
-      pageParam,
-      pageSize,
-      graphClient: this.config.graphClient,
-    })
-  }
-
-  public fetchHistoricalPositions = ({
-    markets,
-    address,
-    pageSize = 10,
-    pageParam,
-    maker,
-  }: {
-    markets: Markets
-    address: Address
-    pageSize: number
-    pageParam?: { page: number; checkpoints?: MarketsAccountCheckpointsQuery }
-    maker?: boolean
-  }) => {
-    return fetchHistoricalPositions({
-      markets,
-      address,
-      graphClient: this.config.graphClient,
-      pageSize,
-      pageParam,
-      maker,
-    })
-  }
-
-  public fetchSubPositions = ({
-    address,
-    market,
-    startVersion,
-    endVersion,
-    first,
-    skip,
-  }: {
-    address: Address
-    market: Address
-    startVersion: bigint
-    endVersion?: bigint
-    first: number
-    skip: number
-  }) => {
-    return fetchSubPositions({
-      graphClient: this.config.graphClient,
-      address,
-      market,
-      startVersion,
-      endVersion,
-      first,
-      skip,
-    })
-  }
-
-  public fetchOpenOrders = ({
-    markets,
-    address,
-    pageParam = 0,
-    pageSize = 100,
-    isMaker,
-  }: {
-    markets: Markets
-    address: Address
-    pageParam: number
-    pageSize: number
-    isMaker?: boolean
-  }) => {
-    return fetchOpenOrders({
-      graphClient: this.config.graphClient,
-      markets,
-      address,
-      pageParam,
-      pageSize,
-      isMaker,
-    })
-  }
-
-  public fetchMarket24hrData = ({ market }: { market: Address }) => {
-    return fetchMarket24hrData({
-      graphClient: this.config.graphClient,
-      market,
-    })
-  }
-
-  public fetchMarket7dData = ({ market }: { market: Address }) => {
-    return fetchMarket7dData({
-      graphClient: this.config.graphClient,
-      market,
-    })
-  }
-
-  public getMarketTransactionBuilders = ({
-    productAddress,
-    marketSnapshots,
-    marketOracles,
-    address,
-  }: {
-    productAddress: Address
-    marketSnapshots?: MarketSnapshots
-    marketOracles?: MarketOracles
-    address?: Address
-  }) => {
-    return getMarketTransactionBuilders({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      address: address ?? this.config.walletClient?.account?.address ?? zeroAddress,
-      pythClient: this.config.pythClient,
-      productAddress,
-      marketSnapshots,
-      marketOracles,
-    })
-  }
-
-  public buildCancelOrderTxData = (orderDetails: [Address, bigint][]) => {
-    return buildCancelOrderTxData({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      orderDetails,
-    })
+    return {
+      modifyPosition: async (...args: Parameters<typeof this.build.modifyPosition>) => {
+        const tx = await this.build.modifyPosition(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      submitVaa: async (...args: Parameters<typeof this.build.submitVaa>) => {
+        const tx = await this.build.submitVaa(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      placeOrder: async (...args: Parameters<typeof this.build.placeOrder>) => {
+        const tx = await this.build.placeOrder(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      cancelOrder: async (orderDetails: [Address, bigint][]) => {
+        const tx = this.build.cancelOrder(orderDetails)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+    }
   }
 }

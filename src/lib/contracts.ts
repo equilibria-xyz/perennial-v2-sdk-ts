@@ -1,6 +1,6 @@
 import { Address, GetContractReturnType, PublicClient, WalletClient, getContract } from 'viem'
 
-import { DefaultChain, SupportedChainId } from '..'
+import { DefaultChain, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvoker2Abi } from '../abi/MultiInvoker2.abi'
@@ -14,12 +14,8 @@ import {
   USDCAddresses,
   VaultFactoryAddresses,
 } from '../constants/contracts'
-import { getOperatorTransactions } from './operators'
 
-export const getDSUContract = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-): GetContractReturnType<typeof ERC20Abi, { public: PublicClient }, Address> => {
+export const getDSUContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
     address: DSUAddresses[chainId],
     abi: ERC20Abi,
@@ -28,10 +24,7 @@ export const getDSUContract = (
   return contract as any
 }
 
-export const getUSDCContract = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-): GetContractReturnType<typeof ERC20Abi, { public: PublicClient }, Address> => {
+export const getUSDCContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
     address: USDCAddresses[chainId],
     abi: ERC20Abi,
@@ -40,24 +33,7 @@ export const getUSDCContract = (
   return contract
 }
 
-// TODO: remove this when Viem fixes their typing issues
-export const getUSDCContractWrite = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-  signer: WalletClient,
-): GetContractReturnType<typeof ERC20Abi, { public: PublicClient; wallet: WalletClient }, Address> => {
-  const contract = getContract({
-    address: USDCAddresses[chainId],
-    abi: ERC20Abi,
-    client: { public: publicClient, wallet: signer },
-  })
-  return contract
-}
-
-export const getMultiInvokerV2Contract = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-): GetContractReturnType<typeof MultiInvoker2Abi, { public: PublicClient }, Address> => {
+export const getMultiInvokerV2Contract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
     address: MultiInvokerV2Addresses[chainId],
     abi: MultiInvoker2Abi,
@@ -67,25 +43,7 @@ export const getMultiInvokerV2Contract = (
   return contract
 }
 
-// TODO: remove this when Viem fixes their typing issues
-export const getMultiInvokerV2ContractWrite = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-  signer: WalletClient,
-): GetContractReturnType<typeof MultiInvoker2Abi, { public: PublicClient; wallet: WalletClient }, Address> => {
-  const contract = getContract({
-    address: MultiInvokerV2Addresses[chainId],
-    abi: MultiInvoker2Abi,
-    client: { public: publicClient, wallet: signer },
-  })
-
-  return contract
-}
-
-export const getMarketFactoryContract = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient }, Address> => {
+export const getMarketFactoryContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
     address: MarketFactoryAddresses[chainId],
     abi: MarketFactoryAbi,
@@ -94,19 +52,7 @@ export const getMarketFactoryContract = (
   return contract
 }
 
-export const getMarketFactoryContractWrite = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-  signer: WalletClient,
-): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient; wallet: WalletClient }, Address> => {
-  const contract = getContract({
-    address: MarketFactoryAddresses[chainId],
-    abi: MarketFactoryAbi,
-    client: { public: publicClient, wallet: signer },
-  })
-  return contract
-}
-
+// Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
 export const getPythFactoryContract = (
   chainId: SupportedChainId = DefaultChain.id,
   publicClient: PublicClient,
@@ -119,10 +65,7 @@ export const getPythFactoryContract = (
   return contract
 }
 
-export const getVaultFactoryContract = (
-  chainId: SupportedChainId = DefaultChain.id,
-  publicClient: PublicClient,
-): GetContractReturnType<typeof VaultFactoryAbi, { public: PublicClient }, Address> => {
+export const getVaultFactoryContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
     address: VaultFactoryAddresses[chainId],
     abi: VaultFactoryAbi,
@@ -131,18 +74,32 @@ export const getVaultFactoryContract = (
   return contract
 }
 
-// TODO: remove this when Viem fixes their typing issues
-export const getVaultFactoryContractWrite = (
-  chainId: SupportedChainId = DefaultChain.id,
+// Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+export function getVaultContract(
+  vaultAddress: Address,
   publicClient: PublicClient,
-  signer: WalletClient,
-): GetContractReturnType<typeof VaultFactoryAbi, { public: PublicClient; wallet: WalletClient }, Address> => {
-  const contract = getContract({
-    address: VaultFactoryAddresses[chainId],
-    abi: VaultFactoryAbi,
-    client: { public: publicClient, wallet: signer },
+): GetContractReturnType<typeof VaultAbi, { public: PublicClient }, Address> {
+  return getContract({ abi: VaultAbi, address: vaultAddress, client: { public: publicClient } })
+}
+
+// Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+export function getMarketContract(
+  marketAddress: Address,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof MarketAbi, { public: PublicClient }, Address> {
+  return getContract({ abi: MarketAbi, address: marketAddress, client: { public: publicClient } })
+}
+
+export function getOracleContract(oracleAddress: Address, publicClient: PublicClient) {
+  return getContract({ abi: OracleAbi, address: oracleAddress, client: { public: publicClient } })
+}
+
+export function getKeeperOracleContract(keeperOracleAddress: Address, publicClient: PublicClient) {
+  return getContract({
+    abi: KeeperOracleAbi,
+    address: keeperOracleAddress,
+    client: { public: publicClient },
   })
-  return contract
 }
 
 export class ContractsModule {
@@ -153,66 +110,53 @@ export class ContractsModule {
   }
 
   constructor(config: { chainId: SupportedChainId; publicClient: PublicClient; signer?: WalletClient }) {
-    if (!config.chainId) throw new Error('chainId is required')
-    if (!config.publicClient) throw new Error('PublicClient is required')
     this.config = config
   }
 
-  public updateConfig(
-    config: Partial<{
-      chainId: SupportedChainId
-      publicClient: PublicClient
-      signer?: WalletClient
-    }>,
-  ) {
-    this.config = { ...this.config, ...config }
-  }
-
-  public getDSUContract = (): GetContractReturnType<typeof ERC20Abi, { public: PublicClient }, Address> => {
+  public getDSUContract() {
     return getDSUContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getUSDCContract = (): GetContractReturnType<typeof ERC20Abi, { public: PublicClient }, Address> => {
+  public getUSDCContract() {
     return getUSDCContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getMultiInvokerV2Contract = (): GetContractReturnType<
-    typeof MultiInvoker2Abi,
-    { public: PublicClient },
-    Address
-  > => {
+  public getMultiInvokerV2Contract() {
     return getMultiInvokerV2Contract(this.config.chainId, this.config.publicClient)
   }
 
-  public getMarketFactoryContract = (): GetContractReturnType<
-    typeof MarketFactoryAbi,
-    { public: PublicClient },
-    Address
-  > => {
+  public getMarketFactoryContract() {
     return getMarketFactoryContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getPythFactoryContract = (): GetContractReturnType<
-    typeof PythFactoryAbi,
-    { public: PublicClient },
-    Address
-  > => {
+  // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+  public getPythFactoryContract(): GetContractReturnType<typeof PythFactoryAbi, { public: PublicClient }, Address> {
     return getPythFactoryContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getVaultFactoryContract = (): GetContractReturnType<
-    typeof VaultFactoryAbi,
-    { public: PublicClient },
-    Address
-  > => {
+  public getVaultFactoryContract() {
     return getVaultFactoryContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getOperatorTransactions = (walletClient: WalletClient) => {
-    return getOperatorTransactions({
-      chainId: this.config.chainId,
-      publicClient: this.config.publicClient,
-      walletClient,
-    })
+  // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+  public getMarketContract(
+    marketAddress: Address,
+  ): GetContractReturnType<typeof MarketAbi, { public: PublicClient }, Address> {
+    return getMarketContract(marketAddress, this.config.publicClient)
+  }
+
+  // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+  public getVaultContract(
+    vaultAddress: Address,
+  ): GetContractReturnType<typeof VaultAbi, { public: PublicClient }, Address> {
+    return getVaultContract(vaultAddress, this.config.publicClient)
+  }
+
+  public getOracleContract(oracleAddress: Address) {
+    return getOracleContract(oracleAddress, this.config.publicClient)
+  }
+
+  public getKeeperOracleContract(keeperOracleAddress: Address) {
+    return getKeeperOracleContract(keeperOracleAddress, this.config.publicClient)
   }
 }

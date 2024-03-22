@@ -23,8 +23,6 @@ import {
   addressToAsset2,
   calculateFundingForSides,
   chainAssetsWithAddress,
-  getMarketContract,
-  getOracleContract,
   notEmpty,
 } from '../..'
 import LensArtifact from '../../../artifacts/contracts/Lens.sol/Lens.json'
@@ -32,16 +30,11 @@ import { Lens2Abi } from '../../abi/Lens2.abi'
 import { getRpcURLFromPublicClient } from '../../constants/network'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
-import { getMarketFactoryContract, getPythFactoryContract } from '../contracts'
+import { getMarketContract, getMarketFactoryContract, getOracleContract, getPythFactoryContract } from '../contracts'
 
-export function fetchProtocolParameter(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
-  const marketFactory = getMarketFactoryContract(chainId, publicClient)
-  return marketFactory.read.parameter()
-}
+export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
-export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOraclesV2>>>
-
-export async function fetchMarketOraclesV2(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
   const markets = chainAssetsWithAddress(chainId)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
     const market = getMarketContract(marketAddress, publicClient)
@@ -84,10 +77,13 @@ export async function fetchMarketOraclesV2(chainId: SupportedChainId = DefaultCh
     }),
   )
 
-  return marketData.reduce((acc, market) => {
-    acc[market.asset] = market
-    return acc
-  }, {} as Record<SupportedAsset, Awaited<ReturnType<typeof fetchMarketOracles>>>)
+  return marketData.reduce(
+    (acc, market) => {
+      acc[market.asset] = market
+      return acc
+    },
+    {} as Record<SupportedAsset, Awaited<ReturnType<typeof fetchMarketOracles>>>,
+  )
 }
 
 export type MarketSnapshot = ChainMarketSnapshot & {
@@ -127,9 +123,9 @@ export type UserMarketSnapshot = ChainUserMarketSnapshot & {
   priceUpdate: Address
 }
 
-export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshotsV2>>>
+export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshots>>>
 // TODO: make market oracles an optional parameter so we can skip that fetch
-export async function fetchMarketSnapshotsV2({
+export async function fetchMarketSnapshots({
   publicClient,
   pythClient,
   chainId = DefaultChain.id,
@@ -151,7 +147,7 @@ export async function fetchMarketSnapshotsV2({
     return
   }
   if (!marketOracles) {
-    marketOracles = await fetchMarketOraclesV2(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
   const snapshotData = await fetchMarketSnapshotsAfterSettle({
     chainId,
@@ -171,100 +167,106 @@ export async function fetchMarketSnapshotsV2({
     const updateError = snapshotData.updates.find((update) => update !== '0x')
     console.error('Snapshot update error', [updateError, address, chainId].join(', '))
   }
-  const marketSnapshots = snapshotData.market.reduce((acc, snapshot) => {
-    const major = Big6Math.max(snapshot.position.long, snapshot.position.short)
-    const nextMajor = Big6Math.max(snapshot.nextPosition.long, snapshot.nextPosition.short)
-    const minor = Big6Math.min(snapshot.position.long, snapshot.position.short)
-    const nextMinor = Big6Math.min(snapshot.nextPosition.long, snapshot.nextPosition.short)
-    const fundingRates = calculateFundingForSides(snapshot)
-    const socializationFactor = !Big6Math.isZero(major)
-      ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
-      : Big6Math.ONE
-    acc[snapshot.asset] = {
-      ...snapshot,
+  const marketSnapshots = snapshotData.market.reduce(
+    (acc, snapshot) => {
+      const major = Big6Math.max(snapshot.position.long, snapshot.position.short)
+      const nextMajor = Big6Math.max(snapshot.nextPosition.long, snapshot.nextPosition.short)
+      const minor = Big6Math.min(snapshot.position.long, snapshot.position.short)
+      const nextMinor = Big6Math.min(snapshot.nextPosition.long, snapshot.nextPosition.short)
+      const fundingRates = calculateFundingForSides(snapshot)
+      const socializationFactor = !Big6Math.isZero(major)
+        ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
+        : Big6Math.ONE
+      acc[snapshot.asset] = {
+        ...snapshot,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
+        major,
+        majorSide: major === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
+        nextMajor,
+        nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
+        minor,
+        minorSide: minor === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
+        nextMinor,
+        nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
+        fundingRate: {
+          long: fundingRates.long,
+          short: fundingRates.short,
+          maker: fundingRates.maker,
+        },
+        socializationFactor,
+        isSocialized: socializationFactor < Big6Math.ONE,
+      }
+      return acc
+    },
+    {} as { [key in SupportedAsset]?: MarketSnapshot },
+  )
+  const userSnapshots = snapshotData.user.reduce(
+    (acc, snapshot) => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
-      major,
-      majorSide: major === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
-      nextMajor,
-      nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
-      minor,
-      minorSide: minor === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
-      nextMinor,
-      nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
-      fundingRate: {
-        long: fundingRates.long,
-        short: fundingRates.short,
-        maker: fundingRates.maker,
-      },
-      socializationFactor,
-      isSocialized: socializationFactor < Big6Math.ONE,
-    }
-    return acc
-  }, {} as { [key in SupportedAsset]?: MarketSnapshot })
-  const userSnapshots = snapshotData.user.reduce((acc, snapshot) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const pre = snapshotData.userPre.find((pre) => pre.asset === snapshot.asset)!
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const marketSnapshot = marketSnapshots[snapshot.asset]!
-    const marketPrice = marketSnapshot.global.latestPrice ?? 0n
-    const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
-    const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
-    const side = getSideFromPosition(latestPosition)
-    const nextSide = getSideFromPosition(nextPosition)
-    const magnitude = side === PositionSideV2.none ? 0n : latestPosition[side]
-    const nextMagnitude = nextSide === PositionSideV2.none ? 0n : nextPosition?.[nextSide] ?? 0n
-    const priceUpdate = snapshot?.priceUpdate
-    if (priceUpdate !== '0x') {
-      console.error('Sync error', snapshot.asset, priceUpdate, address)
-    }
-    const hasVersionError =
-      !snapshot.versions[0].valid &&
-      (pre.nextPosition.timestamp < marketSnapshot.pre.latestOracleVersion.timestamp ||
-        pre.nextPosition.timestamp + 60n < BigInt(Math.floor(Date.now() / 1000)))
+      const pre = snapshotData.userPre.find((pre) => pre.asset === snapshot.asset)!
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const marketSnapshot = marketSnapshots[snapshot.asset]!
+      const marketPrice = marketSnapshot.global.latestPrice ?? 0n
+      const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
+      const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
+      const side = getSideFromPosition(latestPosition)
+      const nextSide = getSideFromPosition(nextPosition)
+      const magnitude = side === PositionSideV2.none ? 0n : latestPosition[side]
+      const nextMagnitude = nextSide === PositionSideV2.none ? 0n : nextPosition?.[nextSide] ?? 0n
+      const priceUpdate = snapshot?.priceUpdate
+      if (priceUpdate !== '0x') {
+        console.error('Sync error', snapshot.asset, priceUpdate, address)
+      }
+      const hasVersionError =
+        !snapshot.versions[0].valid &&
+        (pre.nextPosition.timestamp < marketSnapshot.pre.latestOracleVersion.timestamp ||
+          pre.nextPosition.timestamp + 60n < BigInt(Math.floor(Date.now() / 1000)))
 
-    if (hasVersionError && (magnitude !== 0n || nextMagnitude !== 0n) && magnitude !== nextMagnitude) {
-      console.error('Version error', snapshot.asset, address)
-    }
-    acc[snapshot.asset] = {
-      ...snapshot,
-      pre,
-      side,
-      nextSide,
-      status: getStatusForSnapshot(magnitude, nextMagnitude, snapshot.local.collateral, hasVersionError, priceUpdate),
-      magnitude,
-      nextMagnitude,
-      maintenance: !Big6Math.isZero(magnitude)
-        ? Big6Math.max(
-            marketSnapshot.riskParameter.minMaintenance,
-            Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(magnitude, marketPrice)),
-          )
-        : 0n,
-      nextMaintenance: !Big6Math.isZero(nextMagnitude)
-        ? Big6Math.max(
-            marketSnapshot.riskParameter.minMaintenance,
-            Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(nextMagnitude, marketPrice)),
-          )
-        : 0n,
-      margin: !Big6Math.isZero(magnitude)
-        ? Big6Math.max(
-            marketSnapshot.riskParameter.minMargin,
-            Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(magnitude, marketPrice)),
-          )
-        : 0n,
-      nextMargin: !Big6Math.isZero(nextMagnitude)
-        ? Big6Math.max(
-            marketSnapshot.riskParameter.minMargin,
-            Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(nextMagnitude, marketPrice)),
-          )
-        : 0n,
-      leverage: calcLeverage(marketPrice, magnitude, snapshot.local.collateral),
-      nextLeverage: calcLeverage(marketPrice, nextMagnitude, snapshot.local.collateral),
-      notional: calcNotional(magnitude, marketPrice),
-      nextNotional: calcNotional(nextMagnitude, marketPrice),
-    }
-    return acc
-  }, {} as Record<SupportedAsset, UserMarketSnapshot>)
+      if (hasVersionError && (magnitude !== 0n || nextMagnitude !== 0n) && magnitude !== nextMagnitude) {
+        console.error('Version error', snapshot.asset, address)
+      }
+      acc[snapshot.asset] = {
+        ...snapshot,
+        pre,
+        side,
+        nextSide,
+        status: getStatusForSnapshot(magnitude, nextMagnitude, snapshot.local.collateral, hasVersionError, priceUpdate),
+        magnitude,
+        nextMagnitude,
+        maintenance: !Big6Math.isZero(magnitude)
+          ? Big6Math.max(
+              marketSnapshot.riskParameter.minMaintenance,
+              Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(magnitude, marketPrice)),
+            )
+          : 0n,
+        nextMaintenance: !Big6Math.isZero(nextMagnitude)
+          ? Big6Math.max(
+              marketSnapshot.riskParameter.minMaintenance,
+              Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(nextMagnitude, marketPrice)),
+            )
+          : 0n,
+        margin: !Big6Math.isZero(magnitude)
+          ? Big6Math.max(
+              marketSnapshot.riskParameter.minMargin,
+              Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(magnitude, marketPrice)),
+            )
+          : 0n,
+        nextMargin: !Big6Math.isZero(nextMagnitude)
+          ? Big6Math.max(
+              marketSnapshot.riskParameter.minMargin,
+              Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(nextMagnitude, marketPrice)),
+            )
+          : 0n,
+        leverage: calcLeverage(marketPrice, magnitude, snapshot.local.collateral),
+        nextLeverage: calcLeverage(marketPrice, nextMagnitude, snapshot.local.collateral),
+        notional: calcNotional(magnitude, marketPrice),
+        nextNotional: calcNotional(nextMagnitude, marketPrice),
+      }
+      return acc
+    },
+    {} as Record<SupportedAsset, UserMarketSnapshot>,
+  )
 
   return {
     user: address === zeroAddress ? undefined : userSnapshots,

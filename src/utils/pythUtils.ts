@@ -4,8 +4,8 @@ import { Address, Hex, PublicClient } from 'viem'
 import { BackupPythClient, SupportedChainId, mainnetChains } from '../constants/network'
 import { unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
-import { getKeeperOracleContract } from './contractUtils'
 import { nowSeconds } from './timeUtils'
+import { getKeeperOracleContract } from '..'
 
 export const getRecentVaa = async ({
   pyth,
@@ -245,14 +245,17 @@ export const buildCommitmentsForOracles = async ({
     if (!priceFeedUpdateData || !priceFeedUpdateData.parsed)
       return buildCommitmentsForOraclesIndividual({ chainId, pyth, publicClient, marketOracles, onError, onSuccess })
 
-    const publishTimeMap = priceFeedUpdateData.parsed.reduce((acc, p) => {
-      if (!acc[p.price.publish_time]) acc[p.price.publish_time] = []
-      const oracle = marketOracles.find((o) => o.underlyingId.toLowerCase() === `0x${p.id}`.toLowerCase())
-      if (!oracle) return acc
+    const publishTimeMap = priceFeedUpdateData.parsed.reduce(
+      (acc, p) => {
+        if (!acc[p.price.publish_time]) acc[p.price.publish_time] = []
+        const oracle = marketOracles.find((o) => o.underlyingId.toLowerCase() === `0x${p.id}`.toLowerCase())
+        if (!oracle) return acc
 
-      acc[p.price.publish_time].push(oracle)
-      return acc
-    }, {} as Record<number, { providerId: Hex; minValidTime: bigint }[]>)
+        acc[p.price.publish_time].push(oracle)
+        return acc
+      },
+      {} as Record<number, { providerId: Hex; minValidTime: bigint }[]>,
+    )
 
     onSuccess?.()
     return Object.entries(publishTimeMap).map(([publishTime, oracles]) => ({

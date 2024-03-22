@@ -7,6 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rimraf dist && yarn gen:lens-artifact && yarn gen:gql-typings && yarn tsc",
+    "build:watch": "nodemon --exec 'yarn tsc' --watch src/ -e ts --ignore src/abi/",
     "prepublishOnly": "yarn build",
     "gen:lens-artifact": "yarn hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens2.abi.ts",
     "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
@@ -23,6 +24,7 @@
     "dotenv": "^16.3.1",
     "esno": "^0.17.0",
     "hardhat": "^2.17.0",
+    "nodemon": "^3.1.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "5.4.3"
@@ -33,7 +35,7 @@
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
     "prettier": "^3.1.1",
-    "viem": "2.8.14"
+    "viem": "2.8.18"
   },
   "resolutions": {
     "@equilibria/perennial-v2": "1.0.0-rc4"

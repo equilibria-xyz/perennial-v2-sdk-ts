@@ -10,9 +10,8 @@ export {
   type MarketSnapshot,
   type UserMarketSnapshot,
   type MarketSnapshots,
-  fetchProtocolParameter,
-  fetchMarketOraclesV2,
-  fetchMarketSnapshotsV2,
+  fetchMarketOracles,
+  fetchMarketSnapshots,
 } from './lib/markets/chain'
 
 // Market - Graph
@@ -30,7 +29,15 @@ export {
 } from './lib/markets/graph'
 
 // Market - Transactions
-export { getMarketTransactions, cancelOrder } from './lib/markets/tx'
+export {
+  buildCancelOrderTx,
+  buildModifyPositionTx,
+  buildPlaceOrderTx,
+  buildSubmitVaaTx,
+  type BuildModifyPositionTxArgs,
+  type BuildPlaceOrderTxArgs,
+  type BuildSubmitVaaTxArgs,
+} from './lib/markets/tx'
 
 // Vault - Chain
 export {
@@ -40,7 +47,7 @@ export {
   type ChainVaultAccountSnapshot,
   type ChainVaultSnapshot,
   type VaultPositionHistory,
-  fetchVaultSnapshotsV2,
+  fetchVaultSnapshots,
   fetchVaultPositionHistory,
 } from './lib/vaults/chain'
 
@@ -48,7 +55,17 @@ export {
 export { fetchVault7dAccumulations } from './lib/vaults/graph'
 
 // Vault - Transactions
-export { getVaultTransactions } from './lib/vaults/tx'
+export {
+  buildDepositTx,
+  buildRedeemSharesTx,
+  buildClaimTx,
+  type BuildDepositTxArgs,
+  type BuildRedeemSharesTxArgs,
+  type BuildClaimTxArgs,
+} from './lib/vaults/tx'
+
+// Operator - Transaction
+export { buildApproveUSDCTx, buildApproveMarketFactoryTx, buildApproveVaultFactoryTx } from './lib/operators'
 
 /* #################### Constants #################### */
 
@@ -72,6 +89,10 @@ export {
   getMarketFactoryContract,
   getVaultFactoryContract,
   getPythFactoryContract,
+  getMarketContract,
+  getVaultContract,
+  getOracleContract,
+  getKeeperOracleContract,
 } from './lib/contracts'
 
 // Vaults
@@ -162,15 +183,7 @@ export { BigOrZero, formatBig6, formatBig6Percent, formatBig6USDPrice, Big6Math 
 export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from './utils/big18Utils'
 
 // Contract Utils
-export {
-  getVaultAddressForType,
-  getVaultContract,
-  getMarketContract,
-  getOracleContract,
-  bufferGasLimit,
-  parseViemContractCustomError,
-  getKeeperOracleContract,
-} from './utils/contractUtils'
+export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
 
 // Funding and Interest Rate Utils
 export { computeInterestRate, calculateFundingForSides } from './utils/fundingAndInterestUtils'
