@@ -18,6 +18,7 @@ export {
 export {
   type SubPositionChange,
   type OpenOrder,
+  type Markets,
   fetchActivePositionPnls,
   fetchActivePositionHistory,
   fetchHistoricalPositions,
