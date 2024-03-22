@@ -53,7 +53,7 @@ export async function buildApproveUSDCTx({
 export type BuildModifyPositionTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  productAddress: Address
+  marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
   pythClient: EvmPriceServiceConnection
@@ -75,7 +75,7 @@ export type BuildModifyPositionTxArgs = {
 export async function buildModifyPositionTx({
   chainId,
   publicClient,
-  productAddress,
+  marketAddress,
   marketSnapshots,
   marketOracles,
   pythClient,
@@ -117,10 +117,10 @@ export async function buildModifyPositionTx({
     )
   }
 
-  const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === productAddress)
+  const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
-  const asset = addressToAsset2(productAddress)
+  const asset = addressToAsset2(marketAddress)
 
   // Interface fee
   const interfaceFees: Array<typeof EmptyInterfaceFee> = []
@@ -153,7 +153,7 @@ export async function buildModifyPositionTx({
   }
 
   const updateAction = buildUpdateMarket({
-    market: productAddress,
+    market: marketAddress,
     maker: positionSide === PositionSideV2.maker ? positionAbs : undefined, // Absolute position size
     long: positionSide === PositionSideV2.long ? positionAbs : undefined,
     short: positionSide === PositionSideV2.short ? positionAbs : undefined,
@@ -175,7 +175,7 @@ export async function buildModifyPositionTx({
       positionDelta: positionAbs ?? 0n,
     })
     stopLossAction = buildPlaceTriggerOrder({
-      market: productAddress,
+      market: marketAddress,
       side: positionSide,
       triggerPrice: stopLoss,
       comparison: positionSide === PositionSideV2.short ? 'gte' : 'lte',
@@ -212,7 +212,7 @@ export async function buildModifyPositionTx({
     })
 
     takeProfitAction = buildPlaceTriggerOrder({
-      market: productAddress,
+      market: marketAddress,
       side: positionSide,
       triggerPrice: takeProfit,
       comparison: positionSide === PositionSideV2.short ? 'lte' : 'gte',
@@ -293,7 +293,7 @@ export async function buildModifyPositionTx({
 export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  productAddress: Address
+  marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
   pythClient: EvmPriceServiceConnection
@@ -303,7 +303,7 @@ export type BuildSubmitVaaTxArgs = {
 export async function buildSubmitVaaTx({
   chainId,
   publicClient,
-  productAddress,
+  marketAddress,
   marketOracles,
   pythClient,
   address,
@@ -312,7 +312,7 @@ export async function buildSubmitVaaTx({
     return
   }
 
-  const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === productAddress)
+  const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
   const [{ version, vaa }] = await getRecentVaa({
@@ -339,7 +339,7 @@ export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
   marketOracles: MarketOracles
   publicClient: PublicClient
-  productAddress: Address
+  marketAddress: Address
   marketSnapshots: MarketSnapshots
   orderType: OrderTypes
   limitPrice?: bigint
@@ -362,7 +362,7 @@ export async function buildPlaceOrderTx({
   pythClient,
   marketOracles,
   publicClient,
-  productAddress,
+  marketAddress,
   orderType,
   limitPrice,
   marketSnapshots,
@@ -397,13 +397,13 @@ export async function buildPlaceOrderTx({
   if (cancelOrderDetails) {
     cancelAction = buildCancelOrder(cancelOrderDetails)
   }
-  const asset = addressToAsset2(productAddress)
+  const asset = addressToAsset2(marketAddress)
   const marketSnapshot = asset && marketSnapshots?.market[asset]
 
   if (orderType === OrderTypes.limit && limitPrice) {
     if (collateralDelta) {
       updateAction = buildUpdateMarket({
-        market: productAddress,
+        market: marketAddress,
         maker: undefined,
         long: undefined,
         short: undefined,
@@ -425,7 +425,7 @@ export async function buildPlaceOrderTx({
       positionDelta: delta,
     })
     limitOrderAction = buildPlaceTriggerOrder({
-      market: productAddress,
+      market: marketAddress,
       side: side as PositionSideV2.long | PositionSideV2.short,
       triggerPrice: limitPrice,
       comparison,
@@ -461,7 +461,7 @@ export async function buildPlaceOrderTx({
       positionDelta: stopLossDelta,
     })
     stopLossAction = buildPlaceTriggerOrder({
-      market: productAddress,
+      market: marketAddress,
       side: side as PositionSideV2.long | PositionSideV2.short,
       triggerPrice: stopLoss,
       comparison: side === PositionSideV2.short ? 'gte' : 'lte',
@@ -499,7 +499,7 @@ export async function buildPlaceOrderTx({
     })
 
     takeProfitAction = buildPlaceTriggerOrder({
-      market: productAddress,
+      market: marketAddress,
       side: side as PositionSideV2.long | PositionSideV2.short,
       triggerPrice: takeProfit,
       comparison: side === PositionSideV2.short ? 'lte' : 'gte',
@@ -533,9 +533,9 @@ export async function buildPlaceOrderTx({
   ].filter(notEmpty)
 
   if (orderType === OrderTypes.limit && collateralDelta) {
-    const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === productAddress)
+    const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
     if (!oracleInfo) return
-    const asset = addressToAsset2(productAddress)
+    const asset = addressToAsset2(marketAddress)
     let isPriceStale = false
     if (marketSnapshot && marketSnapshots && asset) {
       const {

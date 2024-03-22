@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { interfaceFeeBps, MaxUint256, SupportedChainId } from '../../constants'
+import { chainIdToChainMap, interfaceFeeBps, MaxUint256, SupportedChainId } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
 import {
   MarketOracles,
@@ -31,36 +31,35 @@ import {
   buildSubmitVaaTx,
   BuildSubmitVaaTxArgs,
 } from './tx'
-import { buildCancelOrder } from '@/utils/multiinvokerV2'
 
 export class MarketsModule {
   private config: {
     chainId: SupportedChainId
     graphClient: GraphQLClient
     publicClient: PublicClient
-    walletClient?: WalletClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }
 
   constructor(config: {
     chainId: SupportedChainId
     publicClient: PublicClient
-    walletClient?: WalletClient
     graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }) {
     this.config = config
   }
 
   get read() {
     return {
-      marketOraclesV2: () => {
+      marketOracles: () => {
         return fetchMarketOraclesV2(this.config.chainId, this.config.publicClient)
       },
       protocolParameter: () => {
         return fetchProtocolParameter(this.config.chainId, this.config.publicClient)
       },
-      marketSnapshotsV2: ({
+      marketSnapshots: ({
         marketOracles,
         address = zeroAddress,
         onSuccess,
@@ -192,7 +191,7 @@ export class MarketsModule {
     }
   }
 
-  get write() {
+  get build() {
     return {
       approveUSDC: (suggestedAmount = MaxUint256) => {
         return buildApproveUSDCTx({
@@ -202,7 +201,7 @@ export class MarketsModule {
         })
       },
       modifyPosition: ({
-        productAddress,
+        marketAddress,
         marketSnapshots,
         marketOracles,
         pythClient,
@@ -223,7 +222,7 @@ export class MarketsModule {
         return buildModifyPositionTx({
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
-          productAddress,
+          marketAddress,
           marketSnapshots,
           marketOracles,
           pythClient,
@@ -242,11 +241,11 @@ export class MarketsModule {
           onCommitmentError,
         })
       },
-      submitVaa: ({ productAddress, marketOracles, pythClient, address }: BuildSubmitVaaTxArgs) => {
+      submitVaa: ({ marketAddress, marketOracles, pythClient, address }: BuildSubmitVaaTxArgs) => {
         return buildSubmitVaaTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          productAddress,
+          marketAddress,
           marketOracles,
           pythClient,
           address,
@@ -255,7 +254,7 @@ export class MarketsModule {
       placeOrder: ({
         address,
         marketOracles,
-        productAddress,
+        marketAddress,
         orderType,
         limitPrice,
         marketSnapshots,
@@ -277,7 +276,7 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           address,
           marketOracles,
-          productAddress,
+          marketAddress,
           orderType,
           limitPrice,
           marketSnapshots,
@@ -300,6 +299,47 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           orderDetails,
         })
+      },
+    }
+  }
+
+  get write() {
+    if (!this.config.walletClient || !this.config.walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
+
+    const {
+      chainId,
+      walletClient: { account: address },
+    } = this.config
+
+    const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
+
+    return {
+      approveUSDC: async (suggestedAmount = MaxUint256) => {
+        const tx = await this.build.approveUSDC(suggestedAmount)
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      modifyPosition: async (args: BuildModifyPositionTxArgs) => {
+        const tx = await this.build.modifyPosition(args)
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      submitVaa: async (args: BuildSubmitVaaTxArgs) => {
+        const tx = await this.build.submitVaa(args)
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      placeOrder: async (args: BuildPlaceOrderTxArgs) => {
+        const tx = await this.build.placeOrder(args)
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+      cancelOrder: async (orderDetails: [Address, bigint][]) => {
+        const tx = this.build.cancelOrder(orderDetails)
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
       },
     }
   }
