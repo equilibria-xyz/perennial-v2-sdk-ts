@@ -1,11 +1,11 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient } from 'viem'
 
+import { getKeeperOracleContract } from '..'
 import { BackupPythClient, SupportedChainId, mainnetChains } from '../constants/network'
 import { unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
 import { nowSeconds } from './timeUtils'
-import { getKeeperOracleContract } from '..'
 
 export const getRecentVaa = async ({
   pyth,

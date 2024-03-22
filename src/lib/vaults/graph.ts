@@ -102,9 +102,12 @@ export async function fetchVault7dAccumulations({
           [accumulatorType.type]:
             BigOrZero(accountPosition.now.at(0)?.[accumulatorType.realizedKey]) -
             BigOrZero(accountPosition.start.at(0)?.[accumulatorType.realizedKey]),
-        })).reduce((acc, curr) => {
-          return { ...acc, ...curr }
-        }, {} as Record<AccumulatorType, bigint>),
+        })).reduce(
+          (acc, curr) => {
+            return { ...acc, ...curr }
+          },
+          {} as Record<AccumulatorType, bigint>,
+        ),
       }
     }),
   }

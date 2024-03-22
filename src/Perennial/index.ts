@@ -6,8 +6,8 @@ import { SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
-import { VaultsModule } from '../lib/vaults'
 import { OperatorModule } from '../lib/operators'
+import { VaultsModule } from '../lib/vaults'
 
 export type SDKConfig = {
   rpcUrl: string
