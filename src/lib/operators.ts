@@ -1,4 +1,4 @@
-import { Address, Hex, PublicClient, WalletClient, encodeFunctionData } from 'viem'
+import { Address, PublicClient, WalletClient, encodeFunctionData } from 'viem'
 
 import {
   Big6Math,

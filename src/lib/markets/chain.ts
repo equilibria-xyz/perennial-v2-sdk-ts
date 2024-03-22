@@ -30,7 +30,7 @@ import { Lens2Abi } from '../../abi/Lens2.abi'
 import { getRpcURLFromPublicClient } from '../../constants/network'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
-import { getMarketContract, getMarketFactoryContract, getOracleContract, getPythFactoryContract } from '../contracts'
+import { getMarketContract, getOracleContract, getPythFactoryContract } from '../contracts'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
