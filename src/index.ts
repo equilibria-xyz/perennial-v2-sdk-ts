@@ -30,7 +30,16 @@ export {
 } from './lib/markets/graph'
 
 // Market - Transactions
-export { getMarketTransactions, cancelOrder } from './lib/markets/tx'
+export {
+  buildApproveUSDCTx,
+  buildCancelOrderTx,
+  buildModifyPositionTx,
+  buildPlaceOrderTx,
+  buildSubmitVaaTx,
+  type BuildModifyPositionTxArgs,
+  type BuildPlaceOrderTxArgs,
+  type BuildSubmitVaaTxArgs,
+} from './lib/markets/tx'
 
 // Vault - Chain
 export {
