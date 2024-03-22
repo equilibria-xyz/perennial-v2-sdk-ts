@@ -42,7 +42,7 @@ jobs:
         run: pnpm run gen:gql-typings && pnpm run gen:lens-artifact
 
       - name: Typecheck
-        run: pnpm run tsc
+        run: pnpm exec tsc
 
       - name: Lint
         run: pnpm run lint
