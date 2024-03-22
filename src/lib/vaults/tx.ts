@@ -1,15 +1,9 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
-import { Address, PublicClient, WalletClient, encodeFunctionData, zeroAddress } from 'viem'
+import { Address, PublicClient, encodeFunctionData, zeroAddress } from 'viem'
 
-import {
-  MaxUint256,
-  MultiInvokerV2Addresses,
-  SupportedChainId,
-  chainIdToChainMap,
-  chainVaultsWithAddress,
-} from '../../constants'
+import { MaxUint256, SupportedChainId, chainVaultsWithAddress } from '../../constants'
 import { MultiInvoker2Action } from '../../types/perennial'
-import { Big6Math, bufferGasLimit, notEmpty, parseViemContractCustomError, sum } from '../../utils'
+import { Big6Math, notEmpty, sum } from '../../utils'
 import { buildCommitPrice, buildUpdateVault } from '../../utils/multiinvokerV2'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'

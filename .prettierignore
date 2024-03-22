@@ -17,10 +17,6 @@ yarn.lock
 
 /lang/
 
-types/generated/
-types/gql/
-storybook-static/
-
-# TV Charting Libs
-public/tradingview
-types/tradingview
+dist
+src/types/generated/
+src/types/gql/

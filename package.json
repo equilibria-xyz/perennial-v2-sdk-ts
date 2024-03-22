@@ -11,7 +11,13 @@
     "prepublishOnly": "yarn build",
     "gen:lens-artifact": "yarn hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens2.abi.ts",
     "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
-    "gen:gql-typings:watch": "graphql-codegen --watch --config graph-codegen.ts"
+    "format": "prettier --write",
+    "format:check": "prettier --check",
+    "lint": "eslint --ext .ts src/",
+    "prepush": "yarn tsc && yarn lint-staged",
+    "postinstall": "husky",
+    "prepack": "pinst --disable",
+    "postpack": "pinst --enable"
   },
   "author": "",
   "license": "ISC",
@@ -21,10 +27,18 @@
     "@equilibria/root": "^2.0.0-rc0",
     "@graphql-codegen/cli": "^3.3.1",
     "@graphql-codegen/client-preset": "^3.0.1",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.3.1",
+    "@typescript-eslint/parser": "^7.3.1",
     "dotenv": "^16.3.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
     "esno": "^0.17.0",
     "hardhat": "^2.17.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
     "nodemon": "^3.1.0",
+    "pinst": "^3.0.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "5.4.3"
@@ -34,10 +48,16 @@
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
-    "prettier": "^3.1.1",
+    "prettier": "^3.2.5",
     "viem": "2.8.18"
   },
   "resolutions": {
     "@equilibria/perennial-v2": "1.0.0-rc4"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

@@ -15,7 +15,7 @@ import {
 } from '../../utils/multiinvokerV2'
 import { calcInterfaceFee } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
-import { getMultiInvokerV2Contract, getOracleContract, getPythFactoryContract, getUSDCContract } from '../contracts'
+import { getMultiInvokerV2Contract, getOracleContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'

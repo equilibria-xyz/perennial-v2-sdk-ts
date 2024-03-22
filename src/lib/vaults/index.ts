@@ -3,13 +3,7 @@ import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { MarketOracles } from '../markets/chain'
-import {
-  VaultSnapshot2,
-  VaultSnapshots,
-  fetchVaultPositionHistory,
-  fetchVaultSnapshots as fetchVaultSnapshots,
-} from './chain'
+import { VaultSnapshot2, fetchVaultPositionHistory, fetchVaultSnapshots as fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
 import { BuildDepositTxArgs, buildDepositTx } from '..'
 
