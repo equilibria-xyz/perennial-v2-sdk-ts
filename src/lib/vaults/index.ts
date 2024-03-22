@@ -2,10 +2,10 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { VaultSnapshot2, fetchVaultPositionHistory, fetchVaultSnapshots as fetchVaultSnapshots } from './chain'
-import { fetchVault7dAccumulations } from './graph'
 import { BuildDepositTxArgs, buildDepositTx } from '..'
+import { SupportedChainId, chainIdToChainMap } from '../../constants'
+import { VaultSnapshot2, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
+import { fetchVault7dAccumulations } from './graph'
 
 export class VaultsModule {
   private config: {

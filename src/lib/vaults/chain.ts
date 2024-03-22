@@ -15,6 +15,8 @@ import {
   zeroAddress,
 } from 'viem'
 
+import { getVaultContract } from '..'
+import { LensDeployedBytecode } from '../../abi/Lens.abi'
 import { VaultAbi } from '../../abi/Vault.abi'
 import { VaultLensAbi, VaultLensDeployedBytecode } from '../../abi/VaultLens.abi'
 import { DSUAddresses, MultiInvokerV2Addresses } from '../../constants/contracts'
@@ -27,8 +29,6 @@ import { Big6Math } from '../../utils/big6Utils'
 import { Big18Math } from '../../utils/big18Utils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
-import { getVaultContract } from '..'
-import { LensDeployedBytecode } from '../../abi/Lens.abi'
 
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
 export type VaultSnapshot2 = ChainVaultSnapshot & {

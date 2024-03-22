@@ -1,22 +1,12 @@
 {
   "compilerOptions": {
     "strict": true,
-    "allowJs": false,
-    "checkJs": false,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "importHelpers": true,
-    "moduleResolution": "NodeNext",
-    "resolveJsonModule": true,
-    "sourceMap": true,
     "target": "ES2021",
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "skipLibCheck": true,
+    "moduleResolution": "NodeNext",
     "module": "NodeNext",
-    "declaration": true,
-    "declarationMap": true,
   },
   "include": ["src/**/*", "hardhat.config.ts"],
   "exclude": ["examples", "dist", "graph-codegen.ts"]

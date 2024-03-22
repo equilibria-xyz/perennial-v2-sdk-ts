@@ -143,10 +143,10 @@ export function getSideFromPosition(position?: UserMarketSnapshot['position']) {
   return position.maker > 0n
     ? PositionSideV2.maker
     : position.long > 0n
-    ? PositionSideV2.long
-    : position.short > 0n
-    ? PositionSideV2.short
-    : PositionSideV2.none
+      ? PositionSideV2.long
+      : position.short > 0n
+        ? PositionSideV2.short
+        : PositionSideV2.none
 }
 
 export function getStatusForSnapshot(

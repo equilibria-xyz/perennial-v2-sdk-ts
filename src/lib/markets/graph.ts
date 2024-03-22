@@ -604,8 +604,8 @@ export async function fetchSubPositions({
         (prevValid && update.valid) || (prevValid && !update.valid && i === 0)
           ? magnitude_ - magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
           : BigInt(update.version) === startVersion || i === self.length - 1
-          ? magnitude_
-          : null
+            ? magnitude_
+            : null
 
       let priceWithImpact = BigInt(update.price)
 

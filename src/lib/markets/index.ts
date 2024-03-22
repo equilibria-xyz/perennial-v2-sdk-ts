@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { chainIdToChainMap, SupportedChainId } from '../../constants'
+import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
@@ -16,13 +16,13 @@ import {
   fetchSubPositions,
 } from './graph'
 import {
+  BuildModifyPositionTxArgs,
+  BuildPlaceOrderTxArgs,
+  BuildSubmitVaaTxArgs,
   buildCancelOrderTx,
   buildModifyPositionTx,
-  BuildModifyPositionTxArgs,
   buildPlaceOrderTx,
-  BuildPlaceOrderTxArgs,
   buildSubmitVaaTx,
-  BuildSubmitVaaTxArgs,
 } from './tx'
 
 export class MarketsModule {

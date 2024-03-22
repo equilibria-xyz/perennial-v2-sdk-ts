@@ -36,16 +36,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Generate types
-        env:
-          GRAPH_URL_ARBITRUM: ${{ secrets.GRAPH_URL_ARBITRUM }}
-        run: pnpm run gen:gql-typings && pnpm run gen:lens-artifact
-
-      - name: Typecheck
-        run: pnpm exec tsc
-
       - name: Lint
         run: pnpm run lint
 
       - name: Check formatting
         run: pnpm run format:check
+
+      - name: Build
+        env:
+          GRAPH_URL_ARBITRUM: ${{ secrets.GRAPH_URL_ARBITRUM }}
+        run: pnpm run build
