@@ -1,60 +1,175 @@
-import { Address, PublicClient, WalletClient, encodeFunctionData, getContract, zeroAddress } from 'viem'
+import { Address, Hex, PublicClient, WalletClient, encodeFunctionData } from 'viem'
 
-import { MultiInvokerV2Addresses, SupportedChainId, chainIdToChainMap } from '..'
+import {
+  Big6Math,
+  ERC20Abi,
+  MarketFactoryAbi,
+  MarketFactoryAddresses,
+  MaxUint256,
+  MultiInvokerV2Addresses,
+  SupportedChainId,
+  USDCAddresses,
+  VaultFactoryAbi,
+  VaultFactoryAddresses,
+  chainIdToChainMap,
+  getUSDCContract,
+  getVaultFactoryContract,
+} from '..'
 import { getMarketFactoryContract } from '..'
 
-export const getOperatorTransactions = ({
+export async function buildApproveUSDCTx({
+  chainId,
+  suggestedAmount = MaxUint256,
+}: {
+  chainId: SupportedChainId
+  suggestedAmount?: bigint
+}) {
+  const data = encodeFunctionData({
+    functionName: 'approve',
+    abi: ERC20Abi,
+    args: [MultiInvokerV2Addresses[chainId], Big6Math.abs(suggestedAmount)],
+  })
+
+  return {
+    data,
+    to: USDCAddresses[chainId],
+    value: 0n,
+  }
+}
+
+export async function buildApproveMarketFactoryTx({ chainId }: { chainId: SupportedChainId }) {
+  const data = encodeFunctionData({
+    abi: MarketFactoryAbi,
+    functionName: 'updateOperator',
+    args: [MultiInvokerV2Addresses[chainId], true],
+  })
+
+  return {
+    to: MarketFactoryAddresses[chainId],
+    value: 0n,
+    data,
+  }
+}
+
+export async function buildApproveVaultFactoryTx({ chainId }: { chainId: SupportedChainId }) {
+  const data = encodeFunctionData({
+    abi: VaultFactoryAbi,
+    functionName: 'updateOperator',
+    args: [MultiInvokerV2Addresses[chainId], true],
+  })
+
+  return {
+    to: VaultFactoryAddresses[chainId],
+    value: 0n,
+    data,
+  }
+}
+
+export async function getUSDCAllowance({
   chainId,
   publicClient,
-  walletClient,
+  address,
 }: {
   chainId: SupportedChainId
   publicClient: PublicClient
-  walletClient?: WalletClient
-}) => {
-  const multiInvokerAddress = MultiInvokerV2Addresses[chainId]
-  const marketFactoryContract = getMarketFactoryContract(chainId, publicClient)
-  const address = walletClient?.account?.address
+  address: Address
+}) {
+  const contract = getUSDCContract(chainId, publicClient)
+  const allowance = await contract.read.allowance([address, MultiInvokerV2Addresses[chainId]])
+  return allowance
+}
 
-  const getApproveMarketFactoryTxData = async () => {
-    const callData = encodeFunctionData({
-      abi: marketFactoryContract.abi,
-      functionName: 'updateOperator',
-      args: [multiInvokerAddress, true],
-    })
+export async function checkMarketFactoryApproval({
+  chainId,
+  publicClient,
+  address,
+}: {
+  chainId: SupportedChainId
+  publicClient: PublicClient
+  address: Address
+}) {
+  const isMarketFactoryApproved = await getMarketFactoryContract(chainId, publicClient).read.operators([
+    address,
+    MultiInvokerV2Addresses[chainId],
+  ])
+  return isMarketFactoryApproved
+}
+
+export async function checkVaultFactoryApproval({
+  chainId,
+  publicClient,
+  address,
+}: {
+  chainId: SupportedChainId
+  publicClient: PublicClient
+  address: Address
+}) {
+  const isVaultFactoryApproved = await getVaultFactoryContract(chainId, publicClient).read.operators([
+    address,
+    MultiInvokerV2Addresses[chainId],
+  ])
+  return isVaultFactoryApproved
+}
+export class OperatorModule {
+  private config: {
+    chainId: SupportedChainId
+    publicClient: PublicClient
+    walletClient?: WalletClient
+  }
+
+  constructor(config: { chainId: SupportedChainId; publicClient: PublicClient; walletClient?: WalletClient }) {
+    this.config = config
+  }
+
+  get read() {
+    return {
+      usdcAllowance: ({ address }: { address: Address }) =>
+        getUSDCAllowance({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+      marketFactoryApproval: ({ address }: { address: Address }) =>
+        checkMarketFactoryApproval({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+      vaultFactoryApproval: ({ address }: { address: Address }) =>
+        checkVaultFactoryApproval({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+    }
+  }
+
+  get build() {
+    return {
+      approveUSDC: ({ suggestedAmount }: { suggestedAmount?: bigint }) =>
+        buildApproveUSDCTx({ chainId: this.config.chainId, suggestedAmount }),
+      approveMarketFactoryTx: () => buildApproveMarketFactoryTx({ chainId: this.config.chainId }),
+      approveVaultFactoryTx: () => buildApproveVaultFactoryTx({ chainId: this.config.chainId }),
+    }
+  }
+
+  get write() {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
+
+    const { chainId } = this.config
+    const address = walletClient.account
+
+    const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
 
     return {
-      to: marketFactoryContract.address,
-      value: 0n,
-      callData,
+      approveUSDC: async ({ suggestedAmount }: { suggestedAmount?: bigint }) => {
+        const tx = await this.build.approveUSDC({ suggestedAmount })
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+
+      approveMarketFactory: async () => {
+        const tx = this.build.approveMarketFactoryTx()
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+
+      approveVaultFactory: async () => {
+        const tx = this.build.approveVaultFactoryTx()
+        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
     }
   }
-
-  const approveMarketFactory = async () => {
-    if (!walletClient || !walletClient.account?.address) throw new Error('No wallet client provided')
-    const factoryContractWritable = getContract({
-      address: marketFactoryContract.address,
-      abi: marketFactoryContract.abi,
-      client: walletClient,
-    })
-    const hash = await factoryContractWritable.write.updateOperator([multiInvokerAddress, true], {
-      account: address ?? zeroAddress,
-      chainId,
-      chain: chainIdToChainMap[chainId],
-    })
-    return hash
-  }
-
-  const checkMarketFactoryApproval = async (address?: Address) => {
-    if (!address && !walletClient?.account?.address) {
-      throw new Error('No address provided')
-    }
-    const isMarketFactoryApproved = await marketFactoryContract.read.operators([
-      address ?? walletClient?.account?.address ?? zeroAddress,
-      MultiInvokerV2Addresses[chainId],
-    ])
-    return isMarketFactoryApproved
-  }
-
-  return { approveMarketFactory, checkMarketFactoryApproval, getApproveMarketFactoryTxData }
 }

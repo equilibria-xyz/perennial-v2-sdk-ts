@@ -1,18 +1,11 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
-import {
-  MaxUint256,
-  OrderTypes,
-  PositionSideV2,
-  SupportedChainId,
-  TriggerComparison,
-  addressToAsset2,
-} from '../../constants'
+import { OrderTypes, PositionSideV2, SupportedChainId, TriggerComparison, addressToAsset2 } from '../../constants'
 import { ReferrerInterfaceFeeInfo, interfaceFeeBps } from '../../constants'
-import { MultiInvokerV2Addresses } from '../../constants/contracts'
+import { MultiInvokerV2Addresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvoker2Action } from '../../types/perennial'
-import { Big6Math, BigOrZero, getOracleContract, notEmpty, nowSeconds } from '../../utils'
+import { Big6Math, BigOrZero, notEmpty, nowSeconds } from '../../utils'
 import {
   EmptyInterfaceFee,
   buildCancelOrder,
@@ -22,37 +15,18 @@ import {
 } from '../../utils/multiinvokerV2'
 import { calcInterfaceFee } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
-import { getMultiInvokerV2Contract, getPythFactoryContract, getUSDCContract } from '../contracts'
+import { getMultiInvokerV2Contract, getOracleContract, getPythFactoryContract, getUSDCContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOraclesV2, fetchMarketSnapshotsV2 } from './chain'
 import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'
+import { MultiInvoker2Abi, PythFactoryAbi } from '@/index'
 
-export async function buildApproveUSDCTx({
-  chainId,
-  publicClient,
-  suggestedAmount = MaxUint256,
-}: {
+type WithChainIdAndPublicClient = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  suggestedAmount: bigint
-}) {
-  const usdcContract = getUSDCContract(chainId, publicClient)
-  const data = encodeFunctionData({
-    functionName: 'approve',
-    abi: usdcContract.abi,
-    args: [MultiInvokerV2Addresses[chainId], Big6Math.abs(suggestedAmount)],
-  })
-
-  return {
-    data,
-    to: usdcContract.address,
-    value: 0n,
-  }
 }
 
 export type BuildModifyPositionTxArgs = {
-  chainId: SupportedChainId
-  publicClient: PublicClient
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
@@ -70,7 +44,7 @@ export type BuildModifyPositionTxArgs = {
   interfaceFeeRate?: typeof interfaceFeeBps
   referralFeeRate?: ReferrerInterfaceFeeInfo
   onCommitmentError?: () => any
-}
+} & WithChainIdAndPublicClient
 
 export async function buildModifyPositionTx({
   chainId,
@@ -292,26 +266,14 @@ export async function buildModifyPositionTx({
 
 export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
-  publicClient: PublicClient
-  marketAddress: Address
-  marketSnapshots?: MarketSnapshots
-  marketOracles?: MarketOracles
   pythClient: EvmPriceServiceConnection
+  marketAddress: Address
+  marketSnapshots: MarketSnapshots
+  marketOracles: MarketOracles
   address: Address
 }
 
-export async function buildSubmitVaaTx({
-  chainId,
-  publicClient,
-  marketAddress,
-  marketOracles,
-  pythClient,
-  address,
-}: BuildSubmitVaaTxArgs) {
-  if (!address || !chainId || !marketOracles || !pythClient) {
-    return
-  }
-
+export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, pythClient }: BuildSubmitVaaTxArgs) {
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
@@ -320,25 +282,22 @@ export async function buildSubmitVaaTx({
     feeds: [oracleInfo],
   })
 
-  const pythFactory = getPythFactoryContract(chainId, publicClient)
   const data = encodeFunctionData({
     functionName: 'commit',
-    abi: pythFactory.abi,
+    abi: PythFactoryAbi,
     args: [[oracleInfo.providerId], version, vaa as Hex],
   })
   return {
     data,
-    to: pythFactory.address,
+    to: PythFactoryAddresses[chainId],
     value: 1n,
   }
 }
 
 export type BuildPlaceOrderTxArgs = {
-  address: Address
-  chainId: SupportedChainId
   pythClient: EvmPriceServiceConnection
+  address: Address
   marketOracles: MarketOracles
-  publicClient: PublicClient
   marketAddress: Address
   marketSnapshots: MarketSnapshots
   orderType: OrderTypes
@@ -354,7 +313,7 @@ export type BuildPlaceOrderTxArgs = {
   interfaceFeeRate?: typeof interfaceFeeBps
   cancelOrderDetails?: { market: Address; nonce: bigint }
   onCommitmentError?: () => any
-}
+} & WithChainIdAndPublicClient
 
 export async function buildPlaceOrderTx({
   address,
@@ -575,13 +534,13 @@ export async function buildPlaceOrderTx({
     }
   }
 
-  const callData = encodeFunctionData({
+  const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
     args: [actions],
   })
   return {
-    callData,
+    data,
     to: multiInvoker.address,
     value: 1n,
   }
@@ -589,28 +548,25 @@ export async function buildPlaceOrderTx({
 
 export function buildCancelOrderTx({
   chainId,
-  publicClient,
   orderDetails,
 }: {
   chainId: SupportedChainId
-  publicClient: PublicClient
   orderDetails: [Address, bigint][]
 }) {
-  const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
   const actions: MultiInvoker2Action[] = orderDetails.map(([market, nonce]) =>
     buildCancelOrder({
       market,
       nonce,
     }),
   )
-  const callData = encodeFunctionData({
+  const data = encodeFunctionData({
     functionName: 'invoke',
-    abi: multiInvoker.abi,
+    abi: MultiInvoker2Abi,
     args: [actions],
   })
   return {
-    callData,
-    to: multiInvoker.address,
-    value: 1n,
+    data,
+    to: MultiInvokerV2Addresses[chainId],
+    value: 0n,
   }
 }

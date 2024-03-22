@@ -22,7 +22,6 @@ import {
   fetchSubPositions,
 } from './graph'
 import {
-  buildApproveUSDCTx,
   buildCancelOrderTx,
   buildModifyPositionTx,
   BuildModifyPositionTxArgs,
@@ -193,110 +192,32 @@ export class MarketsModule {
 
   get build() {
     return {
-      approveUSDC: (suggestedAmount = MaxUint256) => {
-        return buildApproveUSDCTx({
-          chainId: this.config.chainId,
-          publicClient: this.config.publicClient,
-          suggestedAmount,
-        })
-      },
-      modifyPosition: ({
-        marketAddress,
-        marketSnapshots,
-        marketOracles,
-        pythClient,
-        address,
-        positionSide,
-        positionAbs,
-        collateralDelta,
-        stopLoss,
-        takeProfit,
-        settlementFee,
-        cancelOrderDetails,
-        absDifferenceNotional,
-        interfaceFee,
-        interfaceFeeRate = interfaceFeeBps,
-        referralFeeRate,
-        onCommitmentError,
-      }: BuildModifyPositionTxArgs) => {
+      modifyPosition: (args: Omit<BuildModifyPositionTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
         return buildModifyPositionTx({
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
-          marketAddress,
-          marketSnapshots,
-          marketOracles,
-          pythClient,
-          address,
-          positionSide,
-          positionAbs,
-          collateralDelta,
-          stopLoss,
-          takeProfit,
-          settlementFee,
-          cancelOrderDetails,
-          absDifferenceNotional,
-          interfaceFee,
-          interfaceFeeRate,
-          referralFeeRate,
-          onCommitmentError,
+          pythClient: this.config.pythClient,
+          ...args,
         })
       },
-      submitVaa: ({ marketAddress, marketOracles, pythClient, address }: BuildSubmitVaaTxArgs) => {
+      submitVaa: (args: Omit<BuildSubmitVaaTxArgs, 'chainId' | 'pythClient'>) => {
         return buildSubmitVaaTx({
           chainId: this.config.chainId,
-          publicClient: this.config.publicClient,
-          marketAddress,
-          marketOracles,
-          pythClient,
-          address,
+          pythClient: this.config.pythClient,
+          ...args,
         })
       },
-      placeOrder: ({
-        address,
-        marketOracles,
-        marketAddress,
-        orderType,
-        limitPrice,
-        marketSnapshots,
-        collateralDelta,
-        stopLoss,
-        takeProfit,
-        side,
-        delta = 0n,
-        positionAbs,
-        selectedLimitComparison,
-        cancelOrderDetails,
-        referralFeeRate,
-        interfaceFeeRate = interfaceFeeBps,
-        onCommitmentError,
-      }: BuildPlaceOrderTxArgs) => {
+      placeOrder: (args: Omit<BuildPlaceOrderTxArgs, 'chainId' | 'pythClient' | 'publicClient'>) => {
         return buildPlaceOrderTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
-          address,
-          marketOracles,
-          marketAddress,
-          orderType,
-          limitPrice,
-          marketSnapshots,
-          collateralDelta,
-          stopLoss,
-          takeProfit,
-          side,
-          delta,
-          positionAbs,
-          selectedLimitComparison,
-          cancelOrderDetails,
-          referralFeeRate,
-          interfaceFeeRate,
-          onCommitmentError,
+          ...args,
         })
       },
       cancelOrder: (orderDetails: [Address, bigint][]) => {
         return buildCancelOrderTx({
           chainId: this.config.chainId,
-          publicClient: this.config.publicClient,
           orderDetails,
         })
       },
@@ -304,41 +225,35 @@ export class MarketsModule {
   }
 
   get write() {
-    if (!this.config.walletClient || !this.config.walletClient.account) {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
       throw new Error('Wallet client required for write methods.')
     }
 
-    const {
-      chainId,
-      walletClient: { account: address },
-    } = this.config
+    const { chainId } = this.config
+    const address = walletClient.account
 
     const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
 
     return {
-      approveUSDC: async (suggestedAmount = MaxUint256) => {
-        const tx = await this.build.approveUSDC(suggestedAmount)
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+      modifyPosition: async (...args: Parameters<typeof this.build.modifyPosition>) => {
+        const tx = await this.build.modifyPosition(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
-      modifyPosition: async (args: BuildModifyPositionTxArgs) => {
-        const tx = await this.build.modifyPosition(args)
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+      submitVaa: async (...args: Parameters<typeof this.build.submitVaa>) => {
+        const tx = await this.build.submitVaa(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
-      submitVaa: async (args: BuildSubmitVaaTxArgs) => {
-        const tx = await this.build.submitVaa(args)
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
-        return hash
-      },
-      placeOrder: async (args: BuildPlaceOrderTxArgs) => {
-        const tx = await this.build.placeOrder(args)
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+      placeOrder: async (...args: Parameters<typeof this.build.placeOrder>) => {
+        const tx = await this.build.placeOrder(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
       cancelOrder: async (orderDetails: [Address, bigint][]) => {
         const tx = this.build.cancelOrder(orderDetails)
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
     }

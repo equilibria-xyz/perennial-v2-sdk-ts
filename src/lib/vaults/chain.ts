@@ -27,11 +27,11 @@ import { PerennialVaultType, chainVaultsWithAddress } from '../../constants/vaul
 import { notEmpty, sum } from '../../utils/arrayUtils'
 import { Big6Math } from '../../utils/big6Utils'
 import { Big18Math } from '../../utils/big18Utils'
-import { getVaultContract } from '../../utils/contractUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOraclesV2 } from '../markets/chain'
+import { getVaultContract } from '..'
 
-export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshotsV2>>>
+export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
 export type VaultSnapshot2 = ChainVaultSnapshot & {
   pre: ChainVaultSnapshot
   assets: { asset: SupportedAsset; weight: bigint }[]
@@ -40,7 +40,7 @@ export type VaultAccountSnapshot2 = ChainVaultAccountSnapshot & {
   pre: ChainVaultAccountSnapshot
 }
 
-export async function fetchVaultSnapshotsV2({
+export async function fetchVaultSnapshots({
   chainId,
   publicClient,
   address = zeroAddress,
@@ -79,25 +79,31 @@ export async function fetchVaultSnapshotsV2({
     resetPythError: onSuccess,
   })
 
-  const vaultSnapshots = snapshotData.vault.reduce((acc, vaultData) => {
-    acc[vaultData.vaultType] = {
-      ...vaultData,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      pre: snapshotData.vaultPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      assets: vaultData.registrations.map((r) => ({ weight: r.weight, asset: addressToAsset2(r.market)! })),
-    }
-    return acc
-  }, {} as { [key in PerennialVaultType]?: VaultSnapshot2 })
+  const vaultSnapshots = snapshotData.vault.reduce(
+    (acc, vaultData) => {
+      acc[vaultData.vaultType] = {
+        ...vaultData,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        pre: snapshotData.vaultPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        assets: vaultData.registrations.map((r) => ({ weight: r.weight, asset: addressToAsset2(r.market)! })),
+      }
+      return acc
+    },
+    {} as { [key in PerennialVaultType]?: VaultSnapshot2 },
+  )
 
-  const userSnapshots = snapshotData.user.reduce((acc, vaultData) => {
-    acc[vaultData.vaultType] = {
-      ...vaultData,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      pre: snapshotData.userPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
-    }
-    return acc
-  }, {} as { [key in PerennialVaultType]?: VaultAccountSnapshot2 })
+  const userSnapshots = snapshotData.user.reduce(
+    (acc, vaultData) => {
+      acc[vaultData.vaultType] = {
+        ...vaultData,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        pre: snapshotData.userPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
+      }
+      return acc
+    },
+    {} as { [key in PerennialVaultType]?: VaultAccountSnapshot2 },
+  )
 
   return {
     user: address === zeroAddress ? undefined : userSnapshots,
@@ -302,8 +308,11 @@ export async function fetchVaultPositionHistory({
     }),
   )
 
-  return vaultPositionHistory.reduce((acc, vaultData) => {
-    acc[vaultData.vault] = vaultData
-    return acc
-  }, {} as Record<PerennialVaultType, (typeof vaultPositionHistory)[number]>)
+  return vaultPositionHistory.reduce(
+    (acc, vaultData) => {
+      acc[vaultData.vault] = vaultData
+      return acc
+    },
+    {} as Record<PerennialVaultType, (typeof vaultPositionHistory)[number]>,
+  )
 }
