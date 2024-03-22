@@ -144,14 +144,14 @@ export {
 /* #################### ABIs #################### */
 
 export { ERC20Abi } from './abi/ERC20.abi'
-export { Lens2Abi } from './abi/Lens2.abi'
+export { LensAbi } from './abi/Lens.abi'
 export { MarketAbi } from './abi/Market.abi'
 export { MarketFactoryAbi } from './abi/MarketFactory.abi'
 export { MultiInvoker2Abi } from './abi/MultiInvoker2.abi'
 export { OracleAbi } from './abi/Oracle.abi'
 export { VaultAbi } from './abi/Vault.abi'
 export { VaultFactoryAbi } from './abi/VaultFactory.abi'
-export { VaultLens2Abi } from './abi/VaultLens2.abi'
+export { VaultLensAbi } from './abi/VaultLens.abi'
 export { KeeperOracleAbi } from './abi/KeeperOracle.abi'
 export { PythFactoryAbi } from './abi/PythFactory.abi'
 

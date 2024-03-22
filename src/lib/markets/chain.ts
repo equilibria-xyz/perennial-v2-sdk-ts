@@ -25,8 +25,7 @@ import {
   chainAssetsWithAddress,
   notEmpty,
 } from '../..'
-import LensArtifact from '../../../artifacts/contracts/Lens.sol/Lens.json'
-import { Lens2Abi } from '../../abi/Lens2.abi'
+import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { getRpcURLFromPublicClient } from '../../constants/network'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
@@ -314,7 +313,7 @@ async function fetchMarketSnapshotsAfterSettle({
     to: lensAddress,
     from: address,
     data: encodeFunctionData({
-      abi: Lens2Abi,
+      abi: LensAbi,
       functionName: 'snapshot',
       args: [priceCommitments, marketAddresses, address],
     }),
@@ -335,7 +334,7 @@ async function fetchMarketSnapshotsAfterSettle({
         {
           // state diff overrides
           [lensAddress]: {
-            code: LensArtifact.deployedBytecode,
+            code: LensDeployedBytecode,
             balance: toHex(parseEther('1000')),
           },
         },
@@ -343,7 +342,7 @@ async function fetchMarketSnapshotsAfterSettle({
     }),
   })
   const batchRes = (await alchemyRes.json()) as { result: Hex }
-  const lensRes = decodeFunctionResult({ abi: Lens2Abi, functionName: 'snapshot', data: batchRes.result })
+  const lensRes = decodeFunctionResult({ abi: LensAbi, functionName: 'snapshot', data: batchRes.result })
 
   return {
     commitments: lensRes.commitmentStatus,

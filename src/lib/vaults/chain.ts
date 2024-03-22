@@ -15,10 +15,8 @@ import {
   zeroAddress,
 } from 'viem'
 
-import LensArtifact from '../../../artifacts/contracts/Lens.sol/Lens.json'
-import VaultLensArtifact from '../../../artifacts/contracts/Lens.sol/VaultLens.json'
 import { VaultAbi } from '../../abi/Vault.abi'
-import { VaultLens2Abi } from '../../abi/VaultLens2.abi'
+import { VaultLensAbi, VaultLensDeployedBytecode } from '../../abi/VaultLens.abi'
 import { DSUAddresses, MultiInvokerV2Addresses } from '../../constants/contracts'
 import { SupportedAsset, addressToAsset2 } from '../../constants/markets'
 import { SupportedChainId, getRpcURLFromPublicClient } from '../../constants/network'
@@ -30,6 +28,7 @@ import { Big18Math } from '../../utils/big18Utils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { getVaultContract } from '..'
+import { LensDeployedBytecode } from '../../abi/Lens.abi'
 
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
 export type VaultSnapshot2 = ChainVaultSnapshot & {
@@ -153,7 +152,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
     to: vaultLensAddress,
     from: address,
     data: encodeFunctionData({
-      abi: VaultLens2Abi,
+      abi: VaultLensAbi,
       functionName: 'snapshot',
       args: [priceCommitments, lensAddress, vaultAddresses, address, MultiInvokerV2Addresses[chainId]],
     }),
@@ -172,11 +171,11 @@ const fetchVaultSnapshotsAfterSettle = async ({
         {
           // state diff overrides
           [lensAddress]: {
-            code: LensArtifact.deployedBytecode,
+            code: LensDeployedBytecode,
             balance: toHex(Big18Math.fromFloatString('1000')),
           },
           [vaultLensAddress]: {
-            code: VaultLensArtifact.deployedBytecode,
+            code: VaultLensDeployedBytecode,
             balance: toHex(Big18Math.fromFloatString('1000')),
           },
           // Grant DSU to vault lens to allow for settlement
@@ -192,7 +191,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
     }),
   })
   const batchRes = (await alchemyRes.json()) as { result: Hex }
-  const lensRes = decodeFunctionResult({ abi: VaultLens2Abi, functionName: 'snapshot', data: batchRes.result })
+  const lensRes = decodeFunctionResult({ abi: VaultLensAbi, functionName: 'snapshot', data: batchRes.result })
 
   return {
     commitments: lensRes.commitmentStatus,
