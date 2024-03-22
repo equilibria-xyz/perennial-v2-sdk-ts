@@ -10,7 +10,7 @@ async function run() {
     graphUrl: process.env.GRAPH_URL_ARBITRUM_2!,
     pythUrl: process.env.P2P_HERMES_URL!,
   })
-  const marketOracles = await sdk.markets.read.marketOraclesV2()
+  const marketOracles = await sdk.markets.build.approveUSDC(2323232n)
   console.log(marketOracles)
 }
 
