@@ -297,9 +297,9 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
 export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
   address: Address
-  marketOracles: MarketOracles
+  marketOracles?: MarketOracles
   marketAddress: Address
-  marketSnapshots: MarketSnapshots
+  marketSnapshots?: MarketSnapshots
   orderType: OrderTypes
   limitPrice?: bigint
   stopLoss?: bigint
@@ -343,6 +343,16 @@ export async function buildPlaceOrderTx({
 
   if (!marketOracles) {
     marketOracles = await fetchMarketOracles(chainId, publicClient)
+  }
+
+  if (!marketSnapshots) {
+    marketSnapshots = await fetchMarketSnapshots({
+      publicClient,
+      chainId,
+      address,
+      marketOracles,
+      pythClient,
+    })
   }
 
   const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
