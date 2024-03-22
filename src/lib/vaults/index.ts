@@ -52,14 +52,14 @@ export class VaultsModule {
           onSuccess,
         })
       },
-      fetchVaultPositionHistory: ({ address = zeroAddress }: { address?: Address }) => {
+      vaultPositionHistory: ({ address = zeroAddress }: { address?: Address }) => {
         return fetchVaultPositionHistory({
           chainId: this.config.chainId,
           address,
           publicClient: this.config.publicClient,
         })
       },
-      fetchVault7dAccumulations: ({
+      vault7dAccumulations: ({
         vaultAddress,
         vaultSnapshot,
         latestBlockNumber,
