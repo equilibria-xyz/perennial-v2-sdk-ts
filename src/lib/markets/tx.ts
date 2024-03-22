@@ -297,7 +297,7 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
 export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
   address: Address
-  marketOracles: MarketOracles
+  marketOracles?: MarketOracles
   marketAddress: Address
   marketSnapshots: MarketSnapshots
   orderType: OrderTypes
