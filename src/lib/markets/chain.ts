@@ -32,11 +32,6 @@ import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot }
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { getMarketContract, getMarketFactoryContract, getOracleContract, getPythFactoryContract } from '../contracts'
 
-export function fetchProtocolParameter(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
-  const marketFactory = getMarketFactoryContract(chainId, publicClient)
-  return marketFactory.read.parameter()
-}
-
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
 export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
