@@ -1,9 +1,12 @@
 {
   "name": "@perennial/sdk",
-  "version": "0.0.1-beta0",
+  "version": "0.0.1-beta2",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "packageManager": "pnpm@8.15.5",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
