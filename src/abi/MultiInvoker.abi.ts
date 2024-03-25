@@ -1,4 +1,4 @@
-export const MultiInvoker2Abi = [
+export const MultiInvokerAbi = [
   {
     inputs: [
       {

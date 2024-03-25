@@ -3,7 +3,7 @@ import { Address, getAddress } from 'viem'
 
 import { gql } from '../../types/gql'
 import { AccumulatorType, AccumulatorTypes, BigOrZero, last7dBounds } from '../../utils'
-import { VaultSnapshot2 } from './chain'
+import { VaultSnapshot } from './chain'
 
 export async function fetchVault7dAccumulations({
   vaultAddress,
@@ -12,7 +12,7 @@ export async function fetchVault7dAccumulations({
   latestBlockNumber,
 }: {
   vaultAddress: Address
-  vaultSnapshot: VaultSnapshot2
+  vaultSnapshot: VaultSnapshot
   graphClient: GraphQLClient
   latestBlockNumber: bigint
 }) {

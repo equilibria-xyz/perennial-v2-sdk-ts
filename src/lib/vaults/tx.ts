@@ -1,14 +1,14 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, PublicClient, encodeFunctionData, zeroAddress } from 'viem'
 
-import { getMultiInvokerV2Contract } from '..'
+import { getMultiInvokerContract } from '..'
 import { MaxUint256, SupportedChainId, chainVaultsWithAddress } from '../../constants'
-import { MultiInvoker2Action } from '../../types/perennial'
+import { MultiInvokerAction } from '../../types/perennial'
 import { Big6Math, notEmpty, sum } from '../../utils'
-import { buildCommitPrice, buildUpdateVault } from '../../utils/multiinvokerV2'
+import { buildCommitPrice, buildUpdateVault } from '../../utils/multiinvoker'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
-import { VaultSnapshot2, VaultSnapshots, fetchVaultSnapshots } from './chain'
+import { VaultSnapshot, VaultSnapshots, fetchVaultSnapshots } from './chain'
 
 type BaseVaultUpdateTxArgs = {
   chainId: SupportedChainId
@@ -89,11 +89,11 @@ const buildPerformVaultUpdateTx = async ({
   vaultAddress,
   marketOracles,
   vaultSnapshots,
-}: BaseVaultUpdateTxArgs & { baseAction: MultiInvoker2Action }) => {
+}: BaseVaultUpdateTxArgs & { baseAction: MultiInvokerAction }) => {
   const vaultType = chainVaultsWithAddress(chainId).find(({ vaultAddress: v }) => v === vaultAddress)
   if (!vaultType) throw new Error('Invalid Vault')
 
-  const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
+  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
   if (!marketOracles) {
     marketOracles = await fetchMarketOracles(chainId, publicClient)
   }
@@ -142,7 +142,7 @@ const commitmentsForVaultAction = async ({
 }: {
   chainId: SupportedChainId
   pyth: EvmPriceServiceConnection
-  preMarketSnapshots: VaultSnapshot2['pre']['marketSnapshots']
+  preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
   marketOracles: MarketOracles
   publicClient: PublicClient
 }) => {
@@ -167,7 +167,7 @@ const commitmentsForVaultAction = async ({
   }))
 }
 
-const convertAssetsToShares = ({ vaultSnapshot, assets }: { vaultSnapshot: VaultSnapshot2; assets: bigint }) => {
+const convertAssetsToShares = ({ vaultSnapshot, assets }: { vaultSnapshot: VaultSnapshot; assets: bigint }) => {
   const totalAssets = Big6Math.max(vaultSnapshot.totalAssets, 0n)
   const totalShares = vaultSnapshot.totalShares
   if (totalShares === 0n) return assets

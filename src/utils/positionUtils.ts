@@ -1,7 +1,7 @@
 import { Address, encodeErrorResult } from 'viem'
 
 import { MarketAbi } from '..'
-import { PositionSideV2, PositionStatus, SupportedAsset, SupportedChainId, interfaceFeeBps } from '../constants'
+import { PositionSide, PositionStatus, SupportedAsset, SupportedChainId, interfaceFeeBps } from '../constants'
 import { MaxUint256 } from '../constants/units'
 import { MarketSnapshot, MarketSnapshots, UserMarketSnapshot } from '../lib'
 import { Big6Math, formatBig6Percent } from './big6Utils'
@@ -14,12 +14,12 @@ export function magnitude(maker: bigint | string, long: bigint | string, short: 
   return Big6Math.max(BigInt(maker), Big6Math.max(BigInt(long), BigInt(short)))
 }
 
-export function side2(maker: bigint | string, long: bigint | string, short: bigint | string): PositionSideV2 {
-  if (BigInt(maker) > 0n) return PositionSideV2.maker
-  if (BigInt(long) > 0n) return PositionSideV2.long
-  if (BigInt(short) > 0n) return PositionSideV2.short
+export function side(maker: bigint | string, long: bigint | string, short: bigint | string): PositionSide {
+  if (BigInt(maker) > 0n) return PositionSide.maker
+  if (BigInt(long) > 0n) return PositionSide.long
+  if (BigInt(short) > 0n) return PositionSide.short
 
-  return PositionSideV2.none
+  return PositionSide.none
 }
 
 export function efficiency(maker: bigint, major: bigint) {
@@ -127,26 +127,26 @@ export const getPositionFromSelectedMarket = ({
   if (isMaker) {
     // TODO: we need to check also if the user has collateral
     const userMarketSnapshot = userMarketSnapshots[selectedMakerMarket]
-    return [userMarketSnapshot.side, userMarketSnapshot.nextSide].includes(PositionSideV2.maker)
+    return [userMarketSnapshot.side, userMarketSnapshot.nextSide].includes(PositionSide.maker)
       ? userMarketSnapshot
       : undefined
   }
   const userMarketSnapshot = userMarketSnapshots[selectedMarket]
-  return [PositionSideV2.long, PositionSideV2.short].includes(userMarketSnapshot.side) ||
-    [PositionSideV2.long, PositionSideV2.short].includes(userMarketSnapshot.nextSide)
+  return [PositionSide.long, PositionSide.short].includes(userMarketSnapshot.side) ||
+    [PositionSide.long, PositionSide.short].includes(userMarketSnapshot.nextSide)
     ? userMarketSnapshot
     : undefined
 }
 
 export function getSideFromPosition(position?: UserMarketSnapshot['position']) {
-  if (!position) return PositionSideV2.none
+  if (!position) return PositionSide.none
   return position.maker > 0n
-    ? PositionSideV2.maker
+    ? PositionSide.maker
     : position.long > 0n
-      ? PositionSideV2.long
+      ? PositionSide.long
       : position.short > 0n
-        ? PositionSideV2.short
-        : PositionSideV2.none
+        ? PositionSide.short
+        : PositionSide.none
 }
 
 export function getStatusForSnapshot(
@@ -196,8 +196,8 @@ export function calcLpExposure(marketSnapshot?: MarketSnapshot) {
     nextPosition: { long, short, maker },
   } = marketSnapshot
 
-  const majorPosition = majorSide === PositionSideV2.long ? long : short
-  const minorPosition = majorSide === PositionSideV2.long ? short : long
+  const majorPosition = majorSide === PositionSide.long ? long : short
+  const minorPosition = majorSide === PositionSide.long ? short : long
 
   const lpExposure = maker > 0n ? Big6Math.div(majorPosition - minorPosition, maker) : 0n
 
@@ -253,7 +253,7 @@ export const calcTradeFee = ({
   positionDelta: bigint
   marketSnapshot?: MarketSnapshot
   isMaker: boolean
-  direction: PositionSideV2
+  direction: PositionSide
 }) => {
   const noValue = { total: 0n, impactFee: 0n, skewFee: 0n, feeBasisPoints: 0n }
   if (!marketSnapshot || !positionDelta) return noValue
@@ -280,8 +280,8 @@ export const calcTradeFee = ({
     return { impactFee, total, skewFee: undefined, feeBasisPoints }
   }
 
-  const adjustedLong = direction === PositionSideV2.long ? long + positionDelta : long
-  const adjustedShort = direction === PositionSideV2.short ? short + positionDelta : short
+  const adjustedLong = direction === PositionSide.long ? long + positionDelta : long
+  const adjustedShort = direction === PositionSide.short ? short + positionDelta : short
   const major = Big6Math.max(adjustedLong, adjustedShort)
   const calculatedSkew = calcSkew(marketSnapshot)
   const currentSkew = calculatedSkew?.skew ?? 0n
@@ -318,7 +318,7 @@ export function calcEstExecutionPrice({
   oraclePrice: bigint
   calculatedFee: bigint
   positionFee: bigint // marketSnapshot.parameter.positionFee
-  orderDirection: PositionSideV2.long | PositionSideV2.short
+  orderDirection: PositionSide.long | PositionSide.short
 }) {
   const notional = calcNotional(positionDelta, oraclePrice)
   const priceImpact = calcPriceImpactFromTradeFee({ totalTradeFee: calculatedFee, positionFee })
@@ -327,7 +327,7 @@ export function calcEstExecutionPrice({
 
   return {
     priceImpact: fee,
-    total: orderDirection === PositionSideV2.long ? oraclePrice + fee : oraclePrice - fee,
+    total: orderDirection === PositionSide.long ? oraclePrice + fee : oraclePrice - fee,
     priceImpactPercentage,
     nonPriceImpactFee: calculatedFee - priceImpact,
   }
@@ -346,14 +346,14 @@ export function calcInterfaceFee({
   latestPrice: bigint
   chainId: SupportedChainId
   positionDelta: bigint
-  side: PositionSideV2
+  side: PositionSide
   referrerInterfaceFeeDiscount: bigint
   referrerInterfaceFeeShare: bigint
 }) {
   const feeInfo = interfaceFeeBps[chainId]
   if (!latestPrice || !positionDelta || !feeInfo || positionStatus === PositionStatus.failed) {
     return {
-      interfaceFeeBps: feeInfo?.feeAmount[PositionSideV2.none] ?? 0n,
+      interfaceFeeBps: feeInfo?.feeAmount[PositionSide.none] ?? 0n,
       interfaceFee: 0n,
       referrerFee: 0n,
       ecosystemFee: 0n,
@@ -387,14 +387,14 @@ export function calcTotalPositionChangeFee({
   chainId: SupportedChainId
   positionDelta: bigint
   marketSnapshot?: MarketSnapshot
-  direction: PositionSideV2
+  direction: PositionSide
   positionStatus?: PositionStatus
   referrerInterfaceFeeDiscount: bigint
 }) {
   const tradeFee = calcTradeFee({
     positionDelta,
     marketSnapshot,
-    isMaker: direction === PositionSideV2.maker,
+    isMaker: direction === PositionSide.maker,
     direction,
   })
   const interfaceFee = calcInterfaceFee({

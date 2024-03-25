@@ -6,7 +6,7 @@ import {
   MarketFactoryAbi,
   MarketFactoryAddresses,
   MaxUint256,
-  MultiInvokerV2Addresses,
+  MultiInvokerAddresses,
   SupportedChainId,
   USDCAddresses,
   VaultFactoryAbi,
@@ -27,7 +27,7 @@ export async function buildApproveUSDCTx({
   const data = encodeFunctionData({
     functionName: 'approve',
     abi: ERC20Abi,
-    args: [MultiInvokerV2Addresses[chainId], Big6Math.abs(suggestedAmount)],
+    args: [MultiInvokerAddresses[chainId], Big6Math.abs(suggestedAmount)],
   })
 
   return {
@@ -41,7 +41,7 @@ export async function buildApproveMarketFactoryTx({ chainId }: { chainId: Suppor
   const data = encodeFunctionData({
     abi: MarketFactoryAbi,
     functionName: 'updateOperator',
-    args: [MultiInvokerV2Addresses[chainId], true],
+    args: [MultiInvokerAddresses[chainId], true],
   })
 
   return {
@@ -55,7 +55,7 @@ export async function buildApproveVaultFactoryTx({ chainId }: { chainId: Support
   const data = encodeFunctionData({
     abi: VaultFactoryAbi,
     functionName: 'updateOperator',
-    args: [MultiInvokerV2Addresses[chainId], true],
+    args: [MultiInvokerAddresses[chainId], true],
   })
 
   return {
@@ -75,7 +75,7 @@ export async function getUSDCAllowance({
   address: Address
 }) {
   const contract = getUSDCContract(chainId, publicClient)
-  const allowance = await contract.read.allowance([address, MultiInvokerV2Addresses[chainId]])
+  const allowance = await contract.read.allowance([address, MultiInvokerAddresses[chainId]])
   return allowance
 }
 
@@ -90,7 +90,7 @@ export async function checkMarketFactoryApproval({
 }) {
   const isMarketFactoryApproved = await getMarketFactoryContract(chainId, publicClient).read.operators([
     address,
-    MultiInvokerV2Addresses[chainId],
+    MultiInvokerAddresses[chainId],
   ])
   return isMarketFactoryApproved
 }
@@ -106,7 +106,7 @@ export async function checkVaultFactoryApproval({
 }) {
   const isVaultFactoryApproved = await getVaultFactoryContract(chainId, publicClient).read.operators([
     address,
-    MultiInvokerV2Addresses[chainId],
+    MultiInvokerAddresses[chainId],
   ])
   return isVaultFactoryApproved
 }

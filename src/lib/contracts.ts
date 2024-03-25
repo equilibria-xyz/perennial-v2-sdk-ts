@@ -3,13 +3,13 @@ import { Address, GetContractReturnType, PublicClient, WalletClient, getContract
 import { DefaultChain, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
-import { MultiInvoker2Abi } from '../abi/MultiInvoker2.abi'
+import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { PythFactoryAbi } from '../abi/PythFactory.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'
 import {
   DSUAddresses,
   MarketFactoryAddresses,
-  MultiInvokerV2Addresses,
+  MultiInvokerAddresses,
   PythFactoryAddresses,
   USDCAddresses,
   VaultFactoryAddresses,
@@ -33,10 +33,10 @@ export const getUSDCContract = (chainId: SupportedChainId = DefaultChain.id, pub
   return contract
 }
 
-export const getMultiInvokerV2Contract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
+export const getMultiInvokerContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
   const contract = getContract({
-    address: MultiInvokerV2Addresses[chainId],
-    abi: MultiInvoker2Abi,
+    address: MultiInvokerAddresses[chainId],
+    abi: MultiInvokerAbi,
     client: { public: publicClient },
   })
 
@@ -121,8 +121,8 @@ export class ContractsModule {
     return getUSDCContract(this.config.chainId, this.config.publicClient)
   }
 
-  public getMultiInvokerV2Contract() {
-    return getMultiInvokerV2Contract(this.config.chainId, this.config.publicClient)
+  public getMultiInvokerContract() {
+    return getMultiInvokerContract(this.config.chainId, this.config.publicClient)
   }
 
   public getMarketFactoryContract() {

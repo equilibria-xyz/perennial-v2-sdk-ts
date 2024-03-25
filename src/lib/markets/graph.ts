@@ -1,20 +1,14 @@
 import { GraphQLClient } from 'graphql-request'
 import { Address, getAddress } from 'viem'
 
-import {
-  PositionSideV2,
-  SupportedAsset,
-  SupportedChainId,
-  addressToAsset2,
-  chainAssetsWithAddress,
-} from '../../constants'
+import { PositionSide, SupportedAsset, SupportedChainId, addressToAsset, chainAssetsWithAddress } from '../../constants'
 import { gql } from '../../types/gql'
-import { MarketsAccountCheckpointsQuery, PositionSide } from '../../types/gql/graphql'
+import { MarketsAccountCheckpointsQuery, PositionSide as PositionSideGraph } from '../../types/gql/graphql'
 import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum } from '../../utils'
 import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
-import { calcNotional, calcPriceImpactFromTradeFee, magnitude, side2 } from '../../utils/positionUtils'
+import { calcNotional, calcPriceImpactFromTradeFee, magnitude, side as positionSide } from '../../utils/positionUtils'
 import { MarketSnapshots } from './chain'
 
 export type Markets = {
@@ -309,7 +303,7 @@ export async function fetchHistoricalPositions({
         markets: markets.map(({ marketAddress }) => marketAddress),
         first: GraphDefaultPageSize,
         skip: pageNumber * GraphDefaultPageSize,
-        sides: maker ? [PositionSide.Maker] : [PositionSide.Long, PositionSide.Short],
+        sides: maker ? [PositionSideGraph.Maker] : [PositionSideGraph.Long, PositionSideGraph.Short],
       }),
     ))
 
@@ -365,7 +359,7 @@ async function fetchPositionData({
   startVersion: bigint
   endVersion: bigint | null
 }) {
-  const asset = addressToAsset2(market)
+  const asset = addressToAsset(market)
   if (!asset) return
 
   const accountPositionCheckpointDeltas = gql(`
@@ -431,7 +425,7 @@ async function fetchPositionData({
 
   const startSize = BigInt(start.startMagnitude)
   const side =
-    start.side === 'maker' ? PositionSideV2.maker : start.side === 'long' ? PositionSideV2.long : PositionSideV2.short
+    start.side === 'maker' ? PositionSide.maker : start.side === 'long' ? PositionSide.long : PositionSide.short
   const startCollateral =
     BigInt(start.collateral) +
     BigOrZero(firstAccumulation?.accumulationResult_positionFee) +
@@ -463,7 +457,7 @@ async function fetchPositionData({
   const position = {
     market,
     asset,
-    side: side === 'maker' ? PositionSideV2.maker : side === 'long' ? PositionSideV2.long : PositionSideV2.short,
+    side: side === 'maker' ? PositionSide.maker : side === 'long' ? PositionSide.long : PositionSide.short,
     startTime: new Date(Number(start.blockTimestamp) * 1000),
     startTransactionHash: start.transactionHash,
     startSize,
@@ -594,12 +588,12 @@ export async function fetchSubPositions({
       )
 
       const magnitude_ = magnitude(update.newMaker, update.newLong, update.newShort)
-      const side = side2(update.newMaker, update.newLong, update.newShort)
+      const side = positionSide(update.newMaker, update.newLong, update.newShort)
       const prevValid = self.find((u) => u.version < update.version && u.valid)
       const prevMagnitude = prevValid ? magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort) : null
       const prevSide = prevValid
-        ? side2(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
-        : PositionSideV2.none
+        ? positionSide(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
+        : PositionSide.none
       const delta =
         (prevValid && update.valid) || (prevValid && !update.valid && i === 0)
           ? magnitude_ - magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort)

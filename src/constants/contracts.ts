@@ -5,7 +5,7 @@ import { SupportedChainId } from './network'
 
 type AddressMapping = { [chain in SupportedChainId]: Address }
 
-export const MultiInvokerV2Addresses: AddressMapping = {
+export const MultiInvokerAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x431603567EcBb4aa1Ce5a4fdBe5554cAEa658832'),
   [arbitrumSepolia.id]: getAddress('0x1927DE7c9765Ae74050D1d0aa8BB0e93D737F579'),
   [base.id]: getAddress('0xf3E88d5a0036BFDc240A309DBc765C895Dc8b509'),

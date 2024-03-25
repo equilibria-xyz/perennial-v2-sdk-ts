@@ -1,10 +1,10 @@
 import { Address, encodeAbiParameters, zeroAddress } from 'viem'
 
-import { PositionSideV2 } from '../constants/markets'
-import { MultiInvoker2Action } from '../types/perennial'
+import { PositionSide } from '../constants/markets'
+import { MultiInvokerAction } from '../types/perennial'
 import { UpdateNoOp } from './positionUtils'
 
-export const buildNoop = (): MultiInvoker2Action => ({
+export const buildNoop = (): MultiInvokerAction => ({
   action: 0,
   args: '0x',
 })
@@ -35,7 +35,7 @@ export const buildUpdateMarket = ({
     receiver: Address
     unwrap: boolean
   }
-}): MultiInvoker2Action => ({
+}): MultiInvokerAction => ({
   action: 1,
   args: encodeAbiParameters(
     [
@@ -113,7 +113,7 @@ export const buildUpdateVault = ({
   redeem?: bigint
   claim?: bigint
   wrap?: boolean
-}): MultiInvoker2Action => ({
+}): MultiInvokerAction => ({
   action: 2,
   args: encodeAbiParameters(
     ['address', 'uint256', 'uint256', 'uint256', 'bool'].map((type) => ({ type })),
@@ -212,7 +212,7 @@ export const buildPlaceTriggerOrder = ({
   interfaceFee2,
 }: {
   market: Address
-  side: PositionSideV2.long | PositionSideV2.short
+  side: PositionSide.long | PositionSide.short
   comparison: 'lte' | 'gte'
   maxFee: bigint
   triggerPrice: bigint
@@ -227,7 +227,7 @@ export const buildPlaceTriggerOrder = ({
     receiver: Address
     unwrap: boolean
   }
-}): MultiInvoker2Action => ({
+}): MultiInvokerAction => ({
   action: 3,
   args: encodeAbiParameters(PlaceTriggerOrderInputs, [
     market,
@@ -243,7 +243,7 @@ export const buildPlaceTriggerOrder = ({
   ]),
 })
 
-export const buildCancelOrder = ({ market, nonce }: { market: Address; nonce: bigint }): MultiInvoker2Action => ({
+export const buildCancelOrder = ({ market, nonce }: { market: Address; nonce: bigint }): MultiInvokerAction => ({
   action: 4,
   args: encodeAbiParameters(
     ['address', 'uint256'].map((type) => ({ type })),
@@ -265,7 +265,7 @@ export const buildCommitPrice = ({
   ids: string[]
   vaa: string
   revertOnFailure: boolean
-}): MultiInvoker2Action => ({
+}): MultiInvokerAction => ({
   action: 6,
   args: encodeAbiParameters(
     ['address', 'uint256', 'bytes32[]', 'uint256', 'bytes', 'bool'].map((type) => ({ type })),
@@ -273,7 +273,7 @@ export const buildCommitPrice = ({
   ),
 })
 
-export const buildLiquidate = ({ market, user }: { market: Address; user: Address }): MultiInvoker2Action => ({
+export const buildLiquidate = ({ market, user }: { market: Address; user: Address }): MultiInvokerAction => ({
   action: 7,
   args: encodeAbiParameters(
     ['address', 'address'].map((type) => ({ type })),
@@ -281,7 +281,7 @@ export const buildLiquidate = ({ market, user }: { market: Address; user: Addres
   ),
 })
 
-export const buildApproveTarget = ({ target }: { target: Address }): MultiInvoker2Action => ({
+export const buildApproveTarget = ({ target }: { target: Address }): MultiInvokerAction => ({
   action: 8,
   args: encodeAbiParameters(
     ['address'].map((type) => ({ type })),
