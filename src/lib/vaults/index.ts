@@ -4,7 +4,7 @@ import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import { BuildDepositTxArgs, buildDepositTx } from '..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { VaultSnapshot2, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
+import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
 
 export class VaultsModule {
@@ -59,7 +59,7 @@ export class VaultsModule {
         latestBlockNumber,
       }: {
         vaultAddress: Address
-        vaultSnapshot: VaultSnapshot2
+        vaultSnapshot: VaultSnapshot
         latestBlockNumber: bigint
       }) => {
         return fetchVault7dAccumulations({

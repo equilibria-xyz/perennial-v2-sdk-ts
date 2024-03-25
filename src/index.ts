@@ -42,9 +42,9 @@ export {
 
 // Vault - Chain
 export {
-  type VaultSnapshot2,
+  type VaultSnapshot,
   type VaultSnapshots,
-  type VaultAccountSnapshot2,
+  type VaultAccountSnapshot,
   type ChainVaultAccountSnapshot,
   type ChainVaultSnapshot,
   type VaultPositionHistory,
@@ -74,7 +74,7 @@ export * as constants from './constants'
 
 // Contracts
 export {
-  MultiInvokerV2Addresses,
+  MultiInvokerAddresses,
   MarketFactoryAddresses,
   VaultFactoryAddresses,
   PythFactoryAddresses,
@@ -86,7 +86,7 @@ export {
 export {
   getUSDCContract,
   getDSUContract,
-  getMultiInvokerV2Contract,
+  getMultiInvokerContract,
   getMarketFactoryContract,
   getVaultFactoryContract,
   getPythFactoryContract,
@@ -126,13 +126,13 @@ export {
 export {
   SupportedAsset,
   QuoteCurrency,
-  PositionSideV2,
+  PositionSide,
   PositionStatus,
   AssetMetadata,
   type AssetMetadataType,
-  ChainMarketsV2,
+  ChainMarkets,
   chainAssetsWithAddress,
-  addressToAsset2,
+  addressToAsset,
   TriggerComparison,
   OrderTypes,
   orderTypes,
@@ -147,7 +147,7 @@ export { ERC20Abi } from './abi/ERC20.abi'
 export { LensAbi } from './abi/Lens.abi'
 export { MarketAbi } from './abi/Market.abi'
 export { MarketFactoryAbi } from './abi/MarketFactory.abi'
-export { MultiInvoker2Abi } from './abi/MultiInvoker2.abi'
+export { MultiInvokerAbi } from './abi/MultiInvoker.abi'
 export { OracleAbi } from './abi/Oracle.abi'
 export { VaultAbi } from './abi/Vault.abi'
 export { VaultFactoryAbi } from './abi/VaultFactory.abi'
@@ -157,7 +157,7 @@ export { PythFactoryAbi } from './abi/PythFactory.abi'
 
 /* #################### Types #################### */
 
-export { type JumpRateUtilizationCurve, type MultiInvoker2Action } from './types/perennial'
+export { type JumpRateUtilizationCurve, type MultiInvokerAction } from './types/perennial'
 
 // Graph Types
 export * from './types/gql'
@@ -202,7 +202,7 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
-} from './utils/multiinvokerV2'
+} from './utils/multiinvoker'
 
 // Payoff Utils
 export { linearTransform, microPowerTwoTransform, milliPowerTwoTransform } from './utils/payoffUtils'
@@ -210,7 +210,7 @@ export { linearTransform, microPowerTwoTransform, milliPowerTwoTransform } from 
 // Position Utils
 export {
   magnitude,
-  side2,
+  side,
   efficiency,
   calcLiquidationPrice,
   calcLeverage,

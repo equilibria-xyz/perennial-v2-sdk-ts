@@ -16,11 +16,11 @@ import {
   Big6Math,
   DefaultChain,
   MaxUint256,
-  PositionSideV2,
+  PositionSide,
   PositionStatus,
   SupportedAsset,
   SupportedChainId,
-  addressToAsset2,
+  addressToAsset,
   calculateFundingForSides,
   chainAssetsWithAddress,
   notEmpty,
@@ -88,13 +88,13 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
 export type MarketSnapshot = ChainMarketSnapshot & {
   pre: ChainMarketSnapshot
   major: bigint
-  majorSide: PositionSideV2
+  majorSide: PositionSide
   minor: bigint
-  minorSide: PositionSideV2
+  minorSide: PositionSide
   nextMajor: bigint
-  nextMajorSide: PositionSideV2
+  nextMajorSide: PositionSide
   nextMinor: bigint
-  nextMinorSide: PositionSideV2
+  nextMinorSide: PositionSide
   fundingRate: {
     long: bigint
     short: bigint
@@ -106,8 +106,8 @@ export type MarketSnapshot = ChainMarketSnapshot & {
 
 export type UserMarketSnapshot = ChainUserMarketSnapshot & {
   pre: Omit<ChainUserMarketSnapshot, 'priceUpdate'>
-  side: PositionSideV2
-  nextSide: PositionSideV2
+  side: PositionSide
+  nextSide: PositionSide
   status: PositionStatus
   magnitude: bigint
   nextMagnitude: bigint
@@ -181,13 +181,13 @@ export async function fetchMarketSnapshots({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
         major,
-        majorSide: major === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
+        majorSide: major === snapshot.position.long ? PositionSide.long : PositionSide.short,
         nextMajor,
-        nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
+        nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
         minor,
-        minorSide: minor === snapshot.position.long ? PositionSideV2.long : PositionSideV2.short,
+        minorSide: minor === snapshot.position.long ? PositionSide.long : PositionSide.short,
         nextMinor,
-        nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSideV2.long : PositionSideV2.short,
+        nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
         fundingRate: {
           long: fundingRates.long,
           short: fundingRates.short,
@@ -211,8 +211,8 @@ export async function fetchMarketSnapshots({
       const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
       const side = getSideFromPosition(latestPosition)
       const nextSide = getSideFromPosition(nextPosition)
-      const magnitude = side === PositionSideV2.none ? 0n : latestPosition[side]
-      const nextMagnitude = nextSide === PositionSideV2.none ? 0n : nextPosition?.[nextSide] ?? 0n
+      const magnitude = side === PositionSide.none ? 0n : latestPosition[side]
+      const nextMagnitude = nextSide === PositionSide.none ? 0n : nextPosition?.[nextSide] ?? 0n
       const priceUpdate = snapshot?.priceUpdate
       if (priceUpdate !== '0x') {
         console.error('Sync error', snapshot.asset, priceUpdate, address)
@@ -349,7 +349,7 @@ async function fetchMarketSnapshotsAfterSettle({
     updates: lensRes.updateStatus,
     market: lensRes.postUpdate.marketSnapshots
       .map((s) => {
-        const asset = addressToAsset2(getAddress(s.market))
+        const asset = addressToAsset(getAddress(s.market))
         if (!asset) return
         return {
           ...s,
@@ -359,7 +359,7 @@ async function fetchMarketSnapshotsAfterSettle({
       .filter(notEmpty),
     marketPre: lensRes.preUpdate.marketSnapshots
       .map((s) => {
-        const asset = addressToAsset2(getAddress(s.market))
+        const asset = addressToAsset(getAddress(s.market))
         if (!asset) return
         return {
           ...s,
@@ -369,7 +369,7 @@ async function fetchMarketSnapshotsAfterSettle({
       .filter(notEmpty),
     user: lensRes.postUpdate.marketAccountSnapshots
       .map((s, i) => {
-        const asset = addressToAsset2(getAddress(s.market))
+        const asset = addressToAsset(getAddress(s.market))
         if (!asset) return
         return {
           ...s,
@@ -380,7 +380,7 @@ async function fetchMarketSnapshotsAfterSettle({
       .filter(notEmpty),
     userPre: lensRes.preUpdate.marketAccountSnapshots
       .map((s) => {
-        const asset = addressToAsset2(getAddress(s.market))
+        const asset = addressToAsset(getAddress(s.market))
         if (!asset) return
         return {
           ...s,

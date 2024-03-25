@@ -1,11 +1,11 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
-import { MultiInvoker2Abi, PythFactoryAbi } from '../..'
-import { OrderTypes, PositionSideV2, SupportedChainId, TriggerComparison, addressToAsset2 } from '../../constants'
+import { MultiInvokerAbi, PythFactoryAbi } from '../..'
+import { OrderTypes, PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
 import { ReferrerInterfaceFeeInfo, interfaceFeeBps } from '../../constants'
-import { MultiInvokerV2Addresses, PythFactoryAddresses } from '../../constants/contracts'
-import { MultiInvoker2Action } from '../../types/perennial'
+import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
+import { MultiInvokerAction } from '../../types/perennial'
 import { Big6Math, BigOrZero, notEmpty, nowSeconds } from '../../utils'
 import {
   EmptyInterfaceFee,
@@ -13,10 +13,10 @@ import {
   buildCommitPrice,
   buildPlaceTriggerOrder,
   buildUpdateMarket,
-} from '../../utils/multiinvokerV2'
+} from '../../utils/multiinvoker'
 import { calcInterfaceFee } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
-import { getMultiInvokerV2Contract, getOracleContract } from '../contracts'
+import { getMultiInvokerContract, getOracleContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'
@@ -34,7 +34,7 @@ export type BuildModifyPositionTxArgs = {
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
-  positionSide?: PositionSideV2
+  positionSide?: PositionSide
   stopLoss?: bigint
   takeProfit?: bigint
   settlementFee?: bigint
@@ -67,7 +67,7 @@ export async function buildModifyPositionTx({
   referralFeeRate,
   onCommitmentError,
 }: BuildModifyPositionTxArgs) {
-  const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
+  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   if (!marketOracles) {
     marketOracles = await fetchMarketOracles(chainId, publicClient)
@@ -94,7 +94,7 @@ export async function buildModifyPositionTx({
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
-  const asset = addressToAsset2(marketAddress)
+  const asset = addressToAsset(marketAddress)
 
   // Interface fee
   const interfaceFees: Array<typeof EmptyInterfaceFee> = []
@@ -128,16 +128,16 @@ export async function buildModifyPositionTx({
 
   const updateAction = buildUpdateMarket({
     market: marketAddress,
-    maker: positionSide === PositionSideV2.maker ? positionAbs : undefined, // Absolute position size
-    long: positionSide === PositionSideV2.long ? positionAbs : undefined,
-    short: positionSide === PositionSideV2.short ? positionAbs : undefined,
+    maker: positionSide === PositionSide.maker ? positionAbs : undefined, // Absolute position size
+    long: positionSide === PositionSide.long ? positionAbs : undefined,
+    short: positionSide === PositionSide.short ? positionAbs : undefined,
     collateral: collateralDelta ?? 0n, // Delta collateral
     wrap: true,
     interfaceFee: interfaceFees.at(0),
     interfaceFee2: interfaceFees.at(1),
   })
 
-  const isNotMaker = positionSide !== PositionSideV2.maker && positionSide !== PositionSideV2.none
+  const isNotMaker = positionSide !== PositionSide.maker && positionSide !== PositionSide.none
   let stopLossAction
   if (stopLoss && positionSide && isNotMaker && settlementFee) {
     const stopLossInterfaceFee = calcInterfaceFee({
@@ -152,7 +152,7 @@ export async function buildModifyPositionTx({
       market: marketAddress,
       side: positionSide,
       triggerPrice: stopLoss,
-      comparison: positionSide === PositionSideV2.short ? 'gte' : 'lte',
+      comparison: positionSide === PositionSide.short ? 'gte' : 'lte',
       maxFee: settlementFee * 2n,
       delta: -(positionAbs ?? 0n),
       interfaceFee:
@@ -189,7 +189,7 @@ export async function buildModifyPositionTx({
       market: marketAddress,
       side: positionSide,
       triggerPrice: takeProfit,
-      comparison: positionSide === PositionSideV2.short ? 'lte' : 'gte',
+      comparison: positionSide === PositionSide.short ? 'lte' : 'gte',
       delta: -(positionAbs ?? 0n),
       maxFee: settlementFee * 2n,
       interfaceFee:
@@ -211,7 +211,7 @@ export async function buildModifyPositionTx({
     })
   }
 
-  const actions: MultiInvoker2Action[] = [updateAction, stopLossAction, takeProfitAction, ...cancelOrders].filter(
+  const actions: MultiInvokerAction[] = [updateAction, stopLossAction, takeProfitAction, ...cancelOrders].filter(
     notEmpty,
   )
 
@@ -304,7 +304,7 @@ export type BuildPlaceOrderTxArgs = {
   limitPrice?: bigint
   stopLoss?: bigint
   takeProfit?: bigint
-  side: PositionSideV2
+  side: PositionSide
   collateralDelta?: bigint
   delta: bigint
   positionAbs: bigint
@@ -355,7 +355,7 @@ export async function buildPlaceOrderTx({
     })
   }
 
-  const multiInvoker = getMultiInvokerV2Contract(chainId, publicClient)
+  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   let cancelAction
   let updateAction
@@ -366,7 +366,7 @@ export async function buildPlaceOrderTx({
   if (cancelOrderDetails) {
     cancelAction = buildCancelOrder(cancelOrderDetails)
   }
-  const asset = addressToAsset2(marketAddress)
+  const asset = addressToAsset(marketAddress)
   const marketSnapshot = asset && marketSnapshots?.market[asset]
 
   if (orderType === OrderTypes.limit && limitPrice) {
@@ -380,7 +380,7 @@ export async function buildPlaceOrderTx({
         wrap: true,
       })
     }
-    const comparison = selectedLimitComparison ? selectedLimitComparison : side === PositionSideV2.long ? 'lte' : 'gte'
+    const comparison = selectedLimitComparison ? selectedLimitComparison : side === PositionSide.long ? 'lte' : 'gte'
     const limitInterfaceFee = calcInterfaceFee({
       chainId,
       latestPrice:
@@ -395,7 +395,7 @@ export async function buildPlaceOrderTx({
     })
     limitOrderAction = buildPlaceTriggerOrder({
       market: marketAddress,
-      side: side as PositionSideV2.long | PositionSideV2.short,
+      side: side as PositionSide.long | PositionSide.short,
       triggerPrice: limitPrice,
       comparison,
       maxFee: OrderExecutionDeposit,
@@ -431,9 +431,9 @@ export async function buildPlaceOrderTx({
     })
     stopLossAction = buildPlaceTriggerOrder({
       market: marketAddress,
-      side: side as PositionSideV2.long | PositionSideV2.short,
+      side: side as PositionSide.long | PositionSide.short,
       triggerPrice: stopLoss,
-      comparison: side === PositionSideV2.short ? 'gte' : 'lte',
+      comparison: side === PositionSide.short ? 'gte' : 'lte',
       maxFee: OrderExecutionDeposit,
       delta: stopLossDelta,
       interfaceFee:
@@ -469,9 +469,9 @@ export async function buildPlaceOrderTx({
 
     takeProfitAction = buildPlaceTriggerOrder({
       market: marketAddress,
-      side: side as PositionSideV2.long | PositionSideV2.short,
+      side: side as PositionSide.long | PositionSide.short,
       triggerPrice: takeProfit,
-      comparison: side === PositionSideV2.short ? 'lte' : 'gte',
+      comparison: side === PositionSide.short ? 'lte' : 'gte',
       maxFee: OrderExecutionDeposit,
       delta: takeProfitDelta,
       interfaceFee:
@@ -493,7 +493,7 @@ export async function buildPlaceOrderTx({
     })
   }
 
-  const actions: MultiInvoker2Action[] = [
+  const actions: MultiInvokerAction[] = [
     cancelAction,
     updateAction,
     limitOrderAction,
@@ -504,7 +504,7 @@ export async function buildPlaceOrderTx({
   if (orderType === OrderTypes.limit && collateralDelta) {
     const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
     if (!oracleInfo) return
-    const asset = addressToAsset2(marketAddress)
+    const asset = addressToAsset(marketAddress)
     let isPriceStale = false
     if (marketSnapshot && marketSnapshots && asset) {
       const {
@@ -563,7 +563,7 @@ export function buildCancelOrderTx({
   chainId: SupportedChainId
   orderDetails: [Address, bigint][]
 }) {
-  const actions: MultiInvoker2Action[] = orderDetails.map(([market, nonce]) =>
+  const actions: MultiInvokerAction[] = orderDetails.map(([market, nonce]) =>
     buildCancelOrder({
       market,
       nonce,
@@ -571,12 +571,12 @@ export function buildCancelOrderTx({
   )
   const data = encodeFunctionData({
     functionName: 'invoke',
-    abi: MultiInvoker2Abi,
+    abi: MultiInvokerAbi,
     args: [actions],
   })
   return {
     data,
-    to: MultiInvokerV2Addresses[chainId],
+    to: MultiInvokerAddresses[chainId],
     value: 0n,
   }
 }

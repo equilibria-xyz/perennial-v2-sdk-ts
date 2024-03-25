@@ -19,8 +19,8 @@ import { getVaultContract } from '..'
 import { LensDeployedBytecode } from '../../abi/Lens.abi'
 import { VaultAbi } from '../../abi/Vault.abi'
 import { VaultLensAbi, VaultLensDeployedBytecode } from '../../abi/VaultLens.abi'
-import { DSUAddresses, MultiInvokerV2Addresses } from '../../constants/contracts'
-import { SupportedAsset, addressToAsset2 } from '../../constants/markets'
+import { DSUAddresses, MultiInvokerAddresses } from '../../constants/contracts'
+import { SupportedAsset, addressToAsset } from '../../constants/markets'
 import { SupportedChainId, getRpcURLFromPublicClient } from '../../constants/network'
 import { MaxUint256 } from '../../constants/units'
 import { PerennialVaultType, chainVaultsWithAddress } from '../../constants/vaults'
@@ -31,11 +31,11 @@ import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
-export type VaultSnapshot2 = ChainVaultSnapshot & {
+export type VaultSnapshot = ChainVaultSnapshot & {
   pre: ChainVaultSnapshot
   assets: { asset: SupportedAsset; weight: bigint }[]
 }
-export type VaultAccountSnapshot2 = ChainVaultAccountSnapshot & {
+export type VaultAccountSnapshot = ChainVaultAccountSnapshot & {
   pre: ChainVaultAccountSnapshot
 }
 
@@ -85,11 +85,11 @@ export async function fetchVaultSnapshots({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         pre: snapshotData.vaultPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        assets: vaultData.registrations.map((r) => ({ weight: r.weight, asset: addressToAsset2(r.market)! })),
+        assets: vaultData.registrations.map((r) => ({ weight: r.weight, asset: addressToAsset(r.market)! })),
       }
       return acc
     },
-    {} as { [key in PerennialVaultType]?: VaultSnapshot2 },
+    {} as { [key in PerennialVaultType]?: VaultSnapshot },
   )
 
   const userSnapshots = snapshotData.user.reduce(
@@ -101,7 +101,7 @@ export async function fetchVaultSnapshots({
       }
       return acc
     },
-    {} as { [key in PerennialVaultType]?: VaultAccountSnapshot2 },
+    {} as { [key in PerennialVaultType]?: VaultAccountSnapshot },
   )
 
   return {
@@ -154,7 +154,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
     data: encodeFunctionData({
       abi: VaultLensAbi,
       functionName: 'snapshot',
-      args: [priceCommitments, lensAddress, vaultAddresses, address, MultiInvokerV2Addresses[chainId]],
+      args: [priceCommitments, lensAddress, vaultAddresses, address, MultiInvokerAddresses[chainId]],
     }),
   }
 

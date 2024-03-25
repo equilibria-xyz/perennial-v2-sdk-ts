@@ -33,7 +33,7 @@ export enum QuoteCurrency {
   usd = 'USDC.e',
 }
 
-export enum PositionSideV2 {
+export enum PositionSide {
   maker = 'maker',
   long = 'long',
   short = 'short',
@@ -214,7 +214,7 @@ export const AssetMetadata: AssetMetadataType = {
   },
 }
 
-export const ChainMarketsV2: {
+export const ChainMarkets: {
   [chainId in SupportedChainId]: {
     [asset in SupportedAsset]?: Address
   }
@@ -244,15 +244,15 @@ export const ChainMarketsV2: {
 }
 
 export const chainAssetsWithAddress = (chainId: SupportedChainId) => {
-  return Object.entries(ChainMarketsV2[chainId])
+  return Object.entries(ChainMarkets[chainId])
     .map(([asset, marketAddress]) => (isSupportedAsset(asset) && !!marketAddress ? { asset, marketAddress } : null))
     .filter(notEmpty)
 }
 
-export const addressToAsset2 = (address: Address) => {
-  for (const chainId of Object.keys(ChainMarketsV2)) {
-    for (const asset of Object.keys(ChainMarketsV2[Number(chainId) as SupportedChainId])) {
-      if (ChainMarketsV2[Number(chainId) as SupportedChainId][asset as SupportedAsset] === address) {
+export const addressToAsset = (address: Address) => {
+  for (const chainId of Object.keys(ChainMarkets)) {
+    for (const asset of Object.keys(ChainMarkets[Number(chainId) as SupportedChainId])) {
+      if (ChainMarkets[Number(chainId) as SupportedChainId][asset as SupportedAsset] === address) {
         return asset as SupportedAsset
       }
     }
@@ -279,32 +279,32 @@ function isSupportedAsset(asset: any): asset is SupportedAsset {
 }
 
 export const interfaceFeeBps: {
-  [chainId in SupportedChainId]: { feeAmount: { [key in PositionSideV2]: bigint }; feeRecipientAddress: Address }
+  [chainId in SupportedChainId]: { feeAmount: { [key in PositionSide]: bigint }; feeRecipientAddress: Address }
 } = {
   [arbitrumSepolia.id]: {
     feeAmount: {
-      [PositionSideV2.short]: Big6Math.fromFloatString('0.0001'), // 1bps
-      [PositionSideV2.long]: Big6Math.fromFloatString('0.0001'), // 1bps
-      [PositionSideV2.maker]: 0n,
-      [PositionSideV2.none]: 0n,
+      [PositionSide.short]: Big6Math.fromFloatString('0.0001'), // 1bps
+      [PositionSide.long]: Big6Math.fromFloatString('0.0001'), // 1bps
+      [PositionSide.maker]: 0n,
+      [PositionSide.none]: 0n,
     },
     feeRecipientAddress: OracleFactoryAddresses[arbitrumSepolia.id],
   },
   [arbitrum.id]: {
     feeAmount: {
-      [PositionSideV2.short]: Big6Math.fromFloatString('0.0001'), // 1bps,
-      [PositionSideV2.long]: Big6Math.fromFloatString('0.0001'), // 1bps,
-      [PositionSideV2.maker]: 0n,
-      [PositionSideV2.none]: 0n,
+      [PositionSide.short]: Big6Math.fromFloatString('0.0001'), // 1bps,
+      [PositionSide.long]: Big6Math.fromFloatString('0.0001'), // 1bps,
+      [PositionSide.maker]: 0n,
+      [PositionSide.none]: 0n,
     },
     feeRecipientAddress: OracleFactoryAddresses[arbitrum.id],
   },
   [base.id]: {
     feeAmount: {
-      [PositionSideV2.short]: 0n,
-      [PositionSideV2.long]: 0n,
-      [PositionSideV2.maker]: 0n,
-      [PositionSideV2.none]: 0n,
+      [PositionSide.short]: 0n,
+      [PositionSide.long]: 0n,
+      [PositionSide.maker]: 0n,
+      [PositionSide.none]: 0n,
     },
     feeRecipientAddress: OracleFactoryAddresses[base.id],
   },
