@@ -15,7 +15,8 @@
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "lint": "eslint --ext .ts src/",
-    "prepush": "pnpm exec tsc && pnpm exec lint-staged",
+    "precommit": "pnpm exec lint-staged",
+    "prepush": "pnpm run build",
     "prepare": "husky"
   },
   "author": "",
