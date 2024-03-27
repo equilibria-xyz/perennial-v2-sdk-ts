@@ -135,7 +135,7 @@ export class OperatorModule {
 
   get build() {
     return {
-      approveUSDC: ({ suggestedAmount }: { suggestedAmount?: bigint }) =>
+      approveUSDC: ({ suggestedAmount }: { suggestedAmount?: bigint } = {}) =>
         buildApproveUSDCTx({ chainId: this.config.chainId, suggestedAmount }),
       approveMarketFactoryTx: () => buildApproveMarketFactoryTx({ chainId: this.config.chainId }),
       approveVaultFactoryTx: () => buildApproveVaultFactoryTx({ chainId: this.config.chainId }),
@@ -154,7 +154,7 @@ export class OperatorModule {
     const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
 
     return {
-      approveUSDC: async ({ suggestedAmount }: { suggestedAmount?: bigint }) => {
+      approveUSDC: async ({ suggestedAmount }: { suggestedAmount?: bigint } = {}) => {
         const tx = await this.build.approveUSDC({ suggestedAmount })
         const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
         return hash

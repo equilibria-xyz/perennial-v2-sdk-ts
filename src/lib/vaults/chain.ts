@@ -253,8 +253,6 @@ export async function fetchVaultPositionHistory({
   address: Address
   publicClient: PublicClient
 }) {
-  if (!address) return
-
   const vaults = chainVaultsWithAddress(chainId)
   const getLogsArgs = { account: address }
 
