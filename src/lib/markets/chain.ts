@@ -13,6 +13,7 @@ import {
 } from 'viem'
 
 import {
+  AssetMetadata,
   Big6Math,
   DefaultChain,
   MaxUint256,
@@ -36,6 +37,7 @@ export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOra
 export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
   const markets = chainAssetsWithAddress(chainId)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
+    const metadata = AssetMetadata[asset]
     const market = getMarketContract(marketAddress, publicClient)
     const pythFactory = getPythFactoryContract(chainId, publicClient)
     const oracleAddress = await market.read.oracle()
@@ -43,19 +45,12 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
     const oracle = getOracleContract(oracleAddress, publicClient)
     const global = await oracle.read.global()
     const [keeperOracle] = await oracle.read.oracles([global[0]])
-    // KeeperOracle -> Feed
-    const feedEvents = await pythFactory.getEvents.OracleCreated(
-      { oracle: keeperOracle },
-      {
-        fromBlock: 0n,
-        toBlock: 'latest',
-      },
-    )
-    const feed = feedEvents[0].args.id
-    if (!feed) throw new Error(`No feed found for ${keeperOracle}`)
-    const [validFrom, underlyingId] = await Promise.all([
+
+    // TODO(arjun): Pull these from the registry once available
+    const underlyingId = metadata.pythFeedId as Hex
+    const [validFrom, providerId] = await Promise.all([
       pythFactory.read.validFrom(),
-      pythFactory.read.toUnderlyingId([feed]),
+      pythFactory.read.fromUnderlyingId([underlyingId]),
     ])
 
     return {
@@ -64,7 +59,7 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
       address: oracleAddress,
       providerFactoryAddress: pythFactory.address,
       providerAddress: keeperOracle,
-      providerId: feed,
+      providerId,
       underlyingId,
       minValidTime: validFrom,
     }
