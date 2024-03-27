@@ -1,12 +1,10 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
+import { Address, PublicClient, WalletClient } from 'viem'
 
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
-import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
+import { fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
-  Markets,
   fetchActivePositionHistory,
   fetchActivePositionPnls,
   fetchHistoricalPositions,
@@ -25,6 +23,7 @@ import {
   buildSubmitVaaTx,
 } from './tx'
 
+type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient'>
 export class MarketsModule {
   private config: {
     chainId: SupportedChainId
@@ -49,133 +48,55 @@ export class MarketsModule {
       marketOracles: () => {
         return fetchMarketOracles(this.config.chainId, this.config.publicClient)
       },
-      marketSnapshots: ({
-        marketOracles,
-        address = zeroAddress,
-        onSuccess,
-        onError,
-      }: {
-        marketOracles?: MarketOracles
-        address?: Address
-        onSuccess?: () => void
-        onError?: () => void
-      }) => {
+      marketSnapshots: (args: OmitBound<Parameters<typeof fetchMarketSnapshots>[0]>) => {
         return fetchMarketSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          address,
-          marketOracles,
-          onError,
-          onSuccess,
+          ...args,
         })
       },
-      activePositionPnls: ({ marketSnapshots, address }: { marketSnapshots: MarketSnapshots; address: Address }) => {
+      activePositionPnls: (args: OmitBound<Parameters<typeof fetchActivePositionPnls>[0]>) => {
         return fetchActivePositionPnls({
           chainId: this.config.chainId,
-          marketSnapshots,
-          address,
           graphClient: this.config.graphClient,
+          ...args,
         })
       },
-      activePositionHistory: ({
-        market,
-        address,
-        pageParam = 0,
-        pageSize = 100,
-      }: {
-        market: Address
-        address: Address
-        pageParam: number
-        pageSize: number
-      }) => {
+      activePositionHistory: (args: OmitBound<Parameters<typeof fetchActivePositionHistory>[0]>) => {
         return fetchActivePositionHistory({
-          market,
-          address,
-          pageParam,
-          pageSize,
           graphClient: this.config.graphClient,
+          ...args,
         })
       },
-      historicalPositions: ({
-        markets,
-        address,
-        pageSize = 10,
-        pageParam,
-        maker,
-      }: {
-        markets: Markets
-        address: Address
-        pageSize: number
-        pageParam?: { page: number; checkpoints?: MarketsAccountCheckpointsQuery }
-        maker?: boolean
-      }) => {
+      historicalPositions: (args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]>) => {
         return fetchHistoricalPositions({
-          markets,
-          address,
           graphClient: this.config.graphClient,
-          pageSize,
-          pageParam,
-          maker,
+          ...args,
         })
       },
-      subPositions: ({
-        address,
-        market,
-        startVersion,
-        endVersion,
-        first,
-        skip,
-      }: {
-        address: Address
-        market: Address
-        startVersion: bigint
-        endVersion?: bigint
-        first: number
-        skip: number
-      }) => {
+      subPositions: (args: OmitBound<Parameters<typeof fetchSubPositions>[0]>) => {
         return fetchSubPositions({
           graphClient: this.config.graphClient,
-          address,
-          market,
-          startVersion,
-          endVersion,
-          first,
-          skip,
+          ...args,
         })
       },
-      openOrders: ({
-        markets,
-        address,
-        pageParam = 0,
-        pageSize = 100,
-        isMaker,
-      }: {
-        markets: Markets
-        address: Address
-        pageParam: number
-        pageSize: number
-        isMaker?: boolean
-      }) => {
+      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]>) => {
         return fetchOpenOrders({
           graphClient: this.config.graphClient,
-          markets,
-          address,
-          pageParam,
-          pageSize,
-          isMaker,
+          ...args,
         })
       },
-      market24hrData: ({ market }: { market: Address }) => {
+      market24hrData: (args: OmitBound<Parameters<typeof fetchMarket24hrData>[0]>) => {
         return fetchMarket24hrData({
           graphClient: this.config.graphClient,
-          market,
+          ...args,
         })
       },
-      market7dData: ({ market }: { market: Address }) => {
+      market7dData: (args: OmitBound<Parameters<typeof fetchMarket7dData>[0]>) => {
         return fetchMarket7dData({
           graphClient: this.config.graphClient,
-          market,
+          ...args,
         })
       },
     }
@@ -183,7 +104,7 @@ export class MarketsModule {
 
   get build() {
     return {
-      modifyPosition: (args: Omit<BuildModifyPositionTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
+      modifyPosition: (args: OmitBound<BuildModifyPositionTxArgs>) => {
         return buildModifyPositionTx({
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
@@ -191,14 +112,14 @@ export class MarketsModule {
           ...args,
         })
       },
-      submitVaa: (args: Omit<BuildSubmitVaaTxArgs, 'chainId' | 'pythClient'>) => {
+      submitVaa: (args: OmitBound<BuildSubmitVaaTxArgs>) => {
         return buildSubmitVaaTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           ...args,
         })
       },
-      placeOrder: (args: Omit<BuildPlaceOrderTxArgs, 'chainId' | 'pythClient' | 'publicClient'>) => {
+      placeOrder: (args: OmitBound<BuildPlaceOrderTxArgs>) => {
         return buildPlaceOrderTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,

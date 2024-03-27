@@ -1,72 +1,61 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
+import { PublicClient, WalletClient } from 'viem'
 
-import { BuildDepositTxArgs, buildDepositTx } from '..'
+import {
+  BuildClaimTxArgs,
+  BuildDepositTxArgs,
+  BuildRedeemSharesTxArgs,
+  buildClaimTx,
+  buildDepositTx,
+  buildRedeemSharesTx,
+} from '..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
+import { fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
+
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient'>
 
 export class VaultsModule {
   private config: {
     chainId: SupportedChainId
-    graphClient: GraphQLClient
     publicClient: PublicClient
-    walletClient?: WalletClient
+    graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }
 
   constructor(config: {
     chainId: SupportedChainId
     publicClient: PublicClient
-    walletClient?: WalletClient
     graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
+    walletClient?: WalletClient
   }) {
     this.config = config
   }
 
   get read() {
     return {
-      vaultSnapshots: ({
-        address = zeroAddress,
-        onSuccess,
-        onError,
-      }: {
-        address?: Address
-        onSuccess?: () => void
-        onError?: () => void
-      }) => {
+      vaultSnapshots: (args: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]>) => {
         return fetchVaultSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          address,
-          onError,
-          onSuccess,
+          ...args,
         })
       },
-      vaultPositionHistory: ({ address = zeroAddress }: { address?: Address }) => {
+      vaultPositionHistory: (args: OmitBound<Parameters<typeof fetchVaultPositionHistory>[0]>) => {
         return fetchVaultPositionHistory({
           chainId: this.config.chainId,
-          address,
           publicClient: this.config.publicClient,
+          ...args,
         })
       },
-      vault7dAccumulations: ({
-        vaultAddress,
-        vaultSnapshot,
-        latestBlockNumber,
-      }: {
-        vaultAddress: Address
-        vaultSnapshot: VaultSnapshot
-        latestBlockNumber: bigint
-      }) => {
+      vault7dAccumulations: (args: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
         return fetchVault7dAccumulations({
-          vaultAddress,
-          vaultSnapshot,
           graphClient: this.config.graphClient,
-          latestBlockNumber,
+          ...args,
         })
       },
     }
@@ -74,7 +63,7 @@ export class VaultsModule {
 
   get build() {
     return {
-      deposit: (args: Omit<BuildDepositTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
+      deposit: (args: OmitBound<BuildDepositTxArgs>) => {
         return buildDepositTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
@@ -83,8 +72,8 @@ export class VaultsModule {
         })
       },
 
-      redeem: (args: Omit<BuildDepositTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
-        return buildDepositTx({
+      redeem: (args: OmitBound<BuildRedeemSharesTxArgs>) => {
+        return buildRedeemSharesTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
@@ -92,8 +81,8 @@ export class VaultsModule {
         })
       },
 
-      claim: (args: Omit<BuildDepositTxArgs, 'chainId' | 'publicClient' | 'pythClient'>) => {
-        return buildDepositTx({
+      claim: (args: OmitBound<BuildClaimTxArgs>) => {
+        return buildClaimTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
