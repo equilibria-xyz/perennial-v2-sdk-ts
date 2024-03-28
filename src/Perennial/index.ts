@@ -33,6 +33,9 @@ export default class PerennialSDK {
     this._publicClient = createPublicClient({
       chain: chainIdToChainMap[config.chainId] as Chain,
       transport: http(config.rpcUrl),
+      batch: {
+        multicall: true,
+      },
     })
     this._pythClient = new EvmPriceServiceConnection(config.pythUrl, {
       timeout: 30000,
