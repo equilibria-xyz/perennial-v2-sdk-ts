@@ -156,19 +156,19 @@ export class OperatorModule {
     return {
       approveUSDC: async ({ suggestedAmount }: { suggestedAmount?: bigint } = {}) => {
         const tx = await this.build.approveUSDC({ suggestedAmount })
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
 
       approveMarketFactory: async () => {
-        const tx = this.build.approveMarketFactoryTx()
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        const tx = await this.build.approveMarketFactoryTx()
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
 
       approveVaultFactory: async () => {
-        const tx = this.build.approveVaultFactoryTx()
-        const hash = await this.config.walletClient?.sendTransaction({ ...tx, ...txOpts })
+        const tx = await this.build.approveVaultFactoryTx()
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
     }

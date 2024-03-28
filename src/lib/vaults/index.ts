@@ -105,20 +105,20 @@ export class VaultsModule {
 
     return {
       deposit: async (...args: Parameters<typeof this.build.deposit>) => {
-        const tx = this.build.deposit(...args)
-        const hash = walletClient.sendTransaction({ ...tx, ...txOpts })
+        const tx = await this.build.deposit(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
 
       redeem: async (...args: Parameters<typeof this.build.redeem>) => {
-        const tx = this.build.redeem(...args)
-        const hash = walletClient.sendTransaction({ ...tx, ...txOpts })
+        const tx = await this.build.redeem(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
 
       claim: async (...args: Parameters<typeof this.build.claim>) => {
-        const tx = this.build.claim(...args)
-        const hash = walletClient.sendTransaction({ ...tx, ...txOpts })
+        const tx = await this.build.claim(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
     }
