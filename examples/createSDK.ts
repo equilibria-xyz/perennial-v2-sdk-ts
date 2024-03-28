@@ -1,6 +1,8 @@
 import { config as dotenvConfig } from 'dotenv'
-import Perennial from '../'
 import path from 'path'
+
+import Perennial from '../'
+
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 
 async function run() {
