@@ -744,6 +744,37 @@ export async function fetchMarket24hrData({ graphClient, market }: { graphClient
   })
 }
 
+export async function fetchMarkets24hrVolume({
+  graphClient,
+  markets,
+}: {
+  graphClient: GraphQLClient
+  markets: Markets
+}) {
+  const { from, to } = last24hrBounds()
+
+  const query = gql(`
+    query Markets24hrVolume($markets: [Bytes!]!, $from: BigInt!, $to: BigInt!) {
+      volume: bucketedVolumes(
+        where:{bucket: hourly, market_in: $markets, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
+        orderBy: periodStartTimestamp
+        orderDirection: asc
+      ) {
+        periodStartTimestamp
+        longNotional
+        shortNotional
+        market
+      }
+    }
+  `)
+
+  return graphClient.request(query, {
+    markets: markets.map(({ marketAddress }) => marketAddress),
+    from: from.toString(),
+    to: to.toString(),
+  })
+}
+
 export async function fetchMarket7dData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
   const { to, from } = last7dBounds()
 
