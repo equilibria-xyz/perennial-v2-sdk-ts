@@ -10,6 +10,7 @@ import {
   fetchHistoricalPositions,
   fetchMarket7dData,
   fetchMarket24hrData,
+  fetchMarkets24hrVolume,
   fetchOpenOrders,
   fetchSubPositions,
 } from './graph'
@@ -89,6 +90,12 @@ export class MarketsModule {
       },
       market24hrData: (args: OmitBound<Parameters<typeof fetchMarket24hrData>[0]>) => {
         return fetchMarket24hrData({
+          graphClient: this.config.graphClient,
+          ...args,
+        })
+      },
+      markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrVolume>[0]>) => {
+        return fetchMarkets24hrVolume({
           graphClient: this.config.graphClient,
           ...args,
         })

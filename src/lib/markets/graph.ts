@@ -720,12 +720,24 @@ export async function fetchOpenOrders({
 }
 
 export async function fetchMarket24hrData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
-  const { from, to } = last24hrBounds()
+  const volumeRes = await fetchMarkets24hrVolume({ graphClient, markets: [market] })
+  return {
+    volume: volumeRes[market] || [],
+  }
+}
 
+export async function fetchMarkets24hrVolume({
+  graphClient,
+  markets,
+}: {
+  graphClient: GraphQLClient
+  markets: Address[]
+}) {
+  const { from, to } = last24hrBounds()
   const query = gql(`
-    query Market24hrData($market: Bytes!, $from: BigInt!, $to: BigInt!) {
+    query Markets24hrVolume($markets: [Bytes!]!, $from: BigInt!, $to: BigInt!) {
       volume: bucketedVolumes(
-        where:{bucket: hourly, market: $market, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
+        where:{bucket: hourly, market_in: $markets, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
         orderBy: periodStartTimestamp
         orderDirection: asc
       ) {
@@ -737,11 +749,28 @@ export async function fetchMarket24hrData({ graphClient, market }: { graphClient
     }
   `)
 
-  return graphClient.request(query, {
-    market,
+  const volumeData = await graphClient.request(query, {
+    markets,
     from: from.toString(),
     to: to.toString(),
   })
+
+  return volumeData.volume.reduce(
+    (acc, v) => {
+      if (!acc[getAddress(v.market)]) acc[getAddress(v.market)] = [] as (typeof acc)[Address]
+      acc[getAddress(v.market)].push({
+        periodStartTimestamp: v.periodStartTimestamp,
+        longNotional: v.longNotional,
+        shortNotional: v.shortNotional,
+        market: v.market,
+      })
+      return acc
+    },
+    {} as Record<
+      Address,
+      { periodStartTimestamp: string; longNotional: string; shortNotional: string; market: string }[]
+    >,
+  )
 }
 
 export async function fetchMarket7dData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
