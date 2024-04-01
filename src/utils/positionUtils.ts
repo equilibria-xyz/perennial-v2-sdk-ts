@@ -443,7 +443,5 @@ export const calcMaxLeverage = ({
 
   const maxLeverage = Big6Math.min(marginMaxLeverage, collateralMaxLeverage)
 
-  const flooredLeverage = Math.floor(Big6Math.toUnsafeFloat(Big6Math.min(maxLeverage, Big6Math.ONE * 100n)))
-  // Round to nearest 5x
-  return flooredLeverage < 5 ? flooredLeverage : Math.floor(flooredLeverage / 5) * 5
+  return Big6Math.max(maxLeverage, Big6Math.ONE)
 }
