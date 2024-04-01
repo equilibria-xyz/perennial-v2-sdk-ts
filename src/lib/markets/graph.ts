@@ -720,28 +720,10 @@ export async function fetchOpenOrders({
 }
 
 export async function fetchMarket24hrData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
-  const { from, to } = last24hrBounds()
-
-  const query = gql(`
-    query Market24hrData($market: Bytes!, $from: BigInt!, $to: BigInt!) {
-      volume: bucketedVolumes(
-        where:{bucket: hourly, market: $market, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
-        orderBy: periodStartTimestamp
-        orderDirection: asc
-      ) {
-        periodStartTimestamp
-        longNotional
-        shortNotional
-        market
-      }
-    }
-  `)
-
-  return graphClient.request(query, {
-    market,
-    from: from.toString(),
-    to: to.toString(),
-  })
+  const volumeRes = await fetchMarkets24hrVolume({ graphClient, markets: [market] })
+  return {
+    volume: volumeRes[market.toLowerCase()] || [],
+  }
 }
 
 export async function fetchMarkets24hrVolume({
@@ -749,10 +731,9 @@ export async function fetchMarkets24hrVolume({
   markets,
 }: {
   graphClient: GraphQLClient
-  markets: Markets
+  markets: Address[]
 }) {
   const { from, to } = last24hrBounds()
-
   const query = gql(`
     query Markets24hrVolume($markets: [Bytes!]!, $from: BigInt!, $to: BigInt!) {
       volume: bucketedVolumes(
@@ -768,11 +749,38 @@ export async function fetchMarkets24hrVolume({
     }
   `)
 
-  return graphClient.request(query, {
-    markets: markets.map(({ marketAddress }) => marketAddress),
+  const volumeData = await graphClient.request(query, {
+    markets,
     from: from.toString(),
     to: to.toString(),
   })
+
+  return volumeData.volume.reduce(
+    (acc, v) => {
+      if (!acc[v.market]) {
+        acc[v.market] = [
+          {
+            periodStartTimestamp: v.periodStartTimestamp,
+            longNotional: v.longNotional,
+            shortNotional: v.shortNotional,
+            market: v.market,
+          },
+        ]
+      } else {
+        acc[v.market].push({
+          periodStartTimestamp: v.periodStartTimestamp,
+          longNotional: v.longNotional,
+          shortNotional: v.shortNotional,
+          market: v.market,
+        })
+      }
+      return acc
+    },
+    {} as Record<
+      string,
+      { periodStartTimestamp: string; longNotional: string; shortNotional: string; market: string }[]
+    >,
+  )
 }
 
 export async function fetchMarket7dData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
