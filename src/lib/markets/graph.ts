@@ -722,7 +722,7 @@ export async function fetchOpenOrders({
 export async function fetchMarket24hrData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
   const volumeRes = await fetchMarkets24hrVolume({ graphClient, markets: [market] })
   return {
-    volume: volumeRes[market.toLowerCase()] || [],
+    volume: volumeRes[market] || [],
   }
 }
 
@@ -757,27 +757,17 @@ export async function fetchMarkets24hrVolume({
 
   return volumeData.volume.reduce(
     (acc, v) => {
-      if (!acc[v.market]) {
-        acc[v.market] = [
-          {
-            periodStartTimestamp: v.periodStartTimestamp,
-            longNotional: v.longNotional,
-            shortNotional: v.shortNotional,
-            market: v.market,
-          },
-        ]
-      } else {
-        acc[v.market].push({
-          periodStartTimestamp: v.periodStartTimestamp,
-          longNotional: v.longNotional,
-          shortNotional: v.shortNotional,
-          market: v.market,
-        })
-      }
+      if (!acc[getAddress(v.market)]) acc[getAddress(v.market)] = [] as (typeof acc)[Address]
+      acc[getAddress(v.market)].push({
+        periodStartTimestamp: v.periodStartTimestamp,
+        longNotional: v.longNotional,
+        shortNotional: v.shortNotional,
+        market: v.market,
+      })
       return acc
     },
     {} as Record<
-      string,
+      Address,
       { periodStartTimestamp: string; longNotional: string; shortNotional: string; market: string }[]
     >,
   )
