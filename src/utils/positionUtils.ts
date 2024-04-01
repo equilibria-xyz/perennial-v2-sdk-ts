@@ -434,7 +434,7 @@ export const calcMaxLeverage = ({
   minMargin,
   collateral,
 }: { margin?: bigint; minMargin?: bigint; collateral?: bigint } = {}) => {
-  if (!margin) return 10
+  if (!margin) return Big6Math.ONE * 10n
   const marginMaxLeverage = Big6Math.div(Big6Math.ONE, margin)
   const minCollateralForFullRange = Big6Math.mul(minMargin ?? 0n, marginMaxLeverage)
   const collateralMaxLeverage = !!collateral
