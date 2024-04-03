@@ -1,16 +1,5 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
-import {
-  Address,
-  Hex,
-  PublicClient,
-  decodeFunctionResult,
-  encodeFunctionData,
-  getAddress,
-  getContractAddress,
-  parseEther, // eslint-disable-line no-restricted-imports
-  toHex,
-  zeroAddress,
-} from 'viem'
+import { Address, Hex, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
   AssetMetadata,
@@ -27,7 +16,6 @@ import {
   notEmpty,
 } from '../..'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
-import { getRpcURLFromPublicClient } from '../../constants/network'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { getMarketContract, getOracleContract, getPythFactoryContract } from '../contracts'
@@ -136,8 +124,7 @@ export async function fetchMarketSnapshots({
   onError?: () => void
   onSuccess?: () => void
 }) {
-  const rpcUrl = getRpcURLFromPublicClient(publicClient)
-  if (!publicClient || !rpcUrl) {
+  if (!publicClient) {
     return
   }
   if (!marketOracles) {
@@ -148,7 +135,6 @@ export async function fetchMarketSnapshots({
     address,
     marketOracles,
     publicClient,
-    providerUrl: rpcUrl,
     pyth: pythClient,
     onPythError: onError,
     resetPythError: onSuccess,
@@ -277,7 +263,6 @@ async function fetchMarketSnapshotsAfterSettle({
   chainId,
   address,
   marketOracles,
-  providerUrl,
   publicClient,
   pyth,
   onPythError,
@@ -286,7 +271,6 @@ async function fetchMarketSnapshotsAfterSettle({
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
-  providerUrl: string
   publicClient: PublicClient
   pyth: EvmPriceServiceConnection
   onPythError?: () => void
@@ -304,40 +288,19 @@ async function fetchMarketSnapshotsAfterSettle({
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)
 
-  const ethCallPayload = {
-    to: lensAddress,
-    from: address,
-    data: encodeFunctionData({
-      abi: LensAbi,
-      functionName: 'snapshot',
-      args: [priceCommitments, marketAddresses, address],
-    }),
-  }
-
-  // Update marketFactory operator storage to allow lens to update address
-  // Operator storage mapping is at index 1
-  const alchemyRes = await fetch(providerUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      id: 1,
-      jsonrpc: '2.0',
-      method: 'eth_call', // use a manual eth_call here to use state overrides
-      params: [
-        ethCallPayload,
-        'latest',
-        {
-          // state diff overrides
-          [lensAddress]: {
-            code: LensDeployedBytecode,
-            balance: toHex(parseEther('1000')),
-          },
-        },
-      ],
-    }),
+  const { result: lensRes } = await publicClient.simulateContract({
+    address: lensAddress,
+    abi: LensAbi,
+    functionName: 'snapshot',
+    args: [priceCommitments, marketAddresses, address],
+    stateOverride: [
+      {
+        address: lensAddress,
+        code: LensDeployedBytecode,
+        balance: maxUint256,
+      },
+    ],
   })
-  const batchRes = (await alchemyRes.json()) as { result: Hex }
-  const lensRes = decodeFunctionResult({ abi: LensAbi, functionName: 'snapshot', data: batchRes.result })
 
   return {
     commitments: lensRes.commitmentStatus,
