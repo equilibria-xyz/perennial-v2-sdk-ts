@@ -1,6 +1,6 @@
 {
   "name": "@perennial/sdk",
-  "version": "0.0.1-beta9",
+  "version": "0.0.1-beta10",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,7 +54,7 @@
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
-    "viem": "2.8.18"
+    "viem": "2.9.9"
   },
   "pnpm": {
     "overrides": {

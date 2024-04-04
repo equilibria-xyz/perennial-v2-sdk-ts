@@ -21,8 +21,8 @@ dependencies:
     specifier: ^6.0.0
     version: 6.1.0(graphql@16.8.1)
   viem:
-    specifier: 2.8.18
-    version: 2.8.18(typescript@5.4.3)
+    specifier: 2.9.9
+    version: 2.9.9(typescript@5.4.3)
 
 devDependencies:
   '@equilibria/perennial-v2':
@@ -6063,8 +6063,8 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
-  /viem@2.8.18(typescript@5.4.3):
-    resolution: {integrity: sha512-Kq3kwkKziJ8rQeLkmdbSLheHDnA+tx2EdLKLmQ3N4FVtjKYjBP9tPL1r+fI6KltVUM1TDOhIHOdslDSp57VMMg==}
+  /viem@2.9.9(typescript@5.4.3):
+    resolution: {integrity: sha512-SUIHBL6M5IIlqDCMEQwAAvHzeglaM4FEqM6bCI+srLXtFYmrpV4tWhnpobQRNwh4f7HIksmKLLZ+cytv8FfnJQ==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
