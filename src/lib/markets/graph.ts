@@ -22,12 +22,14 @@ export async function fetchActivePositionPnl({
   userMarketSnapshot,
   address,
   graphClient,
+  includeClosedWithCollateral = false,
 }: {
   market: Address
   marketSnapshot: MarketSnapshot
   userMarketSnapshot: UserMarketSnapshot
   address: Address
   graphClient: GraphQLClient
+  includeClosedWithCollateral?: boolean
 }) {
   // Query Checkpoints for each market - note that we don't query for a specific type because if we query for
   // `open` we might get the position before the latest position
@@ -39,6 +41,17 @@ export async function fetchActivePositionPnl({
       ) { market, account, type, blockNumber, version }
     }
   `)
+
+  // Query for the corresponding open checkpoint if the most recent checkpoint is a close with collateral
+  const queryCorrespondingOpen = gql(`
+    query CorrespondingOpenQuery($account: Bytes!, $market: Bytes!, $closeVersion: BigInt!) {
+      marketAccountCheckpoints(
+        where: { account: $account, market: $market, version_lt: $closeVersion, type: open }
+        orderBy: blockNumber, orderDirection: desc, first: 1
+      ) { market, account, type, blockNumber, version }
+    }
+  `)
+
   // Query the market accumulators for each market. These are used to get data between the latest account settlement
   // and the latest global settlement
   const queryMarketAccumulatorsAndFirstUpdate = gql(`
@@ -72,10 +85,23 @@ export async function fetchActivePositionPnl({
   const asset = addressToAsset(market)
   if (!address || !asset) return
 
-  const checkpointData = await graphClient.request(queryAccountCheckpoints, {
+  let checkpointData = await graphClient.request(queryAccountCheckpoints, {
     account: address,
     market: market,
   })
+
+  // If the most recent checkpoint is a close and there is still collateral, we need to find the corresponding open checkpoint
+  if (
+    includeClosedWithCollateral &&
+    checkpointData.marketAccountCheckpoints?.at(0)?.type === 'close' &&
+    userMarketSnapshot.local.collateral !== 0n
+  ) {
+    checkpointData = await graphClient.request(queryCorrespondingOpen, {
+      account: address,
+      market: market,
+      closeVersion: BigInt(checkpointData.marketAccountCheckpoints[0].version).toString(),
+    })
+  }
 
   const isFetchable =
     checkpointData.marketAccountCheckpoints?.[0] && checkpointData.marketAccountCheckpoints?.[0].type === 'open'
