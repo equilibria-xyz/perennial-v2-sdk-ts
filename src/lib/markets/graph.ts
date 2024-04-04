@@ -1,7 +1,7 @@
 import { GraphQLClient } from 'graphql-request'
 import { Address, getAddress } from 'viem'
 
-import { PositionSide, SupportedAsset, SupportedChainId, addressToAsset, chainAssetsWithAddress } from '../../constants'
+import { PositionSide, SupportedAsset, addressToAsset } from '../../constants'
 import { gql } from '../../types/gql'
 import { MarketsAccountCheckpointsQuery, PositionSide as PositionSideGraph } from '../../types/gql/graphql'
 import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum } from '../../utils'
@@ -9,21 +9,23 @@ import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
 import { calcNotional, calcPriceImpactFromTradeFee, magnitude, side as positionSide } from '../../utils/positionUtils'
-import { MarketSnapshots } from './chain'
+import { MarketSnapshot, UserMarketSnapshot } from './chain'
 
 export type Markets = {
   asset: SupportedAsset
   marketAddress: Address
 }[]
 
-export async function fetchActivePositionPnls({
-  chainId,
-  marketSnapshots,
+export async function fetchActivePositionPnl({
+  market,
+  marketSnapshot,
+  userMarketSnapshot,
   address,
   graphClient,
 }: {
-  chainId: SupportedChainId
-  marketSnapshots: MarketSnapshots
+  market: Address
+  marketSnapshot: MarketSnapshot
+  userMarketSnapshot: UserMarketSnapshot
   address: Address
   graphClient: GraphQLClient
 }) {
@@ -66,164 +68,131 @@ export async function fetchActivePositionPnls({
       ) { interfaceFee, orderFee }
     }
   `)
-  const markets = chainAssetsWithAddress(chainId)
 
-  const pnlRequests = markets.map(async (market) => {
-    const { asset, marketAddress } = market
-    if (!address || !marketSnapshots || !marketSnapshots.user) return
+  const asset = addressToAsset(market)
+  if (!address || !asset) return
 
-    const checkpointData = await graphClient.request(queryAccountCheckpoints, {
-      account: address,
-      market: marketAddress,
-    })
-
-    const isFetchable =
-      checkpointData.marketAccountCheckpoints?.[0] && checkpointData.marketAccountCheckpoints?.[0].type === 'open'
-
-    const graphPosition = isFetchable
-      ? await fetchPositionData({
-          graphClient,
-          address,
-          market: getAddress(checkpointData.marketAccountCheckpoints[0].market),
-          endVersion: null,
-          startVersion: BigInt(checkpointData.marketAccountCheckpoints[0].version),
-        })
-      : null
-
-    const lastSettlementSnapshot = marketSnapshots.user[asset].pendingPositions[0].timestamp
-    const lastSettlement = graphPosition?.endVersion ? BigInt(graphPosition.endVersion) : lastSettlementSnapshot
-
-    const marketAccumulators = await graphClient.request(queryMarketAccumulatorsAndFirstUpdate, {
-      market: marketAddress,
-      account: address,
-      accountLatestVersion: lastSettlement.toString(),
-    })
-
-    const snapshot = marketSnapshots.user[asset]
-    const [side, magnitude] = [snapshot.nextSide === 'none' ? snapshot.side : snapshot.nextSide, snapshot.nextMagnitude]
-    let interfaceFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.interfaceFee)
-    let orderFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.orderFee)
-    let startCollateral = snapshot.pre.local.collateral
-    let netDeposits = 0n
-    let keeperFees = snapshot.pendingPositions[0].keeper
-    let positionFees = snapshot.pendingPositions[0].fee
-    const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-      totalTradeFee: snapshot.pre.nextPosition.fee,
-      positionFee: marketSnapshots.market[snapshot.asset]?.parameter.positionFee ?? 0n,
-    })
-    let priceImpactFees = pendingPriceImpactFee
-    const priceImpact = magnitude > 0n ? Big6Math.div(pendingPriceImpactFee, magnitude) : 0n
-
-    let averageEntryPrice = snapshot.prices[0]
-    if (side === 'long') averageEntryPrice = averageEntryPrice + priceImpact
-    if (side === 'short') averageEntryPrice = averageEntryPrice - priceImpact
-    if (graphPosition) {
-      // Start collateral is netDeposits + accumulatedCollateral immediately before start, plus deposits that occurred
-      // on the start block
-      startCollateral = graphPosition.startCollateral
-
-      // Average entry is (openNotionalNow - openNotionalBeforeStart + pendingNotionalDeltaIfPositive) / (openSizeNow - openSizeBeforeStart - pendingSizeDeltaIfPositive)
-      const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
-      const pendingNotional = Big6Math.mul(pendingDelta, snapshot.prices[0])
-      // Add price impact fee for taker positions
-      let avgEntryNumerator = graphPosition.openNotional + (pendingDelta > 0n ? pendingNotional : 0n)
-      if (side === 'long')
-        avgEntryNumerator = avgEntryNumerator + graphPosition.openPriceImpactFees + pendingPriceImpactFee
-      if (side === 'short')
-        avgEntryNumerator = avgEntryNumerator - graphPosition.openPriceImpactFees - pendingPriceImpactFee
-      averageEntryPrice = Big6Math.div(
-        avgEntryNumerator,
-        graphPosition.openSize + (pendingDelta > 0n ? pendingDelta : 0n),
-      )
-
-      // Current values are deltas between now and start
-      netDeposits = graphPosition.netDeposits
-      keeperFees = keeperFees + graphPosition.keeperFees
-      positionFees = positionFees + graphPosition.positionFees
-      priceImpactFees = priceImpactFees + graphPosition.priceImpactFees
-      interfaceFees = graphPosition.interfaceFees
-      orderFees = graphPosition.orderFees
-    }
-    const accumulatedValues = AccumulatorTypes.map(({ type, unrealizedKey }) => {
-      if (side === 'none') return { type, realized: 0n, unrealized: 0n, total: 0n }
-
-      // Pnl from start to latest account settlement
-      const realized = graphPosition?.accumulated[type] || 0n
-
-      // Pnl from latest account settlement to latest global settlement
-      let unrealized = 0n
-      if (marketAccumulators?.start[0] && marketAccumulators?.latest[0]) {
-        if ((side === 'maker' && type === 'makerPositionFee') || type !== 'makerPositionFee') {
-          unrealized = Big6Math.mul(
-            BigInt(marketAccumulators.latest[0][unrealizedKey[side]]) -
-              BigInt(marketAccumulators.start[0][unrealizedKey[side]]),
-            magnitude,
-          )
-        }
-      }
-
-      return { type, realized, unrealized, total: realized + unrealized }
-    })
-
-    // Add interface + order fee as part of start collateral since it is deducted from deposit and collateral balance
-    const realtimePnl = snapshot.local.collateral - (startCollateral + netDeposits + interfaceFees + orderFees)
-    const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n) + interfaceFees + orderFees
-    const accumulatedPnl = AccumulatorTypes.reduce((acc, { type }) => {
-      let pnl = accumulatedValues.find((v) => v.type === type)?.total ?? 0n
-      // If this is a taker position, we need to subtract the price impact fees from the pnl and total
-      if ((type === 'pnl' || type === 'value') && side !== 'maker') pnl = pnl - priceImpactFees
-      return { ...acc, [type]: pnl }
-    }, {} as RealizedAccumulations)
-
-    return {
-      startCollateral,
-      realtime: realtimePnl,
-      realtimePercent: !Big6Math.isZero(percentDenominator)
-        ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator))
-        : 0n,
-      realtimePercentDenominator: percentDenominator,
-      accumulatedPnl,
-      keeperFees,
-      positionFees,
-      priceImpactFees,
-      interfaceFees,
-      orderFees,
-      averageEntryPrice,
-      liquidation: !!graphPosition?.liquidation,
-      liquidationFee: graphPosition?.liquidationFee ?? 0n,
-    }
+  const checkpointData = await graphClient.request(queryAccountCheckpoints, {
+    account: address,
+    market: market,
   })
 
-  const pnlResponses = await Promise.all(pnlRequests)
+  const isFetchable =
+    checkpointData.marketAccountCheckpoints?.[0] && checkpointData.marketAccountCheckpoints?.[0].type === 'open'
 
-  const pnlData = pnlResponses.reduce(
-    (acc, queryResult, index) => {
-      const asset = markets[index].asset
-      if (!queryResult) return acc
-      acc[asset] = queryResult
-      return acc
-    },
-    {} as Record<
-      string,
-      {
-        startCollateral: bigint
-        realtime: bigint
-        realtimePercent: bigint
-        realtimePercentDenominator: bigint
-        accumulatedPnl: RealizedAccumulations
-        keeperFees: bigint
-        positionFees: bigint
-        priceImpactFees: bigint
-        interfaceFees: bigint
-        orderFees: bigint
-        averageEntryPrice: bigint
-        liquidation: boolean
-        liquidationFee: bigint
+  const graphPosition = isFetchable
+    ? await fetchPositionData({
+        graphClient,
+        address,
+        market: getAddress(checkpointData.marketAccountCheckpoints[0].market),
+        endVersion: null,
+        startVersion: BigInt(checkpointData.marketAccountCheckpoints[0].version),
+      })
+    : null
+
+  const lastSettlementSnapshot = userMarketSnapshot.pendingPositions[0].timestamp
+  const lastSettlement = graphPosition?.endVersion ? BigInt(graphPosition.endVersion) : lastSettlementSnapshot
+
+  const marketAccumulators = await graphClient.request(queryMarketAccumulatorsAndFirstUpdate, {
+    market: market,
+    account: address,
+    accountLatestVersion: lastSettlement.toString(),
+  })
+
+  const snapshot = userMarketSnapshot
+  const [side, magnitude] = [snapshot.nextSide === 'none' ? snapshot.side : snapshot.nextSide, snapshot.nextMagnitude]
+  let interfaceFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.interfaceFee)
+  let orderFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.orderFee)
+  let startCollateral = snapshot.pre.local.collateral
+  let netDeposits = 0n
+  let keeperFees = snapshot.pendingPositions[0].keeper
+  let positionFees = snapshot.pendingPositions[0].fee
+  const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
+    totalTradeFee: snapshot.pre.nextPosition.fee,
+    positionFee: marketSnapshot.parameter.positionFee ?? 0n,
+  })
+  let priceImpactFees = pendingPriceImpactFee
+  const priceImpact = magnitude > 0n ? Big6Math.div(pendingPriceImpactFee, magnitude) : 0n
+
+  let averageEntryPrice = snapshot.prices[0]
+  if (side === 'long') averageEntryPrice = averageEntryPrice + priceImpact
+  if (side === 'short') averageEntryPrice = averageEntryPrice - priceImpact
+  if (graphPosition) {
+    // Start collateral is netDeposits + accumulatedCollateral immediately before start, plus deposits that occurred
+    // on the start block
+    startCollateral = graphPosition.startCollateral
+
+    // Average entry is (openNotionalNow - openNotionalBeforeStart + pendingNotionalDeltaIfPositive) / (openSizeNow - openSizeBeforeStart - pendingSizeDeltaIfPositive)
+    const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
+    const pendingNotional = Big6Math.mul(pendingDelta, snapshot.prices[0])
+    // Add price impact fee for taker positions
+    let avgEntryNumerator = graphPosition.openNotional + (pendingDelta > 0n ? pendingNotional : 0n)
+    if (side === 'long')
+      avgEntryNumerator = avgEntryNumerator + graphPosition.openPriceImpactFees + pendingPriceImpactFee
+    if (side === 'short')
+      avgEntryNumerator = avgEntryNumerator - graphPosition.openPriceImpactFees - pendingPriceImpactFee
+    averageEntryPrice = Big6Math.div(
+      avgEntryNumerator,
+      graphPosition.openSize + (pendingDelta > 0n ? pendingDelta : 0n),
+    )
+
+    // Current values are deltas between now and start
+    netDeposits = graphPosition.netDeposits
+    keeperFees = keeperFees + graphPosition.keeperFees
+    positionFees = positionFees + graphPosition.positionFees
+    priceImpactFees = priceImpactFees + graphPosition.priceImpactFees
+    interfaceFees = graphPosition.interfaceFees
+    orderFees = graphPosition.orderFees
+  }
+  const accumulatedValues = AccumulatorTypes.map(({ type, unrealizedKey }) => {
+    if (side === 'none') return { type, realized: 0n, unrealized: 0n, total: 0n }
+
+    // Pnl from start to latest account settlement
+    const realized = graphPosition?.accumulated[type] || 0n
+
+    // Pnl from latest account settlement to latest global settlement
+    let unrealized = 0n
+    if (marketAccumulators?.start[0] && marketAccumulators?.latest[0]) {
+      if ((side === 'maker' && type === 'makerPositionFee') || type !== 'makerPositionFee') {
+        unrealized = Big6Math.mul(
+          BigInt(marketAccumulators.latest[0][unrealizedKey[side]]) -
+            BigInt(marketAccumulators.start[0][unrealizedKey[side]]),
+          magnitude,
+        )
       }
-    >,
-  )
+    }
 
-  return pnlData
+    return { type, realized, unrealized, total: realized + unrealized }
+  })
+
+  // Add interface + order fee as part of start collateral since it is deducted from deposit and collateral balance
+  const realtimePnl = snapshot.local.collateral - (startCollateral + netDeposits + interfaceFees + orderFees)
+  const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n) + interfaceFees + orderFees
+  const accumulatedPnl = AccumulatorTypes.reduce((acc, { type }) => {
+    let pnl = accumulatedValues.find((v) => v.type === type)?.total ?? 0n
+    // If this is a taker position, we need to subtract the price impact fees from the pnl and total
+    if ((type === 'pnl' || type === 'value') && side !== 'maker') pnl = pnl - priceImpactFees
+    return { ...acc, [type]: pnl }
+  }, {} as RealizedAccumulations)
+
+  return {
+    asset,
+    startCollateral,
+    realtime: realtimePnl,
+    realtimePercent: !Big6Math.isZero(percentDenominator)
+      ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator))
+      : 0n,
+    realtimePercentDenominator: percentDenominator,
+    accumulatedPnl,
+    keeperFees,
+    positionFees,
+    priceImpactFees,
+    interfaceFees,
+    orderFees,
+    averageEntryPrice,
+    liquidation: !!graphPosition?.liquidation,
+    liquidationFee: graphPosition?.liquidationFee ?? 0n,
+  }
 }
 
 export async function fetchActivePositionHistory({

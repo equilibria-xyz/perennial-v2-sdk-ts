@@ -6,7 +6,7 @@ import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
-  fetchActivePositionPnls,
+  fetchActivePositionPnl,
   fetchHistoricalPositions,
   fetchMarket7dData,
   fetchMarket24hrData,
@@ -57,9 +57,8 @@ export class MarketsModule {
           ...args,
         })
       },
-      activePositionPnls: (args: OmitBound<Parameters<typeof fetchActivePositionPnls>[0]>) => {
-        return fetchActivePositionPnls({
-          chainId: this.config.chainId,
+      activePositionPnl: (args: OmitBound<Parameters<typeof fetchActivePositionPnl>[0]>) => {
+        return fetchActivePositionPnl({
           graphClient: this.config.graphClient,
           ...args,
         })
