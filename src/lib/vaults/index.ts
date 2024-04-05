@@ -6,13 +6,54 @@ import {
   BuildClaimTxArgs,
   BuildDepositTxArgs,
   BuildRedeemSharesTxArgs,
+  MarketOracles,
   buildClaimTx,
   buildDepositTx,
   buildRedeemSharesTx,
 } from '..'
+import { buildCommitPrice, buildCommitmentsForOracles, notEmpty } from '../..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
+import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
+
+export const fetchVaultCommitments = async ({
+  chainId,
+  pythClient,
+  preMarketSnapshots,
+  marketOracles,
+  publicClient,
+}: {
+  chainId: SupportedChainId
+  pythClient: EvmPriceServiceConnection
+  preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
+  marketOracles: MarketOracles
+  publicClient: PublicClient
+}) => {
+  const oracles = preMarketSnapshots
+    .map((marketSnapshot) => {
+      const oracle = Object.values(marketOracles).find((o) => o.address === marketSnapshot.oracle)
+      if (!oracle) return
+      return oracle
+    })
+    .filter(notEmpty)
+  const commitments = await buildCommitmentsForOracles({
+    chainId,
+    pyth: pythClient,
+    publicClient,
+    marketOracles: oracles,
+  })
+  return commitments.map((c) => ({
+    value: c.value,
+    commitAction: buildCommitPrice({
+      keeperFactory: c.keeperFactory,
+      version: c.version,
+      ids: c.ids,
+      vaa: c.updateData,
+      revertOnFailure: false,
+      value: c.value,
+    }),
+  }))
+}
 
 type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient'>
 
@@ -39,6 +80,14 @@ export class VaultsModule {
     return {
       vaultSnapshots: (args: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]>) => {
         return fetchVaultSnapshots({
+          chainId: this.config.chainId,
+          publicClient: this.config.publicClient,
+          pythClient: this.config.pythClient,
+          ...args,
+        })
+      },
+      vaultCommitments: (args: OmitBound<Parameters<typeof fetchVaultCommitments>[0]>) => {
+        return fetchVaultCommitments({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,

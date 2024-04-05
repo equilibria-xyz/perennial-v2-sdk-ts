@@ -90,4 +90,8 @@ export default class PerennialSDK {
   get graphClient() {
     return this._graphClient
   }
+
+  get pythClient() {
+    return this._pythClient
+  }
 }
