@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@perennial/sdk": "0.0.1-beta12",
+    "fuzzysort": "^2.0.4",
+    "viem": "2.9.12"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.26",
+    "typescript": "5.4.2"
+  }
+}
