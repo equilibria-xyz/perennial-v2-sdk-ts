@@ -5,9 +5,9 @@ import { zeroAddress } from 'viem'
 import setupSDK from '../lib/sdk.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { key, func, args }: { key: string; func: string; args: any } = req.body
-  if (!key || !process.env.API_KEYS?.split(',').includes(key))
-    return res.status(401).json({ error: 'Unauthorized. Try updating the "key" value' })
+  const { apiKey, func, args }: { apiKey: string; func: string; args: any } = req.body
+  if (!apiKey || !process.env.API_KEYS?.split(',').includes(apiKey))
+    return res.status(401).json({ error: 'Unauthorized. Try updating the "apiKey" value' })
   if (!func) return res.status(400).json({ error: 'Function not provided' })
 
   // Setup the SDK
