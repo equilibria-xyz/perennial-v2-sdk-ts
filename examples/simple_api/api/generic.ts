@@ -6,8 +6,7 @@ import setupSDK from '../lib/sdk.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { key, func, args }: { key: string; func: string; args: any } = req.body
-  console.log(process.env.KEYS?.split(','))
-  if (!key || !process.env.KEYS?.split(',').includes(key))
+  if (!key || !process.env.API_KEYS?.split(',').includes(key))
     return res.status(401).json({ error: 'Unauthorized. Try updating the "key" value' })
   if (!func) return res.status(400).json({ error: 'Function not provided' })
 
