@@ -22,6 +22,11 @@ import { getMarketContract, getOracleContract, getPythFactoryContract } from '..
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
+/**
+ * Fetches the market oracles for a given chain
+ * @param chainId Chain ID {@link SupportedChainId}
+ * @param publicClient Public Client
+ */
 export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
   const markets = chainAssetsWithAddress(chainId)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
@@ -106,7 +111,16 @@ export type UserMarketSnapshot = ChainUserMarketSnapshot & {
 }
 
 export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshots>>>
-// TODO: make market oracles an optional parameter so we can skip that fetch
+/**
+ * Fetches market snapshots for a given address
+ * @param publicClient Public Client
+ * @param pythClient Pyth Client
+ * @param chainId Chain ID {@link SupportedChainId}
+ * @param address Wallet Address
+ * @param marketOracles {@link MarketOracles}
+ * @param onError Error callback
+ * @param onSuccess Success callback
+ */
 export async function fetchMarketSnapshots({
   publicClient,
   pythClient,

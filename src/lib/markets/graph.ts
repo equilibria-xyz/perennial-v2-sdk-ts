@@ -16,6 +16,16 @@ export type Markets = {
   marketAddress: Address
 }[]
 
+/**
+ * Fetches position PnL for a given market and Address
+ * @param address Wallet Address
+ * @param market Market Address
+ * @param userMarketSnapshot {@link UserMarketSnapshot}
+ * @param marketSnapshot {@link MarketSnapshot}
+ * @param includeClosedWithCollateral Include closed positions with collateral
+ * @param graphClient GraphQLClient
+ * @returns User's PnL for an active position.
+ */
 export async function fetchActivePositionPnl({
   market,
   marketSnapshot,
@@ -220,7 +230,15 @@ export async function fetchActivePositionPnl({
     liquidationFee: graphPosition?.liquidationFee ?? 0n,
   }
 }
-
+/**
+ * Fetches active position history for a given address
+ * @param address Wallet Address
+ * @param market Market Address
+ * @param pageParam Page number
+ * @param pageSize Page size
+ * @param graphClient GraphQLClient
+ * @returns User's position history for an active position.
+ */
 export async function fetchActivePositionHistory({
   market,
   address,
@@ -263,7 +281,15 @@ export async function fetchActivePositionHistory({
     checkpoint: { close: close[0], open: open[0] },
   }
 }
-
+/**
+ * Fetches the position history for a given address
+ * @param address Wallet Address
+ * @param markets List of {@link Markets} to fetch position history for
+ * @param pageParam Page number
+ * @param pageSize Page size
+ * @param graphClient GraphQLClient
+ * @returns User's position history.
+ */
 export async function fetchHistoricalPositions({
   markets,
   address,
@@ -499,6 +525,17 @@ async function fetchPositionData({
 }
 
 export type SubPositionChange = Awaited<ReturnType<typeof fetchSubPositions>>['changes'][number]
+/**
+ * Fetches the sub positions activity for a given position
+ * @param address Wallet Address
+ * @param market Market Address
+ * @param startVersion BigInt - Start oracle version number
+ * @param endVersion BigInt - End oracle version number
+ * @param first Number of entries to fetch
+ * @param skip Number of entries to skip
+ * @param graphClient GraphQLClient
+ * @returns User's sub positions.
+ */
 export async function fetchSubPositions({
   graphClient,
   address,
@@ -673,6 +710,15 @@ export async function fetchSubPositions({
 }
 
 export type OpenOrder = NonNullable<NonNullable<Awaited<ReturnType<typeof fetchOpenOrders>>>>['openOrders'][number]
+/**
+ * Fetches the open orders for a given address
+ * @param address Wallet Address
+ * @param markets List of {@link Markets} to fetch open orders for
+ * @param pageParam Page number
+ * @param pageSize Page size
+ * @param graphClient GraphQLClient
+ * @returns User's open orders.
+ */
 export async function fetchOpenOrders({
   graphClient,
   markets,
@@ -714,13 +760,24 @@ export async function fetchOpenOrders({
   }
 }
 
+/**
+ * Fetches the 24hr volume data for a given market
+ * @param market Market Address
+ * @param graphClient GraphQLClient
+ * @returns Market 24hr volume data.
+ */
 export async function fetchMarket24hrData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
   const volumeRes = await fetchMarkets24hrVolume({ graphClient, markets: [market] })
   return {
     volume: volumeRes[market] || [],
   }
 }
-
+/**
+ * Fetches the 24hr volume data for a list of market
+ * @param markets List of market Addresses
+ * @param graphClient GraphQLClient
+ * @returns Markets 24hr volume data.
+ */
 export async function fetchMarkets24hrVolume({
   graphClient,
   markets,
@@ -767,7 +824,12 @@ export async function fetchMarkets24hrVolume({
     >,
   )
 }
-
+/**
+ * Fetches the 7d data for a given market
+ * @param market Market Address
+ * @param graphClient GraphQLClient
+ * @returns Market 7d data.
+ */
 export async function fetchMarket7dData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
   const { to, from } = last7dBounds()
 

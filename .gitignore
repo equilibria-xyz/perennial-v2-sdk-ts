@@ -138,3 +138,5 @@ src/types/gql
 .env.local
 artifacts
 cache
+
+docs
