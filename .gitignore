@@ -139,4 +139,6 @@ src/types/gql
 artifacts
 cache
 
-docs
+docs-site
+docs/*
+.vercel

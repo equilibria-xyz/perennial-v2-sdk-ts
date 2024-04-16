@@ -106,12 +106,20 @@ export class VaultsModule {
        * @param onSuccess Success callback
        * @returns {@link VaultSnapshots}
        */
-      vaultSnapshots: (args: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]>) => {
+      vaultSnapshots: ({
+        address,
+        marketOracles,
+        onError,
+        onSuccess,
+      }: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]>) => {
         return fetchVaultSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          ...args,
+          address,
+          marketOracles,
+          onError,
+          onSuccess,
         })
       },
       /**
@@ -120,12 +128,16 @@ export class VaultsModule {
        * @param marketOracles {@link MarketOracles}
        * @returns The vault commitments.
        */
-      vaultCommitments: (args: OmitBound<Parameters<typeof fetchVaultCommitments>[0]>) => {
+      vaultCommitments: ({
+        preMarketSnapshots,
+        marketOracles,
+      }: OmitBound<Parameters<typeof fetchVaultCommitments>[0]>) => {
         return fetchVaultCommitments({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          ...args,
+          preMarketSnapshots,
+          marketOracles,
         })
       },
       /**
@@ -133,11 +145,11 @@ export class VaultsModule {
        * @param address Wallet Address
        * @returns The vault position history.
        */
-      vaultPositionHistory: (args: OmitBound<Parameters<typeof fetchVaultPositionHistory>[0]>) => {
+      vaultPositionHistory: ({ address }: OmitBound<Parameters<typeof fetchVaultPositionHistory>[0]>) => {
         return fetchVaultPositionHistory({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          ...args,
+          address,
         })
       },
       /**
@@ -147,10 +159,16 @@ export class VaultsModule {
        * @param latestBlockNumber Latest block number
        * @returns The vault 7d accumulations.
        */
-      vault7dAccumulations: (args: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
+      vault7dAccumulations: ({
+        vaultAddress,
+        vaultSnapshot,
+        latestBlockNumber,
+      }: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
         return fetchVault7dAccumulations({
           graphClient: this.config.graphClient,
-          ...args,
+          vaultAddress,
+          vaultSnapshot,
+          latestBlockNumber,
         })
       },
     }
@@ -162,17 +180,17 @@ export class VaultsModule {
        * Build a transaction to deposit into a vault
        * @param vaultAddress Vault Address
        * @param amount Amount to deposit
-       * @param marketOracles {@link MarketOracles}
-       * @param vaultSnapshots {@link VaultSnapshots}
        * @param address Wallet Address
        * @returns Vault deposit transaction data.
        */
-      deposit: (args: OmitBound<BuildDepositTxArgs>) => {
+      deposit: ({ vaultAddress, address, amount }: OmitBound<BuildDepositTxArgs>) => {
         return buildDepositTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          ...args,
+          vaultAddress,
+          address,
+          amount,
         })
       },
       /**
@@ -182,13 +200,29 @@ export class VaultsModule {
        * @param amount Amount to redeem
        * @param assets (optional) boolean - Whether to redeem assets
        * @param max (optional) boolean - Whether to redeem max
+       * @param marketOracles {@link MarketOracles}
+       * @param vaultSnapshots {@link VaultSnapshots}
        */
-      redeem: (args: OmitBound<BuildRedeemSharesTxArgs>) => {
+      redeem: ({
+        vaultAddress,
+        address,
+        amount,
+        assets,
+        max,
+        vaultSnapshots,
+        marketOracles,
+      }: OmitBound<BuildRedeemSharesTxArgs>) => {
         return buildRedeemSharesTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          ...args,
+          vaultAddress,
+          address,
+          amount,
+          assets,
+          max,
+          vaultSnapshots,
+          marketOracles,
         })
       },
       /**
@@ -230,8 +264,8 @@ export class VaultsModule {
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Transaction hash
        * */
-      deposit: async (...args: Parameters<typeof this.build.deposit>) => {
-        const tx = await this.build.deposit(...args)
+      deposit: async ({ vaultAddress, address, amount }: OmitBound<BuildDepositTxArgs>) => {
+        const tx = await this.build.deposit({ vaultAddress, address, amount })
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -245,8 +279,24 @@ export class VaultsModule {
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Transaction hash
        */
-      redeem: async (...args: Parameters<typeof this.build.redeem>) => {
-        const tx = await this.build.redeem(...args)
+      redeem: async ({
+        vaultAddress,
+        address,
+        amount,
+        assets,
+        max,
+        vaultSnapshots,
+        marketOracles,
+      }: OmitBound<BuildRedeemSharesTxArgs>) => {
+        const tx = await this.build.redeem({
+          vaultAddress,
+          address,
+          amount,
+          assets,
+          max,
+          vaultSnapshots,
+          marketOracles,
+        })
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },

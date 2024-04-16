@@ -3,8 +3,10 @@ import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient } from 'viem'
 
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { fetchMarketOracles, fetchMarketSnapshots } from './chain'
+import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
+import { MarketOracles, MarketSnapshot, UserMarketSnapshot, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
+  Markets,
   fetchActivePositionHistory,
   fetchActivePositionPnl,
   fetchHistoricalPositions,
@@ -71,7 +73,12 @@ export class MarketsModule {
        * @param onSuccess Success callback
        * @returns The {@link MarketSnapshots}.
        */
-      marketSnapshots: (args: OmitBound<Parameters<typeof fetchMarketSnapshots>[0]>) => {
+      marketSnapshots: (args: {
+        address: Address
+        marketOracles?: MarketOracles
+        onError?: () => void
+        onSuccess?: () => void
+      }) => {
         return fetchMarketSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
@@ -88,7 +95,13 @@ export class MarketsModule {
        * @param includeClosedWithCollateral Include closed positions with collateral
        * @returns User's PnL for an active position.
        */
-      activePositionPnl: (args: OmitBound<Parameters<typeof fetchActivePositionPnl>[0]>) => {
+      activePositionPnl: (args: {
+        market: Address
+        marketSnapshot: MarketSnapshot
+        userMarketSnapshot: UserMarketSnapshot
+        address: Address
+        includeClosedWithCollateral?: boolean
+      }) => {
         return fetchActivePositionPnl({
           graphClient: this.config.graphClient,
           ...args,
@@ -102,7 +115,7 @@ export class MarketsModule {
        * @param pageSize Page size
        * @returns User's position history for an active position.
        */
-      activePositionHistory: (args: OmitBound<Parameters<typeof fetchActivePositionHistory>[0]>) => {
+      activePositionHistory: (args: { market: Address; address: Address; pageParam: number; pageSize: number }) => {
         return fetchActivePositionHistory({
           graphClient: this.config.graphClient,
           ...args,
@@ -116,7 +129,13 @@ export class MarketsModule {
        * @param pageSize Page size
        * @returns User's position history.
        */
-      historicalPositions: (args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]>) => {
+      historicalPositions: (args: {
+        markets: Markets
+        address: Address
+        pageSize: number
+        pageParam?: { page: number; checkpoints?: MarketsAccountCheckpointsQuery }
+        maker?: boolean
+      }) => {
         return fetchHistoricalPositions({
           graphClient: this.config.graphClient,
           ...args,
@@ -132,7 +151,14 @@ export class MarketsModule {
        * @param skip Number of entries to skip
        * @returns User's sub positions.
        */
-      subPositions: (args: OmitBound<Parameters<typeof fetchSubPositions>[0]>) => {
+      subPositions: (args: {
+        address: Address
+        market: Address
+        startVersion: bigint
+        endVersion?: bigint
+        first: number
+        skip: number
+      }) => {
         return fetchSubPositions({
           graphClient: this.config.graphClient,
           ...args,
@@ -146,7 +172,13 @@ export class MarketsModule {
        * @param pageSize Page size
        * @returns User's open orders.
        */
-      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]>) => {
+      openOrders: (args: {
+        markets: Markets
+        address: Address
+        pageParam: number
+        pageSize: number
+        isMaker?: boolean
+      }) => {
         return fetchOpenOrders({
           graphClient: this.config.graphClient,
           ...args,
@@ -157,10 +189,10 @@ export class MarketsModule {
        * @param market Market Address
        * @returns Market 24hr volume data.
        */
-      market24hrData: (args: OmitBound<Parameters<typeof fetchMarket24hrData>[0]>) => {
+      market24hrData: ({ market }: { market: Address }) => {
         return fetchMarket24hrData({
           graphClient: this.config.graphClient,
-          ...args,
+          market,
         })
       },
       /**
@@ -168,10 +200,10 @@ export class MarketsModule {
        * @param markets List of market Addresses
        * @returns Markets 24hr volume data.
        */
-      markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrVolume>[0]>) => {
+      markets24hrData: ({ markets }: { markets: Address[] }) => {
         return fetchMarkets24hrVolume({
           graphClient: this.config.graphClient,
-          ...args,
+          markets,
         })
       },
       /**
@@ -179,10 +211,10 @@ export class MarketsModule {
        * @param market Market Address
        * @returns Market 7d data.
        */
-      market7dData: (args: OmitBound<Parameters<typeof fetchMarket7dData>[0]>) => {
+      market7dData: ({ market }: { market: Address }) => {
         return fetchMarket7dData({
           graphClient: this.config.graphClient,
-          ...args,
+          market,
         })
       },
     }
@@ -210,12 +242,44 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Modify position transaction data.
        */
-      modifyPosition: (args: OmitBound<BuildModifyPositionTxArgs>) => {
+      modifyPosition: ({
+        marketAddress,
+        marketSnapshots,
+        marketOracles,
+        address,
+        collateralDelta,
+        positionAbs,
+        positionSide,
+        stopLoss,
+        takeProfit,
+        settlementFee,
+        cancelOrderDetails,
+        absDifferenceNotional,
+        interfaceFee,
+        interfaceFeeRate,
+        referralFeeRate,
+        onCommitmentError,
+      }: OmitBound<BuildModifyPositionTxArgs>) => {
         return buildModifyPositionTx({
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
-          ...args,
+          marketAddress,
+          marketSnapshots,
+          marketOracles,
+          address,
+          collateralDelta,
+          positionAbs,
+          positionSide,
+          stopLoss,
+          takeProfit,
+          settlementFee,
+          cancelOrderDetails,
+          absDifferenceNotional,
+          interfaceFee,
+          interfaceFeeRate,
+          referralFeeRate,
+          onCommitmentError,
         })
       },
       /**
@@ -226,11 +290,13 @@ export class MarketsModule {
        * @param marketOracles {@link MarketOracles}
        * @returns Submit VAA transaction data.
        */
-      submitVaa: (args: OmitBound<BuildSubmitVaaTxArgs>) => {
+      submitVaa: ({ marketAddress, marketOracles, address }: OmitBound<BuildSubmitVaaTxArgs>) => {
         return buildSubmitVaaTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
-          ...args,
+          marketAddress,
+          marketOracles,
+          address,
         })
       },
       /**
@@ -255,12 +321,46 @@ export class MarketsModule {
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
        */
-      placeOrder: (args: OmitBound<BuildPlaceOrderTxArgs>) => {
+      placeOrder: ({
+        address,
+        marketOracles,
+        marketAddress,
+        orderType,
+        limitPrice,
+        marketSnapshots,
+        collateralDelta,
+        stopLoss,
+        takeProfit,
+        side,
+        delta = 0n,
+        positionAbs,
+        selectedLimitComparison,
+        cancelOrderDetails,
+        referralFeeRate,
+        interfaceFeeRate,
+        onCommitmentError,
+      }: OmitBound<BuildPlaceOrderTxArgs>) => {
         return buildPlaceOrderTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
-          ...args,
+          address,
+          marketOracles,
+          marketAddress,
+          orderType,
+          limitPrice,
+          marketSnapshots,
+          collateralDelta,
+          stopLoss,
+          takeProfit,
+          side,
+          delta,
+          positionAbs,
+          selectedLimitComparison,
+          cancelOrderDetails,
+          referralFeeRate,
+          interfaceFeeRate,
+          onCommitmentError,
         })
       },
       /**
@@ -309,8 +409,42 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Transaction Hash
        */
-      modifyPosition: async (...args: Parameters<typeof this.build.modifyPosition>) => {
-        const tx = await this.build.modifyPosition(...args)
+      modifyPosition: async ({
+        marketAddress,
+        marketSnapshots,
+        marketOracles,
+        address,
+        collateralDelta,
+        positionAbs,
+        positionSide,
+        stopLoss,
+        takeProfit,
+        settlementFee,
+        cancelOrderDetails,
+        absDifferenceNotional,
+        interfaceFee,
+        interfaceFeeRate,
+        referralFeeRate,
+        onCommitmentError,
+      }: OmitBound<BuildModifyPositionTxArgs>) => {
+        const tx = await this.build.modifyPosition({
+          marketAddress,
+          marketSnapshots,
+          marketOracles,
+          address,
+          collateralDelta,
+          positionAbs,
+          positionSide,
+          stopLoss,
+          takeProfit,
+          settlementFee,
+          cancelOrderDetails,
+          absDifferenceNotional,
+          interfaceFee,
+          interfaceFeeRate,
+          referralFeeRate,
+          onCommitmentError,
+        })
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -322,8 +456,8 @@ export class MarketsModule {
        * @param marketOracles {@link MarketOracles}
        * @returns Transaction Hash.
        */
-      submitVaa: async (...args: Parameters<typeof this.build.submitVaa>) => {
-        const tx = await this.build.submitVaa(...args)
+      submitVaa: async ({ marketAddress, marketOracles, address }: OmitBound<BuildSubmitVaaTxArgs>) => {
+        const tx = await this.build.submitVaa({ marketAddress, marketOracles, address })
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -349,8 +483,44 @@ export class MarketsModule {
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
        */
-      placeOrder: async (...args: Parameters<typeof this.build.placeOrder>) => {
-        const tx = await this.build.placeOrder(...args)
+      placeOrder: async ({
+        address,
+        marketOracles,
+        marketAddress,
+        orderType,
+        limitPrice,
+        marketSnapshots,
+        collateralDelta,
+        stopLoss,
+        takeProfit,
+        side,
+        delta = 0n,
+        positionAbs,
+        selectedLimitComparison,
+        cancelOrderDetails,
+        referralFeeRate,
+        interfaceFeeRate,
+        onCommitmentError,
+      }: OmitBound<BuildPlaceOrderTxArgs>) => {
+        const tx = await this.build.placeOrder({
+          address,
+          marketOracles,
+          marketAddress,
+          orderType,
+          limitPrice,
+          marketSnapshots,
+          collateralDelta,
+          stopLoss,
+          takeProfit,
+          side,
+          delta,
+          positionAbs,
+          selectedLimitComparison,
+          cancelOrderDetails,
+          referralFeeRate,
+          interfaceFeeRate,
+          onCommitmentError,
+        })
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },

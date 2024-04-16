@@ -270,7 +270,6 @@ export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
   pythClient: EvmPriceServiceConnection
   marketAddress: Address
-  marketSnapshots: MarketSnapshots
   marketOracles: MarketOracles
   address: Address
 }
