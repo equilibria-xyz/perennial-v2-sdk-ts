@@ -21,7 +21,7 @@
     "precommit": "pnpm exec lint-staged",
     "prepush": "pnpm run build",
     "prepare": "husky",
-    "build:docs": "typedoc --out docs --plugin typedoc-plugin-missing-exports --internalModule Definitions src/Perennial/index.ts src/lib/markets/index.ts src/lib/vaults/index.ts src/lib/contracts.ts src/lib/operators.ts"
+    "build:docs": "typedoc --options typedoc.config.cjs"
   },
   "author": "",
   "license": "ISC",

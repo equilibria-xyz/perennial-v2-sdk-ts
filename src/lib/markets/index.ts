@@ -242,44 +242,12 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Modify position transaction data.
        */
-      modifyPosition: ({
-        marketAddress,
-        marketSnapshots,
-        marketOracles,
-        address,
-        collateralDelta,
-        positionAbs,
-        positionSide,
-        stopLoss,
-        takeProfit,
-        settlementFee,
-        cancelOrderDetails,
-        absDifferenceNotional,
-        interfaceFee,
-        interfaceFeeRate,
-        referralFeeRate,
-        onCommitmentError,
-      }: OmitBound<BuildModifyPositionTxArgs>) => {
+      modifyPosition: (args: OmitBound<BuildModifyPositionTxArgs>) => {
         return buildModifyPositionTx({
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
-          marketAddress,
-          marketSnapshots,
-          marketOracles,
-          address,
-          collateralDelta,
-          positionAbs,
-          positionSide,
-          stopLoss,
-          takeProfit,
-          settlementFee,
-          cancelOrderDetails,
-          absDifferenceNotional,
-          interfaceFee,
-          interfaceFeeRate,
-          referralFeeRate,
-          onCommitmentError,
+          ...args,
         })
       },
       /**
@@ -321,46 +289,12 @@ export class MarketsModule {
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
        */
-      placeOrder: ({
-        address,
-        marketOracles,
-        marketAddress,
-        orderType,
-        limitPrice,
-        marketSnapshots,
-        collateralDelta,
-        stopLoss,
-        takeProfit,
-        side,
-        delta = 0n,
-        positionAbs,
-        selectedLimitComparison,
-        cancelOrderDetails,
-        referralFeeRate,
-        interfaceFeeRate,
-        onCommitmentError,
-      }: OmitBound<BuildPlaceOrderTxArgs>) => {
+      placeOrder: (args: OmitBound<BuildPlaceOrderTxArgs>) => {
         return buildPlaceOrderTx({
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
-          address,
-          marketOracles,
-          marketAddress,
-          orderType,
-          limitPrice,
-          marketSnapshots,
-          collateralDelta,
-          stopLoss,
-          takeProfit,
-          side,
-          delta,
-          positionAbs,
-          selectedLimitComparison,
-          cancelOrderDetails,
-          referralFeeRate,
-          interfaceFeeRate,
-          onCommitmentError,
+          ...args,
         })
       },
       /**
@@ -409,42 +343,8 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Transaction Hash
        */
-      modifyPosition: async ({
-        marketAddress,
-        marketSnapshots,
-        marketOracles,
-        address,
-        collateralDelta,
-        positionAbs,
-        positionSide,
-        stopLoss,
-        takeProfit,
-        settlementFee,
-        cancelOrderDetails,
-        absDifferenceNotional,
-        interfaceFee,
-        interfaceFeeRate,
-        referralFeeRate,
-        onCommitmentError,
-      }: OmitBound<BuildModifyPositionTxArgs>) => {
-        const tx = await this.build.modifyPosition({
-          marketAddress,
-          marketSnapshots,
-          marketOracles,
-          address,
-          collateralDelta,
-          positionAbs,
-          positionSide,
-          stopLoss,
-          takeProfit,
-          settlementFee,
-          cancelOrderDetails,
-          absDifferenceNotional,
-          interfaceFee,
-          interfaceFeeRate,
-          referralFeeRate,
-          onCommitmentError,
-        })
+      modifyPosition: async (args: OmitBound<BuildModifyPositionTxArgs>) => {
+        const tx = await this.build.modifyPosition(args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -483,44 +383,8 @@ export class MarketsModule {
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
        */
-      placeOrder: async ({
-        address,
-        marketOracles,
-        marketAddress,
-        orderType,
-        limitPrice,
-        marketSnapshots,
-        collateralDelta,
-        stopLoss,
-        takeProfit,
-        side,
-        delta = 0n,
-        positionAbs,
-        selectedLimitComparison,
-        cancelOrderDetails,
-        referralFeeRate,
-        interfaceFeeRate,
-        onCommitmentError,
-      }: OmitBound<BuildPlaceOrderTxArgs>) => {
-        const tx = await this.build.placeOrder({
-          address,
-          marketOracles,
-          marketAddress,
-          orderType,
-          limitPrice,
-          marketSnapshots,
-          collateralDelta,
-          stopLoss,
-          takeProfit,
-          side,
-          delta,
-          positionAbs,
-          selectedLimitComparison,
-          cancelOrderDetails,
-          referralFeeRate,
-          interfaceFeeRate,
-          onCommitmentError,
-        })
+      placeOrder: async (args: OmitBound<BuildPlaceOrderTxArgs>) => {
+        const tx = await this.build.placeOrder(args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
