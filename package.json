@@ -20,7 +20,8 @@
     "lint": "eslint --ext .ts src/",
     "precommit": "pnpm exec lint-staged",
     "prepush": "pnpm run build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:docs": "typedoc --options typedoc.config.cjs"
   },
   "author": "",
   "license": "ISC",
@@ -47,9 +48,12 @@
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "tslib": "^2.6.2",
+    "typedoc": "^0.25.13",
+    "typedoc-plugin-missing-exports": "^2.2.0",
     "typescript": "5.4.3"
   },
   "dependencies": {
+    "@microsoft/tsdoc": "^0.14.2",
     "@perennial/pyth-evm-js": "^1.32.0-fork4",
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",

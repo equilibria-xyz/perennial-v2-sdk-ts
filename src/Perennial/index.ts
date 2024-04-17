@@ -17,6 +17,20 @@ export type SDKConfig = {
   pythUrl: string
 }
 export default class PerennialSDK {
+  /**
+   * Perennial SDK class
+   *
+   * @param config SDK configuration
+   * @param config.rpcUrl Rpc URL
+   * @param config.walletClient Wallet Client
+   * @param config.chainId {@link SupportedChainId}
+   * @param config.graphUrl SubGraph URL
+   * @param config.pythUrl Pyth URL
+   *
+   * @returns Perennial SDK instance
+   *
+   * @beta
+   */
   private config: SDKConfig
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>

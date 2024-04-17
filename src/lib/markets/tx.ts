@@ -26,6 +26,8 @@ type WithChainIdAndPublicClient = {
   publicClient: PublicClient
 }
 
+export type InterfaceFeeRate = typeof interfaceFeeBps
+
 export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
@@ -41,7 +43,7 @@ export type BuildModifyPositionTxArgs = {
   cancelOrderDetails?: OpenOrder[]
   absDifferenceNotional?: bigint
   interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
-  interfaceFeeRate?: typeof interfaceFeeBps
+  interfaceFeeRate?: InterfaceFeeRate
   referralFeeRate?: ReferrerInterfaceFeeInfo
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
@@ -268,7 +270,6 @@ export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
   pythClient: EvmPriceServiceConnection
   marketAddress: Address
-  marketSnapshots: MarketSnapshots
   marketOracles: MarketOracles
   address: Address
 }
@@ -294,6 +295,8 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
   }
 }
 
+export type CancelOrderDetails = { market: Address; nonce: bigint }
+
 export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
   address: Address
@@ -310,8 +313,8 @@ export type BuildPlaceOrderTxArgs = {
   positionAbs: bigint
   selectedLimitComparison?: TriggerComparison
   referralFeeRate?: ReferrerInterfaceFeeInfo
-  interfaceFeeRate?: typeof interfaceFeeBps
-  cancelOrderDetails?: { market: Address; nonce: bigint }
+  interfaceFeeRate?: InterfaceFeeRate
+  cancelOrderDetails?: CancelOrderDetails
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -556,12 +559,14 @@ export async function buildPlaceOrderTx({
   }
 }
 
+export type CancelOrderTuple = [Address, bigint]
+
 export function buildCancelOrderTx({
   chainId,
   orderDetails,
 }: {
   chainId: SupportedChainId
-  orderDetails: [Address, bigint][]
+  orderDetails: CancelOrderTuple[]
 }) {
   const actions: MultiInvokerAction[] = orderDetails.map(([market, nonce]) =>
     buildCancelOrder({
