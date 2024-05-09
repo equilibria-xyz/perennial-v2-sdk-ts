@@ -983,3 +983,140 @@ export const getPriceAtVersion = async ({
 
   return res.marketVersionPrice?.price ?? 0n
 }
+
+export type TradeHistoryItem<T> = {
+  side: string
+  delta: bigint
+  collateralDelta: bigint
+  priceImpactFee: bigint
+  fromOracleVersion: bigint
+  toOracleVersion: bigint
+  accumulatedValue: bigint
+  accumulatedPnl: bigint
+  accumulatedFunding: bigint
+  accumulatedInterest: bigint
+  accumulatedPositionFee: bigint
+  accumulatedKeeper: bigint
+  date: Date
+  transactionHash: string
+  accountPositionProcesseds: T
+}
+
+export async function fetchTradeHistory({
+  graphClient,
+  address,
+  first,
+  offset,
+}: {
+  graphClient: GraphQLClient
+  address: Address
+  first: number
+  offset: number
+}) {
+  const tradeHistoryQuery = gql(`
+   query fetchTradeHistory($account: Bytes!, $first: Int!, $offset: Int!) {
+    accountPositionProcesseds(
+      where: { account: $account },
+      orderBy: toOracleVersion,
+      orderDirection: desc,
+      first: $first,
+      skip: $offset,
+    ) {
+      account,
+      market,
+      fromOracleVersion,
+      toOracleVersion,
+      accumulatedValue,
+      accumulatedPnl,
+      accumulatedFunding,
+      accumulatedInterest,
+      accumulationResult_positionFee,
+      accumulationResult_keeper,
+      update {
+        version,
+        delta,
+        side,
+        collateral,
+        priceImpactFee,
+        blockTimestamp,
+        transactionHash
+      }
+    }
+   }
+  `)
+
+  const { accountPositionProcesseds } = await graphClient.request(tradeHistoryQuery, {
+    account: address,
+    first,
+    offset,
+  })
+
+  const entities = accountPositionProcesseds.reduce(
+    (acc, entity) => {
+      const market = addressToAsset(getAddress(entity.market)) as SupportedAsset
+
+      if (!acc[market]) acc[market] = []
+      acc[market].push(entity)
+      return acc
+    },
+    {} as Record<SupportedAsset, typeof accountPositionProcesseds>,
+  )
+
+  const trades = Object.entries(entities).reduce(
+    (acc, [market, entities]) => {
+      const asset = market as SupportedAsset
+
+      const updates: TradeHistoryItem<typeof accountPositionProcesseds>[] = []
+
+      entities.forEach((entity) => {
+        if (entity.update) {
+          updates.push({
+            side: entity.update.side,
+            delta: BigOrZero(entity.update.delta),
+            collateralDelta: BigOrZero(entity.update.collateral),
+            priceImpactFee: BigOrZero(entity.update.priceImpactFee),
+            fromOracleVersion: BigInt(entity.fromOracleVersion),
+            toOracleVersion: BigInt(entity.toOracleVersion),
+            accumulatedValue: BigOrZero(entity.accumulatedValue),
+            accumulatedPnl: BigOrZero(entity.accumulatedPnl),
+            accumulatedFunding: BigOrZero(entity.accumulatedFunding),
+            accumulatedInterest: BigOrZero(entity.accumulatedInterest),
+            accumulatedPositionFee: BigOrZero(entity.accumulationResult_positionFee),
+            accumulatedKeeper: BigOrZero(entity.accumulationResult_keeper),
+            date: new Date(Number(entity.update.blockTimestamp) * 1000),
+            transactionHash: entity.update.transactionHash,
+            accountPositionProcesseds: [entity],
+          })
+        } else {
+          const update = updates[updates.length - 1]
+          update.accountPositionProcesseds.push(entity)
+        }
+      })
+      acc[asset] = updates
+
+      return acc
+    },
+    {} as Record<SupportedAsset, TradeHistoryItem<typeof accountPositionProcesseds>[]>,
+  )
+  return trades
+}
+
+// Note:
+// Do i filter this one out at the end?
+// {
+//   side: 'none',
+//   delta: 0n,
+//   collateralDelta: 0n,
+//   priceImpactFee: 0n,
+//   fromOracleVersion: 1707900880n,
+//   toOracleVersion: 1707900890n,
+//   accumulatedValue: 0n,
+//   accumulatedPnl: 0n,
+//   accumulatedFunding: 0n,
+//   accumulatedInterest: 0n,
+//   accumulatedPositionFee: 0n,
+//   accumulatedKeeper: 0n,
+//   date: 2024-02-14T08:54:45.000Z,
+//   transactionHash: '0x3a306b3830a6b10c93e58e43f071b01eda23167331c4ba22535a8869cb560881',
+//   accountPositionProcesseds: [Array]
+// },
