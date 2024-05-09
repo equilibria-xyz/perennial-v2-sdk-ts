@@ -15,6 +15,7 @@ import {
   fetchMarkets24hrVolume,
   fetchOpenOrders,
   fetchSubPositions,
+  fetchTradeHistory,
 } from './graph'
 import {
   BuildModifyPositionTxArgs,
@@ -160,6 +161,19 @@ export class MarketsModule {
         skip: number
       }) => {
         return fetchSubPositions({
+          graphClient: this.config.graphClient,
+          ...args,
+        })
+      },
+      /**
+       * Fetches the trade history for a given address
+       * @param address Wallet Address
+       * @param first number of trades
+       * @param offset number of trades to skip
+       * @returns User's trade history.
+       */
+      tradeHistory: (args: { address: Address; first: number; offset: number }) => {
+        return fetchTradeHistory({
           graphClient: this.config.graphClient,
           ...args,
         })
