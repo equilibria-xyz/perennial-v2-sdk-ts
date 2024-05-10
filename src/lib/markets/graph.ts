@@ -984,24 +984,6 @@ export const getPriceAtVersion = async ({
   return res.marketVersionPrice?.price ?? 0n
 }
 
-export type TradeHistoryItem<T> = {
-  side: string
-  delta: bigint
-  collateralDelta: bigint
-  priceImpactFee: bigint
-  fromOracleVersion: bigint
-  toOracleVersion: bigint
-  accumulatedValue: bigint
-  accumulatedPnl: bigint
-  accumulatedFunding: bigint
-  accumulatedInterest: bigint
-  accumulatedPositionFee: bigint
-  accumulatedKeeper: bigint
-  date: Date
-  transactionHash: string
-  accountPositionProcesseds: T
-}
-
 export async function fetchTradeHistory({
   graphClient,
   address,
@@ -1022,24 +1004,13 @@ export async function fetchTradeHistory({
       first: $first,
       skip: $offset,
     ) {
-      account,
-      market,
-      fromOracleVersion,
-      toOracleVersion,
-      accumulatedValue,
-      accumulatedPnl,
-      accumulatedFunding,
-      accumulatedInterest,
-      accumulationResult_positionFee,
-      accumulationResult_keeper,
+      accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
+        accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
+        side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber,
+        market
       update {
-        version,
-        delta,
-        side,
-        collateral,
-        priceImpactFee,
-        blockTimestamp,
-        transactionHash
+        version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
+        localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee, side, delta
       }
     }
    }
@@ -1053,70 +1024,88 @@ export async function fetchTradeHistory({
 
   const entities = accountPositionProcesseds.reduce(
     (acc, entity) => {
-      const market = addressToAsset(getAddress(entity.market)) as SupportedAsset
-
-      if (!acc[market]) acc[market] = []
-      acc[market].push(entity)
+      if (!acc[entity.market]) acc[entity.market] = []
+      acc[entity.market].push(entity)
       return acc
     },
-    {} as Record<SupportedAsset, typeof accountPositionProcesseds>,
+    {} as Record<string, typeof accountPositionProcesseds>,
   )
+
+  type Update = (typeof accountPositionProcesseds)[number]['update'] & {
+    accountPositionProcesseds: typeof accountPositionProcesseds
+  }
 
   const trades = Object.entries(entities).reduce(
     (acc, [market, entities]) => {
-      const asset = market as SupportedAsset
-
-      const updates: TradeHistoryItem<typeof accountPositionProcesseds>[] = []
+      const updates: Update[] = []
 
       entities.forEach((entity) => {
-        if (entity.update) {
-          updates.push({
-            side: entity.update.side,
-            delta: BigOrZero(entity.update.delta),
-            collateralDelta: BigOrZero(entity.update.collateral),
-            priceImpactFee: BigOrZero(entity.update.priceImpactFee),
-            fromOracleVersion: BigInt(entity.fromOracleVersion),
-            toOracleVersion: BigInt(entity.toOracleVersion),
-            accumulatedValue: BigOrZero(entity.accumulatedValue),
-            accumulatedPnl: BigOrZero(entity.accumulatedPnl),
-            accumulatedFunding: BigOrZero(entity.accumulatedFunding),
-            accumulatedInterest: BigOrZero(entity.accumulatedInterest),
-            accumulatedPositionFee: BigOrZero(entity.accumulationResult_positionFee),
-            accumulatedKeeper: BigOrZero(entity.accumulationResult_keeper),
-            date: new Date(Number(entity.update.blockTimestamp) * 1000),
-            transactionHash: entity.update.transactionHash,
-            accountPositionProcesseds: [entity],
-          })
+        if (
+          entity.update &&
+          entity.update.side !== 'none' &&
+          entity.update.delta !== '0' &&
+          entity.update.collateral !== '0'
+        ) {
+          updates.push({ ...entity.update, accountPositionProcesseds: [entity] })
         } else {
           const update = updates[updates.length - 1]
-          update.accountPositionProcesseds.push(entity)
+          if (update) {
+            update.accountPositionProcesseds.push(entity)
+          }
         }
       })
-      acc[asset] = updates
 
+      acc[market] = updates.map((update, i, self) => {
+        const accumulations = update.accountPositionProcesseds.filter(
+          (p) =>
+            BigInt(p.toOracleVersion) >= BigInt(update.version) &&
+            (i > 0 ? BigInt(p.toOracleVersion) < BigInt(self[i - 1].version) : true),
+        )
+        const magnitude_ = magnitude(update.newMaker, update.newLong, update.newShort)
+        const side = positionSide(update.newMaker, update.newLong, update.newShort)
+        const prevValid = self.find((u) => u.version < update.version && u.valid)
+        const prevMagnitude = prevValid ? magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort) : null
+        const prevSide = prevValid
+          ? positionSide(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
+          : PositionSide.none
+
+        // Safe to omit start version here?
+        const delta =
+          (prevValid && update.valid) || (prevValid && !update.valid && i === 0)
+            ? magnitude_ - magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
+            : magnitude_
+
+        const realizedValues = accumulateRealized(accumulations)
+        const collateralOnly = delta === 0n && BigOrZero(update.collateral) !== 0n
+        const settlementOnly =
+          BigOrZero(update.collateral) === 0n &&
+          i !== self.length - 1 &&
+          !update.valid &&
+          prevMagnitude !== null &&
+          magnitude_ - prevMagnitude === 0n
+        let priceWithImpact = BigInt(update.price)
+
+        if (!!delta && (side === 'long' || prevSide === 'long'))
+          priceWithImpact = priceWithImpact + Big6Math.div(BigOrZero(update.priceImpactFee), delta)
+        if (!!delta && (side === 'short' || prevSide === 'short'))
+          priceWithImpact = priceWithImpact - Big6Math.div(BigOrZero(update.priceImpactFee), delta)
+        // If taker, subtract the price impact fee from the realized pnl
+        if (side !== 'maker') realizedValues.pnl = realizedValues.pnl - BigInt(update.priceImpactFee)
+        return {
+          ...update,
+          side,
+          magnitude: magnitude_,
+          priceWithImpact,
+          delta,
+          accumulations,
+          realizedValues,
+          collateralOnly,
+          settlementOnly,
+        }
+      })
       return acc
     },
-    {} as Record<SupportedAsset, TradeHistoryItem<typeof accountPositionProcesseds>[]>,
+    {} as Record<string, SubPositionChange[]>,
   )
   return trades
 }
-
-// Note:
-// Do i filter this one out at the end?
-// {
-//   side: 'none',
-//   delta: 0n,
-//   collateralDelta: 0n,
-//   priceImpactFee: 0n,
-//   fromOracleVersion: 1707900880n,
-//   toOracleVersion: 1707900890n,
-//   accumulatedValue: 0n,
-//   accumulatedPnl: 0n,
-//   accumulatedFunding: 0n,
-//   accumulatedInterest: 0n,
-//   accumulatedPositionFee: 0n,
-//   accumulatedKeeper: 0n,
-//   date: 2024-02-14T08:54:45.000Z,
-//   transactionHash: '0x3a306b3830a6b10c93e58e43f071b01eda23167331c4ba22535a8869cb560881',
-//   accountPositionProcesseds: [Array]
-// },
