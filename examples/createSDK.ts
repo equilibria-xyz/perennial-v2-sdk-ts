@@ -2,7 +2,7 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial from '../'
+import Perennial, { Day } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 
@@ -31,8 +31,6 @@ async function run() {
 
   const tradeHistory = await sdk.markets.read.tradeHistory({
     address: getAddress('0x325cd6b3cd80edb102ac78848f5b127eb6db13f3'),
-    first: 100,
-    offset: 0,
   })
 
   console.log(tradeHistory)
