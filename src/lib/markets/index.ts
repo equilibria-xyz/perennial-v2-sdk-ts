@@ -166,13 +166,13 @@ export class MarketsModule {
         })
       },
       /**
-       * Fetches the trade history for a given address
+       * Fetches the trade history for a given address. Limited to a 7 day window.
        * @param address Wallet Address
-       * @param first number of trades
-       * @param offset number of trades to skip
+       * @param fromTs start timestamp in milliseconds
+       * @param toTs end timestamp in milliseconds
        * @returns User's trade history.
        */
-      tradeHistory: (args: { address: Address; first: number; offset: number }) => {
+      tradeHistory: (args: { address: Address; fromTs?: bigint; toTs?: bigint }) => {
         return fetchTradeHistory({
           graphClient: this.config.graphClient,
           ...args,
