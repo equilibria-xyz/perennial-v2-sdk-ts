@@ -15,6 +15,7 @@ import {
   fetchMarkets24hrVolume,
   fetchOpenOrders,
   fetchSubPositions,
+  fetchTradeHistory,
 } from './graph'
 import {
   BuildModifyPositionTxArgs,
@@ -160,6 +161,19 @@ export class MarketsModule {
         skip: number
       }) => {
         return fetchSubPositions({
+          graphClient: this.config.graphClient,
+          ...args,
+        })
+      },
+      /**
+       * Fetches the trade history for a given address. Limited to a 7 day window.
+       * @param address Wallet Address
+       * @param fromTs start timestamp in seconds
+       * @param toTs end timestamp in seconds
+       * @returns User's trade history.
+       */
+      tradeHistory: (args: { address: Address; fromTs?: bigint; toTs?: bigint }) => {
+        return fetchTradeHistory({
           graphClient: this.config.graphClient,
           ...args,
         })

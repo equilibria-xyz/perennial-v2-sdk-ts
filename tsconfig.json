@@ -5,8 +5,9 @@
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "skipLibCheck": true,
+    "declaration": true,
     "moduleResolution": "NodeNext",
-    "module": "NodeNext",
+    "module": "NodeNext"
   },
   "include": ["src/**/*", "hardhat.config.ts"],
   "exclude": ["examples", "dist", "graph-codegen.ts"]
