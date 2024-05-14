@@ -5,7 +5,6 @@ import { PositionSide, SupportedAsset, addressToAsset } from '../../constants'
 import { gql } from '../../types/gql'
 import {
   FetchSubPositions_AccountUpdatesQuery,
-  FetchTradeHistoryQuery,
   MarketsAccountCheckpointsQuery,
   PositionSide as PositionSideGraph,
 } from '../../types/gql/graphql'
@@ -568,6 +567,7 @@ export async function fetchSubPositions({
       ) {
         version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
         localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee
+        side, delta
       }
 
       accountPositionProcesseds(
@@ -579,6 +579,7 @@ export async function fetchSubPositions({
         accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
         accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
         side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber
+        market
       }
 
       nextUpdate: updateds(
@@ -623,7 +624,7 @@ export async function fetchSubPositions({
           BigInt(p.toOracleVersion) >= BigInt(update.version) &&
           (i > 0 ? BigInt(p.toOracleVersion) < BigInt(self[i - 1].version) : true),
       )
-      return processUpdate(update, i, self, accumulations)
+      return processSubPosition(update, i, self, accumulations, startVersion)
     })
     .map((change, i, self) => {
       if (change.settlementOnly) return null // Filter out settlement only changes
@@ -669,6 +670,14 @@ export async function fetchSubPositions({
   return { changes, hasMore: updateds.length === first }
 }
 
+/**
+ * Fetches the trade history for a given address. Limited to a 7 day window.
+ * @param address Wallet Address
+ * @param fromTs start timestamp in seconds (defaults to 7 days before toTs)
+ * @param toTs end timestamp in seconds (defaults to now)
+ * @param graphClient GraphQLClient
+ * @returns User's trade history.
+ */
 export async function fetchTradeHistory({
   graphClient,
   address,
@@ -682,8 +691,8 @@ export async function fetchTradeHistory({
 }) {
   const maxTimeRange = Day * 7n
   const now = BigInt(nowSeconds())
-  if (!fromTs) fromTs = now - maxTimeRange
   if (!toTs) toTs = now
+  if (!fromTs) fromTs = toTs - maxTimeRange
 
   if (toTs - fromTs > maxTimeRange) {
     throw new Error('The time range exceeds the maximum allowed range of 7 days.')
@@ -691,26 +700,25 @@ export async function fetchTradeHistory({
   // TODO(arjun): update this query to use trades entity in subgraph when available
   const tradeHistoryQuery = gql(`
   query fetchTradeHistory($account: Bytes!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-   accountPositionProcesseds(
-     where: { account: $account, toOracleVersion_gte: $fromTs, toOracleVersion_lt: $toTs },
-     orderBy: toOracleVersion,
-     orderDirection: desc,
-     first: $first, 
-     skip: $skip
-   ) {
-     accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
-       accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
-       side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber,
-       market
-     update {
-       version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
-       localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee, side, delta
-     }
-   }
+    accountPositionProcesseds(
+      where: { account: $account, toOracleVersion_gte: $fromTs, toOracleVersion_lt: $toTs },
+      orderBy: toOracleVersion,
+      orderDirection: desc,
+      first: $first,
+      skip: $skip
+    ) {
+      accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
+      accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
+      side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber,
+      market, update {
+        version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
+        localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee, side, delta
+      }
+    }
   }
- `)
+  `)
 
-  const { accountPositionProcesseds } = await queryAll(async (pageNumber: number) =>
+  const { accountPositionProcesseds } = await queryAll(async (pageNumber) =>
     graphClient.request(tradeHistoryQuery, {
       account: address,
       first: GraphDefaultPageSize,
@@ -730,8 +738,9 @@ export async function fetchTradeHistory({
     {} as Record<Address, typeof accountPositionProcesseds>,
   )
 
-  type Update = (typeof accountPositionProcesseds)[number]['update'] & {
-    accountPositionProcesseds: typeof accountPositionProcesseds
+  type Update = {
+    update: NonNullable<(typeof accountPositionProcesseds)[number]['update']>
+    accumulations: typeof accountPositionProcesseds
   }
 
   const trades = Object.entries(marketAccountPositionProcesseds).reduce(
@@ -744,21 +753,27 @@ export async function fetchTradeHistory({
           entity.update.delta !== '0' &&
           entity.update.collateral !== '0'
         ) {
-          updates.push({ ...entity.update, accountPositionProcesseds: [entity] })
+          updates.push({ update: entity.update, accumulations: [entity] })
         } else {
-          const update =
-            updates[updates.length - 1] ??
-            entities.find(
+          const update = updates.at(-1) ?? {
+            update: entities.find(
               (e) => e.update && e.update.side !== 'none' && e.update.delta !== '0' && e.update.collateral !== '0',
-            )
-          if (update) {
-            update.accountPositionProcesseds.push(entity)
+            ),
+            accumulations: [] as typeof accountPositionProcesseds,
+          }
+          if (update.update) {
+            update.accumulations.push(entity)
           }
         }
       })
 
-      acc[getAddress(market)] = updates.map((update, i, self) => {
-        return processUpdate(update, i, self, update.accountPositionProcesseds)
+      acc[getAddress(market)] = updates.map(({ update, accumulations }, i, self) => {
+        return processSubPosition(
+          update,
+          i,
+          self.map((u) => u.update),
+          accumulations,
+        )
       })
       return acc
     },
@@ -767,30 +782,28 @@ export async function fetchTradeHistory({
   return trades
 }
 
-type TradeHistoryUpdate = NonNullable<FetchTradeHistoryQuery['accountPositionProcesseds'][number]['update']>
-type TradeHistoryAccumulations = NonNullable<FetchTradeHistoryQuery['accountPositionProcesseds']>
 type SubPositionUpdate = NonNullable<FetchSubPositions_AccountUpdatesQuery['updateds'][number]>
 type SubPositionAccumulations = NonNullable<FetchSubPositions_AccountUpdatesQuery['accountPositionProcesseds']>
 
-function processUpdate(
-  update: TradeHistoryUpdate | SubPositionUpdate,
-  i: number,
-  self: TradeHistoryUpdate[] | SubPositionUpdate[],
-  accumulations: TradeHistoryAccumulations | SubPositionAccumulations,
+function processSubPosition(
+  update: SubPositionUpdate,
+  updateIndex: number,
+  allUpdates: SubPositionUpdate[],
+  accumulations: SubPositionAccumulations,
   startVersion?: bigint,
 ) {
   const magnitude_ = magnitude(update.newMaker, update.newLong, update.newShort)
   const side = positionSide(update.newMaker, update.newLong, update.newShort)
-  const prevValid = self.find((u) => u.version < update.version && u.valid)
+  const prevValid = allUpdates.find((u) => u.version < update.version && u.valid)
   const prevMagnitude = prevValid ? magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort) : null
   const prevSide = prevValid
     ? positionSide(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
     : PositionSide.none
 
   const delta =
-    (prevValid && update.valid) || (prevValid && !update.valid && i === 0)
+    (prevValid && update.valid) || (prevValid && !update.valid && updateIndex === 0)
       ? magnitude_ - magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
-      : BigInt(update.version) === startVersion || i === self.length - 1
+      : BigInt(update.version) === startVersion || updateIndex === allUpdates.length - 1
         ? magnitude_
         : null
 
@@ -798,12 +811,13 @@ function processUpdate(
   const collateralOnly = delta === 0n && BigOrZero(update.collateral) !== 0n
   const settlementOnly =
     BigOrZero(update.collateral) === 0n &&
-    i !== self.length - 1 &&
+    updateIndex !== allUpdates.length - 1 &&
     !update.valid &&
     prevMagnitude !== null &&
     magnitude_ - prevMagnitude === 0n
 
   let priceWithImpact = BigInt(update.price)
+
   // Handle price impact. This is the price plus/minus the price impact fee divided by the delta. This is
   // directional - long opens and short closes increase the price, short opens and long closes decrease the price
   if (!!delta && (side === 'long' || prevSide === 'long'))
