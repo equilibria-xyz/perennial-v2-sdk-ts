@@ -168,8 +168,8 @@ export class MarketsModule {
       /**
        * Fetches the trade history for a given address. Limited to a 7 day window.
        * @param address Wallet Address
-       * @param fromTs start timestamp in milliseconds
-       * @param toTs end timestamp in milliseconds
+       * @param fromTs start timestamp in seconds
+       * @param toTs end timestamp in seconds
        * @returns User's trade history.
        */
       tradeHistory: (args: { address: Address; fromTs?: bigint; toTs?: bigint }) => {
