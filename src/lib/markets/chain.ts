@@ -41,9 +41,10 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
 
     // TODO(arjun): Pull these from the registry once available
     const underlyingId = metadata.pythFeedId as Hex
+    const underlyingPayoff = await pythFactory.read.toUnderlyingPayoff([underlyingId])
     const [validFrom, providerId] = await Promise.all([
       pythFactory.read.validFrom(),
-      pythFactory.read.fromUnderlyingId([underlyingId]),
+      pythFactory.read.fromUnderlying([underlyingId, underlyingPayoff.provider]),
     ])
 
     return {

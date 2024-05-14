@@ -216,10 +216,9 @@ export const calcSkew = (marketSnapshot?: MarketSnapshot) => {
   if (!marketSnapshot) return undefined
   const {
     nextPosition: { long, short },
-    riskParameter: { virtualTaker },
   } = marketSnapshot
   const nextMajor = long > short ? long : short
-  const skew = nextMajor + virtualTaker > 0n ? Big6Math.div(long - short, nextMajor + virtualTaker) : 0n
+  const skew = nextMajor > 0n ? Big6Math.div(long - short, nextMajor) : 0n
 
   const totalTaker = long + short
   const longSkew = totalTaker > 0n ? Big6Math.div(long, totalTaker) : 0n
@@ -258,8 +257,9 @@ export const calcTradeFee = ({
   const noValue = { total: 0n, impactFee: 0n, skewFee: 0n, feeBasisPoints: 0n }
   if (!marketSnapshot || !positionDelta) return noValue
 
+  // TODO (v2.2): Fix fee calcs
   const {
-    riskParameter: { takerFee, takerSkewFee, takerImpactFee, makerFee, makerImpactFee, virtualTaker },
+    riskParameter: { takerFee, makerFee },
     nextPosition: { long, short, maker },
     global: { latestPrice },
   } = marketSnapshot
@@ -273,9 +273,9 @@ export const calcTradeFee = ({
     const newUtilization =
       maker + minor + positionDelta !== 0n ? Big6Math.div(major, maker + minor + positionDelta) : 0n
     const utilizationDelta = newUtilization - currentUtilization
-    const impactFee = Big6Math.mul(makerImpactFee, utilizationDelta)
-    const total = Big6Math.max(Big6Math.mul(notional, impactFee + makerFee), 0n)
-    const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : makerFee
+    const impactFee = Big6Math.mul(makerFee.proportionalFee, utilizationDelta)
+    const total = Big6Math.max(Big6Math.mul(notional, impactFee + makerFee.linearFee), 0n)
+    const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : makerFee.linearFee
 
     return { impactFee, total, skewFee: undefined, feeBasisPoints }
   }
@@ -285,14 +285,14 @@ export const calcTradeFee = ({
   const major = Big6Math.max(adjustedLong, adjustedShort)
   const calculatedSkew = calcSkew(marketSnapshot)
   const currentSkew = calculatedSkew?.skew ?? 0n
-  const skewDenominator = major + virtualTaker
+  const skewDenominator = major
   const newSkew = skewDenominator !== 0n ? Big6Math.div(adjustedLong - adjustedShort, skewDenominator) : 0n
   const skewDelta = Big6Math.abs(newSkew - currentSkew)
   const absSkewDelta = Big6Math.abs(newSkew) - Big6Math.abs(currentSkew)
-  const skewFee = Big6Math.mul(takerSkewFee, skewDelta)
-  const impactFee = Big6Math.mul(takerImpactFee, absSkewDelta)
-  const total = Big6Math.max(Big6Math.mul(notional, skewFee + impactFee + takerFee), 0n)
-  const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : takerFee
+  const skewFee = Big6Math.mul(takerFee.adiabaticFee, skewDelta)
+  const impactFee = Big6Math.mul(takerFee.proportionalFee, absSkewDelta)
+  const total = Big6Math.max(Big6Math.mul(notional, skewFee + impactFee + takerFee.linearFee), 0n)
+  const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : takerFee.linearFee
 
   return { skewFee, impactFee, total, feeBasisPoints }
 }

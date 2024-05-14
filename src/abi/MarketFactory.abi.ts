@@ -7,11 +7,6 @@ export const MarketFactoryAbi = [
         type: 'address',
       },
       {
-        internalType: 'contract IFactory',
-        name: 'payoffFactory_',
-        type: 'address',
-      },
-      {
         internalType: 'address',
         name: 'implementation_',
         type: 'address',
@@ -156,11 +151,6 @@ export const MarketFactoryAbi = [
             name: 'oracle',
             type: 'address',
           },
-          {
-            internalType: 'contract IPayoffProvider',
-            name: 'payoff',
-            type: 'address',
-          },
         ],
         indexed: false,
         internalType: 'struct IMarket.MarketDefinition',
@@ -249,6 +239,11 @@ export const MarketFactoryAbi = [
             name: 'minEfficiency',
             type: 'uint256',
           },
+          {
+            internalType: 'UFixed6',
+            name: 'referralFee',
+            type: 'uint256',
+          },
         ],
         indexed: false,
         internalType: 'struct ProtocolParameter',
@@ -293,6 +288,25 @@ export const MarketFactoryAbi = [
   },
   {
     anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'referrer',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'UFixed6',
+        name: 'newFee',
+        type: 'uint256',
+      },
+    ],
+    name: 'ReferralFeeUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
     inputs: [],
     name: 'Unpaused',
     type: 'event',
@@ -316,11 +330,6 @@ export const MarketFactoryAbi = [
           {
             internalType: 'contract IOracleProvider',
             name: 'oracle',
-            type: 'address',
-          },
-          {
-            internalType: 'contract IPayoffProvider',
-            name: 'payoff',
             type: 'address',
           },
         ],
@@ -383,12 +392,7 @@ export const MarketFactoryAbi = [
     inputs: [
       {
         internalType: 'contract IOracleProvider',
-        name: '',
-        type: 'address',
-      },
-      {
-        internalType: 'contract IPayoffProvider',
-        name: '',
+        name: 'oracle',
         type: 'address',
       },
     ],
@@ -494,6 +498,11 @@ export const MarketFactoryAbi = [
             name: 'minEfficiency',
             type: 'uint256',
           },
+          {
+            internalType: 'UFixed6',
+            name: 'referralFee',
+            type: 'uint256',
+          },
         ],
         internalType: 'struct ProtocolParameter',
         name: '',
@@ -538,10 +547,10 @@ export const MarketFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'payoffFactory',
+    name: 'pendingOwner',
     outputs: [
       {
-        internalType: 'contract IFactory',
+        internalType: 'address',
         name: '',
         type: 'address',
       },
@@ -550,13 +559,19 @@ export const MarketFactoryAbi = [
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'pendingOwner',
-    outputs: [
+    inputs: [
       {
         internalType: 'address',
         name: '',
         type: 'address',
+      },
+    ],
+    name: 'referralFee',
+    outputs: [
+      {
+        internalType: 'UFixed6',
+        name: '',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -626,6 +641,11 @@ export const MarketFactoryAbi = [
             name: 'minEfficiency',
             type: 'uint256',
           },
+          {
+            internalType: 'UFixed6',
+            name: 'referralFee',
+            type: 'uint256',
+          },
         ],
         internalType: 'struct ProtocolParameter',
         name: 'newParameter',
@@ -659,6 +679,24 @@ export const MarketFactoryAbi = [
       },
     ],
     name: 'updatePendingOwner',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'referrer',
+        type: 'address',
+      },
+      {
+        internalType: 'UFixed6',
+        name: 'newReferralFee',
+        type: 'uint256',
+      },
+    ],
+    name: 'updateReferralFee',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
