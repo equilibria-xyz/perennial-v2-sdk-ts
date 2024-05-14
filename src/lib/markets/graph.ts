@@ -692,7 +692,7 @@ export async function fetchTradeHistory({
   const tradeHistoryQuery = gql(`
   query fetchTradeHistory($account: Bytes!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
    accountPositionProcesseds(
-     where: { account: $account, blockTimestamp_gte: $fromTs, blockTimestamp_lte: $toTs },
+     where: { account: $account, toOracleVersion_gte: $fromTs, toOracleVersion_lt: $toTs },
      orderBy: toOracleVersion,
      orderDirection: desc,
      first: $first, 
