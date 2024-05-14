@@ -141,10 +141,10 @@ export async function fetchActivePositionPnl({
   let orderFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.orderFee)
   let startCollateral = snapshot.pre.local.collateral
   let netDeposits = 0n
-  let keeperFees = snapshot.pendingPositions[0].keeper
-  let positionFees = snapshot.pendingPositions[0].fee
+  let keeperFees = snapshot.checkpoint.settlementFee
+  let positionFees = snapshot.checkpoint.tradeFee
   const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-    totalTradeFee: snapshot.pre.nextPosition.fee,
+    totalTradeFee: snapshot.pre.checkpoint.tradeFee,
     positionFee: marketSnapshot.parameter.positionFee ?? 0n,
   })
   let priceImpactFees = pendingPriceImpactFee
