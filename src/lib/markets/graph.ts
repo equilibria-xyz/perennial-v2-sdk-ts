@@ -672,13 +672,11 @@ export async function fetchSubPositions({
 export async function fetchTradeHistory({
   graphClient,
   address,
-  pageNumber = 0,
   fromTs,
   toTs,
 }: {
   graphClient: GraphQLClient
   address: Address
-  pageNumber?: number
   fromTs?: bigint
   toTs?: bigint
 }) {
@@ -692,11 +690,13 @@ export async function fetchTradeHistory({
   }
   // TODO(arjun): update this query to use trades entity in subgraph when available
   const tradeHistoryQuery = gql(`
-  query fetchTradeHistory($account: Bytes!, $fromTs: BigInt, $toTs: BigInt) {
+  query fetchTradeHistory($account: Bytes!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
    accountPositionProcesseds(
      where: { account: $account, blockTimestamp_gte: $fromTs, blockTimestamp_lte: $toTs },
      orderBy: toOracleVersion,
-     orderDirection: desc
+     orderDirection: desc,
+     first: $first, 
+     skip: $skip
    ) {
      accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
        accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
@@ -710,7 +710,7 @@ export async function fetchTradeHistory({
   }
  `)
 
-  const { accountPositionProcesseds } = await queryAll(async () =>
+  const { accountPositionProcesseds } = await queryAll(async (pageNumber: number) =>
     graphClient.request(tradeHistoryQuery, {
       account: address,
       first: GraphDefaultPageSize,
@@ -802,8 +802,10 @@ function processUpdate(
     !update.valid &&
     prevMagnitude !== null &&
     magnitude_ - prevMagnitude === 0n
-  let priceWithImpact = BigInt(update.price)
 
+  let priceWithImpact = BigInt(update.price)
+  // Handle price impact. This is the price plus/minus the price impact fee divided by the delta. This is
+  // directional - long opens and short closes increase the price, short opens and long closes decrease the price
   if (!!delta && (side === 'long' || prevSide === 'long'))
     priceWithImpact = priceWithImpact + Big6Math.div(BigOrZero(update.priceImpactFee), delta)
   if (!!delta && (side === 'short' || prevSide === 'short'))
