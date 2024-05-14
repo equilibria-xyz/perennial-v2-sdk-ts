@@ -1,14 +1,18 @@
 {
   "type": "module",
   "dependencies": {
-    "@perennial/sdk": "file:../../dist",
+    "@perennial/sdk": "../../dist",
     "fuzzysort": "^2.0.4",
     "viem": "2.9.12"
   },
   "devDependencies": {
+    "@types/node": "^20.12.12",
     "@vercel/node": "^3.0.26",
     "ts-node": "^10.9.2",
     "typescript": "5.4.2",
     "vercel": "^33.7.0"
+  },
+  "scripts": {
+    "postinstall": "cd ../../ && pnpm install && pnpm run build"
   }
 }
