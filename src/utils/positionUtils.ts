@@ -254,30 +254,38 @@ export const calcTradeFee = ({
   isMaker: boolean
   direction: PositionSide
 }) => {
-  const noValue = { total: 0n, impactFee: 0n, skewFee: 0n, feeBasisPoints: 0n }
+  const noValue = { total: 0n, skewFee: 0n, feeBasisPoints: 0n, proportionalFee: 0n, linearFee: 0n, adiabaticFee: 0n }
   if (!marketSnapshot || !positionDelta) return noValue
 
-  // TODO (v2.2): Fix fee calcs
   const {
     riskParameter: { takerFee, makerFee },
-    nextPosition: { long, short, maker },
+    nextPosition: { long, short },
     global: { latestPrice },
+    makerTotal,
+    takerTotal,
   } = marketSnapshot
 
   const notional = calcNotional(positionDelta, latestPrice)
 
   if (isMaker) {
-    const major = Big6Math.max(long, short)
-    const minor = Big6Math.min(long, short)
-    const currentUtilization = maker + minor !== 0n ? Big6Math.div(major, maker + minor) : 0n
-    const newUtilization =
-      maker + minor + positionDelta !== 0n ? Big6Math.div(major, maker + minor + positionDelta) : 0n
-    const utilizationDelta = newUtilization - currentUtilization
-    const impactFee = Big6Math.mul(makerFee.proportionalFee, utilizationDelta)
-    const total = Big6Math.max(Big6Math.mul(notional, impactFee + makerFee.linearFee), 0n)
-    const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : makerFee.linearFee
+    const adjustedMakerTotal = makerTotal + positionDelta
+    const makerProportionalFeeRate = Big6Math.mul(
+      makerFee.proportionalFee,
+      Big6Math.div(adjustedMakerTotal, makerFee.scale),
+    )
+    const makerProportionalFee = Big6Math.mul(notional, makerProportionalFeeRate)
+    const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
+    const total = makerLinearFee + makerProportionalFee
+    const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : 0n // Default to 0bps if fee total is 0?
 
-    return { impactFee, total, skewFee: undefined, feeBasisPoints }
+    return {
+      total,
+      skewFee: undefined,
+      feeBasisPoints,
+      proportionalFee: makerProportionalFee,
+      linearFee: makerLinearFee,
+      adiabaticFee: 0n,
+    }
   }
 
   const adjustedLong = direction === PositionSide.long ? long + positionDelta : long
@@ -291,38 +299,84 @@ export const calcTradeFee = ({
   const absSkewDelta = Big6Math.abs(newSkew) - Big6Math.abs(currentSkew)
   const skewFee = Big6Math.mul(takerFee.adiabaticFee, skewDelta)
   const impactFee = Big6Math.mul(takerFee.proportionalFee, absSkewDelta)
-  const total = Big6Math.max(Big6Math.mul(notional, skewFee + impactFee + takerFee.linearFee), 0n)
-  const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : takerFee.linearFee
-
-  return { skewFee, impactFee, total, feeBasisPoints }
+  const adjustedTakerTotal = takerTotal + positionDelta
+  const takerProportionalFeeRate = Big6Math.mul(
+    takerFee.proportionalFee,
+    Big6Math.div(adjustedTakerTotal, takerFee.scale),
+  )
+  const takerProportionalFee = Big6Math.mul(notional, takerProportionalFeeRate)
+  const takerAdiabaticFeeRate = Big6Math.mul(
+    takerFee.adiabaticFee,
+    Big6Math.div(Big6Math.div(skewDelta, 2n), takerFee.scale),
+  )
+  const takerAdiabaticFee = Big6Math.mul(notional, takerAdiabaticFeeRate)
+  const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
+  const total = takerLinearFee + takerProportionalFee + takerAdiabaticFee
+  const feeBasisPoints = !Big6Math.isZero(total) ? Big6Math.div(total, notional) : 0n
+  return {
+    skewFee,
+    impactFee,
+    total,
+    feeBasisPoints,
+    proportionalFee: takerProportionalFee,
+    linearFee: takerLinearFee,
+    adiabaticFee: takerAdiabaticFee,
+  }
 }
 
 export function calcPriceImpactFromTradeFee({
-  totalTradeFee,
-  positionFee,
+  positionFee = 0n,
+  referralFee = 0n,
+  takerAdiabaticFee,
+  takerProportionalFee,
+  takerLinearFee,
+  positionDelta,
 }: {
-  totalTradeFee: bigint
-  positionFee: bigint
+  positionFee?: bigint
+  takerLinearFee: bigint
+  referralFee?: bigint
+  takerAdiabaticFee: bigint
+  takerProportionalFee: bigint
+  positionDelta: bigint
 }) {
-  return Big6Math.mul(totalTradeFee, Big6Math.ONE - positionFee)
+  const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
+  const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
+  const tradeFee = subtractiveFee + marketFee
+  const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee - tradeFee
+  return positionDelta > 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
 }
 
 export function calcEstExecutionPrice({
   oraclePrice,
   calculatedFee,
-  positionFee,
   orderDirection,
   positionDelta,
+  marketSnapshot,
+  referralFee,
 }: {
   positionDelta: bigint
   oraclePrice: bigint
   calculatedFee: bigint
-  positionFee: bigint // marketSnapshot.parameter.positionFee
   orderDirection: PositionSide.long | PositionSide.short
+  marketSnapshot?: MarketSnapshot
+  referralFee?: bigint
 }) {
   const notional = calcNotional(positionDelta, oraclePrice)
-  const priceImpact = calcPriceImpactFromTradeFee({ totalTradeFee: calculatedFee, positionFee })
-  const priceImpactPercentage = notional > 0n ? Big6Math.div(priceImpact, calcNotional(positionDelta, oraclePrice)) : 0n
+  const tradeFeeData = calcTradeFee({
+    positionDelta,
+    isMaker: false,
+    direction: orderDirection,
+    marketSnapshot,
+  })
+  const priceImpact = calcPriceImpactFromTradeFee({
+    referralFee,
+    positionFee: marketSnapshot?.parameter.positionFee,
+    takerAdiabaticFee: tradeFeeData.adiabaticFee,
+    takerProportionalFee: tradeFeeData.proportionalFee,
+    takerLinearFee: tradeFeeData.linearFee,
+    positionDelta,
+  })
+  const priceImpactPercentage = notional > 0n ? Big6Math.div(priceImpact, notional) : 0n
   const fee = Big6Math.div(priceImpact, positionDelta)
 
   return {
