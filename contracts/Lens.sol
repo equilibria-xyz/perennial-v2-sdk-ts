@@ -26,6 +26,7 @@ contract Lens {
     RiskParameter riskParameter;
     Global global;
     address oracle;
+    Order pendingOrder;
     Position position;
     Position nextPosition;
     Position[] pendingPositions;
@@ -38,6 +39,7 @@ contract Lens {
     IMarket market;
     address account;
     Local local;
+    Order pendingOrder;
     Position position;
     Position nextPosition;
     Checkpoint checkpoint;
@@ -103,6 +105,7 @@ contract Lens {
     marketSnapshot.riskParameter = market.riskParameter();
     marketSnapshot.global = market.global();
     marketSnapshot.position = market.position();
+    marketSnapshot.pendingOrder = market.pending();
     marketSnapshot.pendingPositions = new Position[](marketSnapshot.global.currentId - marketSnapshot.global.latestId + 1);
     marketSnapshot.versions = new Version[](marketSnapshot.pendingPositions.length);
     marketSnapshot.oracle = address(market.oracle());
@@ -120,6 +123,7 @@ contract Lens {
     marketAccountSnapshot.market = market;
     marketAccountSnapshot.account = account;
     marketAccountSnapshot.local = market.locals(account);
+    marketAccountSnapshot.pendingOrder = market.pendings(account);
     marketAccountSnapshot.position = market.positions(account);
     marketAccountSnapshot.pendingPositions = new Position[](marketAccountSnapshot.local.currentId - marketAccountSnapshot.local.latestId + 1);
     marketAccountSnapshot.checkpoint = market.checkpoints(account, marketAccountSnapshot.position.timestamp);
