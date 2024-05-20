@@ -2309,6 +2309,11 @@ export const MarketAbi = [
         name: 'newRiskParameter',
         type: 'tuple',
       },
+      {
+        internalType: 'bool',
+        name: 'isMigration',
+        type: 'bool',
+      },
     ],
     name: 'updateRiskParameter',
     outputs: [],
