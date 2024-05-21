@@ -8,7 +8,13 @@ import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum } fr
 import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
-import { calcNotional, calcPriceImpactFromTradeFee, magnitude, side as positionSide } from '../../utils/positionUtils'
+import {
+  calcNotional,
+  calcPriceImpactFromTradeFee,
+  calcTradeFee,
+  magnitude,
+  side as positionSide,
+} from '../../utils/positionUtils'
 import { MarketSnapshot, UserMarketSnapshot } from './chain'
 
 export type Markets = {
@@ -143,9 +149,19 @@ export async function fetchActivePositionPnl({
   let netDeposits = 0n
   let keeperFees = snapshot.checkpoint.settlementFee
   let positionFees = snapshot.checkpoint.tradeFee
+
+  const tradeFeeData = calcTradeFee({
+    positionDelta: magnitude, // TODO: check this
+    marketSnapshot,
+    isMaker: side === PositionSide.maker,
+    direction: side,
+  })
   const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-    totalTradeFee: snapshot.pre.checkpoint.tradeFee,
     positionFee: marketSnapshot.parameter.positionFee ?? 0n,
+    takerAdiabaticFee: tradeFeeData.adiabaticFee,
+    takerProportionalFee: tradeFeeData.proportionalFee,
+    takerLinearFee: tradeFeeData.linearFee,
+    positionDelta: magnitude,
   })
   let priceImpactFees = pendingPriceImpactFee
   const priceImpact = magnitude > 0n ? Big6Math.div(pendingPriceImpactFee, magnitude) : 0n
