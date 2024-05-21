@@ -268,7 +268,7 @@ export const calcTradeFee = ({
   const notional = calcNotional(positionDelta, latestPrice)
 
   if (isMaker) {
-    const adjustedMakerTotal = makerTotal + positionDelta
+    const adjustedMakerTotal = makerTotal + Big6Math.abs(positionDelta)
     const makerProportionalFeeRate = Big6Math.mul(
       makerFee.proportionalFee,
       Big6Math.div(adjustedMakerTotal, makerFee.scale),
@@ -296,7 +296,7 @@ export const calcTradeFee = ({
   const skewDenominator = major
   const newSkew = skewDenominator !== 0n ? Big6Math.div(adjustedLong - adjustedShort, skewDenominator) : 0n
   const skewDelta = Big6Math.abs(newSkew - currentSkew)
-  const adjustedTakerTotal = takerTotal + positionDelta
+  const adjustedTakerTotal = takerTotal + Big6Math.abs(positionDelta)
   const takerProportionalFeeRate = Big6Math.mul(
     takerFee.proportionalFee,
     Big6Math.div(adjustedTakerTotal, takerFee.scale),
