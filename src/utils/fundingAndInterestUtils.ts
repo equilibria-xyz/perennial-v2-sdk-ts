@@ -39,9 +39,9 @@ export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const major = Big6Math.max(long, short)
   const minor = Big6Math.min(long, short)
   // Interest
-  const nu = maker + minor > 0n ? Big6Math.div(major, maker + minor) : 0n
-  const eu = Big6Math.mul(major, Big6Math.div(efficiencyLimit, maker))
-  const utilization = Big6Math.min(100n, Big6Math.max(nu, eu)) // TODO: check this min(100%, max(nu, eu))
+  const netUtilization = maker + minor > 0n ? Big6Math.div(major, maker + minor) : 0n
+  const efficiencyUtilization = Big6Math.mul(major, Big6Math.div(efficiencyLimit, maker))
+  const utilization = Big6Math.min(100n * Big6Math.ONE, Big6Math.max(netUtilization, efficiencyUtilization))
   const interestRate = computeInterestRate(utilizationCurve, utilization)
   const applicableNotional = Big6Math.min(maker, long + short)
   const interest = long + short > 0n ? Big6Math.div(Big6Math.mul(interestRate, applicableNotional), long + short) : 0n
