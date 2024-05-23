@@ -4,7 +4,6 @@ import { Address, PublicClient, WalletClient } from 'viem'
 
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
-import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshot, UserMarketSnapshot, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   Markets,
