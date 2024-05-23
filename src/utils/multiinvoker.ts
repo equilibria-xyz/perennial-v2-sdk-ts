@@ -307,15 +307,17 @@ export const mergeMultiInvokerTxs = (
     throw new Error('No transaction data provided')
   }
 
-  let actions: MultiInvokerAction[] = []
+  if (transactionData.some((d) => d.to !== transactionData[0].to)) {
+    throw new Error('All transaction data must have the same "to" address')
+  }
 
-  for (const { data } of transactionData) {
+  const actions = transactionData.flatMap(({ data }) => {
     const { args } = decodeFunctionData({
       abi: MultiInvokerAbi,
       data,
     })
-    actions = [...actions, ...args.flatMap((arg: MultiInvokerAction) => arg)]
-  }
+    return args.flatMap((arg: MultiInvokerAction) => arg)
+  })
 
   const data = encodeFunctionData({
     functionName: 'invoke',

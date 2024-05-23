@@ -323,12 +323,6 @@ export class MarketsModule {
           orderDetails,
         })
       },
-      /**
-       * Merge multiple build transaction data objects into a single object.
-       * Can be used to batch multiple operations into a single transaction.
-       * @param transactions Array of transaction data objects.
-       */
-      mergeMultiInvokerTxs: mergeMultiInvokerTxs,
     }
   }
 
