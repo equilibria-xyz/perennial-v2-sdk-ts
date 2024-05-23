@@ -203,6 +203,7 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
+  mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
 // Payoff Utils

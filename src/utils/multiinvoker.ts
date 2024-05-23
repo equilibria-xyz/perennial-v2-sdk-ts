@@ -1,5 +1,6 @@
-import { Address, encodeAbiParameters, zeroAddress } from 'viem'
+import { Address, Hex, decodeFunctionData, encodeAbiParameters, encodeFunctionData, zeroAddress } from 'viem'
 
+import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { PositionSide } from '../constants/markets'
 import { MultiInvokerAction } from '../types/perennial'
 import { UpdateNoOp } from './positionUtils'
@@ -294,3 +295,37 @@ export const EmptyInterfaceFee: {
   receiver: Address
   unwrap: boolean
 } = { amount: 0n, receiver: zeroAddress, unwrap: false }
+
+export const mergeMultiInvokerTxs = (
+  transactionData: {
+    data: Hex
+    value: bigint
+    to: Address
+  }[],
+) => {
+  if (transactionData.length === 0) {
+    throw new Error('No transaction data provided')
+  }
+
+  let actions: MultiInvokerAction[] = []
+
+  for (const { data } of transactionData) {
+    const { args } = decodeFunctionData({
+      abi: MultiInvokerAbi,
+      data,
+    })
+    actions = [...actions, ...args.flatMap((arg: MultiInvokerAction) => arg)]
+  }
+
+  const data = encodeFunctionData({
+    functionName: 'invoke',
+    abi: MultiInvokerAbi,
+    args: [actions],
+  })
+
+  return {
+    data,
+    value: transactionData.reduce((acc, { value }) => acc + value, 0n),
+    to: transactionData[0].to,
+  }
+}
