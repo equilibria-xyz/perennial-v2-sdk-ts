@@ -311,18 +311,35 @@ export const mergeMultiInvokerTxs = (
     throw new Error('All transaction data must have the same "to" address')
   }
 
+  let delegate: null | Address = null
+
   const actions = transactionData.flatMap(({ data }) => {
-    const { args } = decodeFunctionData({
+    const { functionName, args } = decodeFunctionData({
       abi: MultiInvokerAbi,
       data,
     })
-    return args.flatMap((arg: MultiInvokerAction) => arg)
+    if (functionName !== 'invoke') throw new Error('Invalid data')
+
+    const [firstArg, secondArg] = args
+    // If first argument is an array, then this is the non-delegated invoke
+    if (Array.isArray(firstArg)) {
+      // If this is non-delegated invoke and there was a previous delegated invoke, throw an error
+      if (delegate) throw new Error('All transactions must have the same delegate')
+      return firstArg
+    }
+
+    // secondArg should always exist
+    if (!secondArg) throw new Error('Invalid data')
+    if (!delegate) delegate = firstArg as Address
+    if (firstArg !== delegate) throw new Error('All transactions must have the same delegate')
+
+    return secondArg
   })
 
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: MultiInvokerAbi,
-    args: [actions],
+    args: delegate ? [delegate, actions] : [actions],
   })
 
   return {
