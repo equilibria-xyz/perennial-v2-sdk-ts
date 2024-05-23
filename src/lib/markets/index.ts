@@ -4,6 +4,7 @@ import { Address, PublicClient, WalletClient } from 'viem'
 
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
+import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshot, UserMarketSnapshot, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   Markets,
@@ -322,6 +323,12 @@ export class MarketsModule {
           orderDetails,
         })
       },
+      /**
+       * Merge multiple build transaction data objects into a single object.
+       * Can be used to batch multiple operations into a single transaction.
+       * @param transactions Array of transaction data objects.
+       */
+      mergeMultiInvokerTxs: mergeMultiInvokerTxs,
     }
   }
 
