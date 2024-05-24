@@ -91,6 +91,8 @@ export type MarketSnapshot = ChainMarketSnapshot & {
   }
   socializationFactor: bigint
   isSocialized: boolean
+  makerTotal: bigint
+  takerTotal: bigint
 }
 
 export type UserMarketSnapshot = ChainUserMarketSnapshot & {
@@ -172,6 +174,10 @@ export async function fetchMarketSnapshots({
       const socializationFactor = !Big6Math.isZero(major)
         ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
         : Big6Math.ONE
+      const makerTotal = snapshot.pendingOrder.makerPos + snapshot.pendingOrder.makerNeg
+      const takerPos = snapshot.pendingOrder.longPos + snapshot.pendingOrder.shortNeg
+      const takerNeg = snapshot.pendingOrder.shortPos + snapshot.pendingOrder.longNeg
+      const takerTotal = takerPos + takerNeg
       acc[snapshot.asset] = {
         ...snapshot,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -191,6 +197,8 @@ export async function fetchMarketSnapshots({
         },
         socializationFactor,
         isSocialized: socializationFactor < Big6Math.ONE,
+        makerTotal,
+        takerTotal,
       }
       return acc
     },
