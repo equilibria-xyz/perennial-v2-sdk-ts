@@ -2,7 +2,7 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial from '../'
+import Perennial, { Day } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 
@@ -16,10 +16,11 @@ async function run() {
   // const marketOracles = await sdk.markets.read.marketOracles()
   // console.log(marketOracles)
 
-  const volumeData = await sdk.markets.read.market24hrData({
-    market: getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
-  })
-  console.log(volumeData)
+  // const volumeData = await sdk.markets.read.market24hrData({
+  //   market: getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
+  // })
+  // console.log(volumeData)
+
   // const volumeData2 = await sdk.markets.read.markets24hrData({
   //   markets: [
   //     getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
@@ -27,6 +28,12 @@ async function run() {
   //   ],
   // })
   // console.log(volumeData2)
+
+  const tradeHistory = await sdk.markets.read.tradeHistory({
+    address: getAddress('0x325cd6b3cd80edb102ac78848f5b127eb6db13f3'),
+  })
+
+  console.log(tradeHistory)
 }
 
 run()

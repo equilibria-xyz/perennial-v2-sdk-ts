@@ -27,6 +27,7 @@ export {
   fetchMarket24hrData,
   fetchMarket7dData,
   getPriceAtVersion,
+  fetchTradeHistory,
 } from './lib/markets/graph'
 
 // Market - Transactions
@@ -202,6 +203,7 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
+  mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
 // Payoff Utils
