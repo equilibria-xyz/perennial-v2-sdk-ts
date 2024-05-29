@@ -312,19 +312,17 @@ export const calcTradeFee = ({
 
   const adjustedLong = direction === PositionSide.long ? long + positionDelta : long
   const adjustedShort = direction === PositionSide.short ? short + positionDelta : short
-  const major = Big6Math.max(adjustedLong, adjustedShort)
-  const calculatedSkew = calcSkew(marketSnapshot)
-  const currentSkew = calculatedSkew?.skew ?? 0n
-  const skewDenominator = major
-  const newSkew = skewDenominator !== 0n ? Big6Math.div(adjustedLong - adjustedShort, skewDenominator) : 0n
-  const skewDelta = Big6Math.abs(newSkew - currentSkew)
+  const currentSkew = long - short
+  const newSkew = adjustedLong - adjustedShort
+  const skewDelta = newSkew - currentSkew
   const adjustedTakerTotal = takerTotal + Big6Math.abs(positionDelta)
   const takerProportionalFeeRate = Big6Math.div(
     Big6Math.mul(takerFee.proportionalFee, adjustedTakerTotal),
     takerFee.scale,
   )
+
   const takerProportionalFee = Big6Math.mul(notional, takerProportionalFeeRate)
-  const takerAdiabaticFeeRate = Big6Math.mul(takerFee.adiabaticFee, Big6Math.div(skewDelta / 2n, takerFee.scale))
+  const takerAdiabaticFeeRate = Big6Math.div(Big6Math.mul(takerFee.adiabaticFee, skewDelta / 2n), takerFee.scale)
   const takerAdiabaticFee = Big6Math.mul(notional, takerAdiabaticFeeRate)
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
@@ -351,7 +349,7 @@ export function calcPriceImpactFromTradeFee({
   tradeImpact: bigint
   positionDelta: bigint
 }) {
-  return positionDelta > 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
+  return positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
 }
 
 export function calcEstExecutionPrice({
