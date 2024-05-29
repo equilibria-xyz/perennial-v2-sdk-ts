@@ -162,10 +162,7 @@ export async function fetchActivePositionPnl({
     direction: side,
   })
   const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-    positionFee: marketSnapshot.parameter.positionFee ?? 0n,
-    takerAdiabaticFee: tradeFeeData.adiabaticFee,
-    takerProportionalFee: tradeFeeData.proportionalFee,
-    takerLinearFee: tradeFeeData.linearFee,
+    tradeImpact: tradeFeeData.tradeImpact,
     positionDelta: pendingDelta,
   })
   let priceImpactFees = pendingPriceImpactFee
