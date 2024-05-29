@@ -154,7 +154,6 @@ export async function fetchActivePositionPnl({
   let keeperFees = snapshot.checkpoint.settlementFee
   let positionFees = snapshot.checkpoint.tradeFee
   const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
-  const pendingDeltaAbs = Big6Math.abs(pendingDelta)
   const tradeFeeData = calcTradeFee({
     positionDelta: pendingDelta,
     marketSnapshot,
@@ -165,8 +164,8 @@ export async function fetchActivePositionPnl({
     tradeImpact: tradeFeeData.tradeImpact,
     positionDelta: pendingDelta,
   })
-  let priceImpactFees = pendingPriceImpactFee
-  const priceImpact = pendingDeltaAbs > 0n ? Big6Math.div(pendingPriceImpactFee, pendingDeltaAbs) : 0n
+  let priceImpactFees = tradeFeeData.tradeImpact
+  const priceImpact = pendingPriceImpactFee
 
   let averageEntryPrice = snapshot.prices[0]
   if (side === 'long') averageEntryPrice = averageEntryPrice + priceImpact

@@ -292,7 +292,7 @@ export const calcTradeFee = ({
       Big6Math.mul(makerFee.proportionalFee, adjustedMakerTotal),
       makerFee.scale,
     )
-    // NOTE: worth double checking if this is the correct return value
+
     const makerProportionalFee = Big6Math.mul(notional, makerProportionalFeeRate)
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
     const tradeFee = makerLinearFee + makerProportionalFee
@@ -312,22 +312,19 @@ export const calcTradeFee = ({
 
   const adjustedLong = direction === PositionSide.long ? long + positionDelta : long
   const adjustedShort = direction === PositionSide.short ? short + positionDelta : short
-  const major = Big6Math.max(adjustedLong, adjustedShort)
-  const calculatedSkew = calcSkew(marketSnapshot)
-  const currentSkew = calculatedSkew?.skew ?? 0n
-  const skewDenominator = major
-  const newSkew = skewDenominator !== 0n ? Big6Math.div(adjustedLong - adjustedShort, skewDenominator) : 0n
-  const skewDelta = Big6Math.abs(newSkew - currentSkew)
+  const currentSkew = long - short
+  const newSkew = adjustedLong - adjustedShort
+  const takerAdiabaticFeeNumerator = Big6Math.mul(takerFee.adiabaticFee, newSkew + currentSkew)
+  const signedNotional = Big6Math.mul(positionDelta * (direction === PositionSide.short ? -1n : 1n), latestPrice)
+  const takerAdiabaticFee = Big6Math.div(Big6Math.mul(signedNotional, takerAdiabaticFeeNumerator), takerFee.scale * 2n)
+
   const adjustedTakerTotal = takerTotal + Big6Math.abs(positionDelta)
-  const takerProportionalFeeRate = Big6Math.div(
-    Big6Math.mul(takerFee.proportionalFee, adjustedTakerTotal),
-    takerFee.scale,
-  )
-  const takerProportionalFee = Big6Math.mul(notional, takerProportionalFeeRate)
-  const takerAdiabaticFeeRate = Big6Math.mul(takerFee.adiabaticFee, Big6Math.div(skewDelta / 2n, takerFee.scale))
-  const takerAdiabaticFee = Big6Math.mul(notional, takerAdiabaticFeeRate)
+  const takerProportionalFeeNumerator = Big6Math.mul(takerFee.proportionalFee, adjustedTakerTotal)
+  const takerProportionalFee = Big6Math.div(Big6Math.mul(notional, takerProportionalFeeNumerator), takerFee.scale)
+
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
+
   const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
   const tradeFee = subtractiveFee + marketFee
   const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
@@ -351,12 +348,11 @@ export function calcPriceImpactFromTradeFee({
   tradeImpact: bigint
   positionDelta: bigint
 }) {
-  return positionDelta > 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
+  return positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
 }
 
 export function calcEstExecutionPrice({
   oraclePrice,
-  calculatedFee,
   orderDirection,
   positionDelta,
   marketSnapshot,
@@ -364,7 +360,6 @@ export function calcEstExecutionPrice({
 }: {
   positionDelta: bigint
   oraclePrice: bigint
-  calculatedFee: bigint
   orderDirection: PositionSide.long | PositionSide.short
   marketSnapshot?: MarketSnapshot
   referralFee?: bigint
@@ -383,14 +378,17 @@ export function calcEstExecutionPrice({
     tradeImpact: tradeFeeData.tradeImpact,
   })
 
-  const priceImpactPercentage = notional > 0n ? Big6Math.div(priceImpact, notional) : 0n
-  const fee = Big6Math.div(priceImpact, positionDelta)
+  const priceImpactPercentage = notional !== 0n ? Big6Math.div(tradeFeeData.tradeImpact, notional) : 0n
+  const directionalPriceImpact = positionDelta > 0n ? priceImpact : -priceImpact
 
   return {
-    priceImpact: fee,
-    total: orderDirection === PositionSide.long ? oraclePrice + fee : oraclePrice - fee,
+    priceImpact,
+    total:
+      orderDirection === PositionSide.long
+        ? oraclePrice + directionalPriceImpact
+        : oraclePrice - directionalPriceImpact,
     priceImpactPercentage,
-    nonPriceImpactFee: calculatedFee - priceImpact,
+    nonPriceImpactFee: tradeFeeData.tradeFee - priceImpact,
   }
 }
 
