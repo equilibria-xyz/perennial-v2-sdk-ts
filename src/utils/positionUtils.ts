@@ -257,14 +257,12 @@ export const calcTradeFee = ({
   marketSnapshot,
   isMaker,
   direction,
-  positionFee = 0n,
   referralFee = 0n,
 }: {
   positionDelta: bigint
   marketSnapshot?: MarketSnapshot
   isMaker: boolean
   direction: PositionSide
-  positionFee?: bigint
   referralFee?: bigint
 }): TradeFeeInfo => {
   let tradeFeeInfo = {
@@ -280,6 +278,7 @@ export const calcTradeFee = ({
   const {
     riskParameter: { takerFee, makerFee },
     nextPosition: { long, short },
+    parameter: { positionFee },
     global: { latestPrice },
     makerTotal,
     takerTotal,
@@ -346,24 +345,12 @@ export const calcTradeFee = ({
 }
 
 export function calcPriceImpactFromTradeFee({
-  positionFee = 0n,
-  referralFee = 0n,
-  takerAdiabaticFee,
-  takerProportionalFee,
-  takerLinearFee,
+  tradeImpact,
   positionDelta,
 }: {
-  positionFee?: bigint
-  takerLinearFee: bigint
-  referralFee?: bigint
-  takerAdiabaticFee: bigint
-  takerProportionalFee: bigint
+  tradeImpact: bigint
   positionDelta: bigint
 }) {
-  const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
-  const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
-  const tradeFee = subtractiveFee + marketFee
-  const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee - tradeFee
   return positionDelta > 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
 }
 
@@ -388,17 +375,12 @@ export function calcEstExecutionPrice({
     isMaker: false,
     direction: orderDirection,
     marketSnapshot,
-    positionFee: marketSnapshot?.parameter.positionFee,
     referralFee,
   })
 
   const priceImpact = calcPriceImpactFromTradeFee({
     positionDelta,
-    takerLinearFee: tradeFeeData.linearFee,
-    takerProportionalFee: tradeFeeData.proportionalFee,
-    takerAdiabaticFee: tradeFeeData.adiabaticFee,
-    positionFee: marketSnapshot?.parameter.positionFee,
-    referralFee,
+    tradeImpact: tradeFeeData.tradeImpact,
   })
 
   const priceImpactPercentage = notional > 0n ? Big6Math.div(priceImpact, notional) : 0n
@@ -489,7 +471,7 @@ export function calcTotalPositionChangeFee({
   const settlementFee = positionDelta !== 0n && marketSnapshot ? marketSnapshot.parameter.settlementFee : 0n
 
   return {
-    total: tradeFee.tradeFee + interfaceFee.interfaceFee + settlementFee,
+    total: tradeFee.tradeFee + tradeFee.tradeImpact + interfaceFee.interfaceFee + settlementFee,
     tradeFee,
     interfaceFee,
     settlementFee,
