@@ -323,7 +323,6 @@ export const calcTradeFee = ({
   const takerAdiabaticFeeNumerator = Big6Math.mul(takerFee.adiabaticFee, newSkew + currentSkew)
   const signedNotional = Big6Math.mul(positionDelta, latestPrice)
   const takerAdiabaticFee = Big6Math.div(Big6Math.mul(signedNotional, takerAdiabaticFeeNumerator), takerFee.scale * 2n)
-  console.log('takerAdiabaticFee', takerAdiabaticFee)
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
   const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
