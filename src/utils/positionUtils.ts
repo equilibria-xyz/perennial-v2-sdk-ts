@@ -314,16 +314,16 @@ export const calcTradeFee = ({
   const adjustedShort = direction === PositionSide.short ? short + positionDelta : short
   const currentSkew = long - short
   const newSkew = adjustedLong - adjustedShort
-  const skewDelta = newSkew - currentSkew
   const adjustedTakerTotal = takerTotal + Big6Math.abs(positionDelta)
   const takerProportionalFeeRate = Big6Math.div(
     Big6Math.mul(takerFee.proportionalFee, adjustedTakerTotal),
     takerFee.scale,
   )
-
   const takerProportionalFee = Big6Math.mul(notional, takerProportionalFeeRate)
-  const takerAdiabaticFeeRate = Big6Math.div(Big6Math.mul(takerFee.adiabaticFee, skewDelta / 2n), takerFee.scale)
-  const takerAdiabaticFee = Big6Math.mul(notional, takerAdiabaticFeeRate)
+  const takerAdiabaticFeeNumerator = Big6Math.mul(takerFee.adiabaticFee, newSkew + currentSkew)
+  const signedNotional = Big6Math.mul(positionDelta, latestPrice)
+  const takerAdiabaticFee = Big6Math.div(Big6Math.mul(signedNotional, takerAdiabaticFeeNumerator), takerFee.scale * 2n)
+  console.log('takerAdiabaticFee', takerAdiabaticFee)
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
   const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
@@ -349,12 +349,11 @@ export function calcPriceImpactFromTradeFee({
   tradeImpact: bigint
   positionDelta: bigint
 }) {
-  return positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
+  return positionDelta !== 0n ? Big6Math.div(tradeImpact, positionDelta) : 0n
 }
 
 export function calcEstExecutionPrice({
   oraclePrice,
-  calculatedFee,
   orderDirection,
   positionDelta,
   marketSnapshot,
@@ -362,7 +361,6 @@ export function calcEstExecutionPrice({
 }: {
   positionDelta: bigint
   oraclePrice: bigint
-  calculatedFee: bigint
   orderDirection: PositionSide.long | PositionSide.short
   marketSnapshot?: MarketSnapshot
   referralFee?: bigint
@@ -381,14 +379,13 @@ export function calcEstExecutionPrice({
     tradeImpact: tradeFeeData.tradeImpact,
   })
 
-  const priceImpactPercentage = notional > 0n ? Big6Math.div(priceImpact, notional) : 0n
-  const fee = Big6Math.div(priceImpact, positionDelta)
+  const priceImpactPercentage = notional !== 0n ? Big6Math.div(priceImpact, notional) : 0n
 
   return {
-    priceImpact: fee,
-    total: orderDirection === PositionSide.long ? oraclePrice + fee : oraclePrice - fee,
+    priceImpact,
+    total: orderDirection === PositionSide.long ? oraclePrice + priceImpact : oraclePrice - priceImpact,
     priceImpactPercentage,
-    nonPriceImpactFee: calculatedFee - priceImpact,
+    nonPriceImpactFee: tradeFeeData.tradeFee - priceImpact,
   }
 }
 
