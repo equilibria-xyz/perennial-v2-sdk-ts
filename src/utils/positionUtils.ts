@@ -292,7 +292,7 @@ export const calcTradeFee = ({
       Big6Math.mul(makerFee.proportionalFee, adjustedMakerTotal),
       makerFee.scale,
     )
-    // NOTE: worth double checking if this is the correct return value
+
     const makerProportionalFee = Big6Math.mul(notional, makerProportionalFeeRate)
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
     const tradeFee = makerLinearFee + makerProportionalFee
@@ -348,7 +348,7 @@ export function calcPriceImpactFromTradeFee({
   tradeImpact: bigint
   positionDelta: bigint
 }) {
-  return positionDelta !== 0n ? Big6Math.div(tradeImpact, positionDelta) : 0n
+  return positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
 }
 
 export function calcEstExecutionPrice({
@@ -378,11 +378,15 @@ export function calcEstExecutionPrice({
     tradeImpact: tradeFeeData.tradeImpact,
   })
 
-  const priceImpactPercentage = notional !== 0n ? Big6Math.div(priceImpact, notional) : 0n
+  const priceImpactPercentage = notional !== 0n ? Big6Math.div(tradeFeeData.tradeImpact, notional) : 0n
+  const directionalPriceImpact = positionDelta > 0n ? priceImpact : -priceImpact
 
   return {
     priceImpact,
-    total: orderDirection === PositionSide.long ? oraclePrice + priceImpact : oraclePrice - priceImpact,
+    total:
+      orderDirection === PositionSide.long
+        ? oraclePrice + directionalPriceImpact
+        : oraclePrice - directionalPriceImpact,
     priceImpactPercentage,
     nonPriceImpactFee: tradeFeeData.tradeFee - priceImpact,
   }
