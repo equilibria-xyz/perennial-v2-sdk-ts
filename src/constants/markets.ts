@@ -291,9 +291,9 @@ export const triggerOrderTypes = [OrderTypes.stopLoss, OrderTypes.takeProfit]
 function isSupportedAsset(asset: any): asset is SupportedAsset {
   return Object.values(SupportedAsset).includes(asset)
 }
-
+// Default interface fee rates and recipient for perennial.
 export const interfaceFeeBps: {
-  [chainId in SupportedChainId]: { feeAmount: { [key in PositionSide]: bigint }; feeRecipientAddress: Address }
+  [chainId in SupportedChainId]: InterfaceFeeBps
 } = {
   [arbitrumSepolia.id]: {
     feeAmount: {
@@ -334,3 +334,8 @@ export type ReferrerInterfaceFeeInfo =
     }
   | null
   | undefined
+
+export type InterfaceFeeBps = {
+  feeAmount: { [key in PositionSide]: bigint }
+  feeRecipientAddress: Address
+}

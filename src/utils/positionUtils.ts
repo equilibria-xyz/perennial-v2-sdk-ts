@@ -1,7 +1,7 @@
 import { Address, encodeErrorResult } from 'viem'
 
 import { MarketAbi } from '..'
-import { PositionSide, PositionStatus, SupportedAsset, SupportedChainId, interfaceFeeBps } from '../constants'
+import { InterfaceFeeBps, PositionSide, PositionStatus, SupportedAsset, SupportedChainId } from '../constants'
 import { MaxUint256 } from '../constants/units'
 import { MarketSnapshot, MarketSnapshots, UserMarketSnapshot } from '../lib'
 import { Big6Math, formatBig6Percent } from './big6Utils'
@@ -395,11 +395,11 @@ export function calcEstExecutionPrice({
 export function calcInterfaceFee({
   positionStatus = PositionStatus.resolved,
   latestPrice,
-  chainId,
   positionDelta,
   side,
   referrerInterfaceFeeDiscount,
   referrerInterfaceFeeShare,
+  interfaceFeeBps,
 }: {
   positionStatus?: PositionStatus
   latestPrice: bigint
@@ -408,8 +408,9 @@ export function calcInterfaceFee({
   side: PositionSide
   referrerInterfaceFeeDiscount: bigint
   referrerInterfaceFeeShare: bigint
+  interfaceFeeBps?: InterfaceFeeBps
 }) {
-  const feeInfo = interfaceFeeBps[chainId]
+  const feeInfo = interfaceFeeBps
   if (!latestPrice || !positionDelta || !feeInfo || positionStatus === PositionStatus.failed) {
     return {
       interfaceFeeBps: feeInfo?.feeAmount[PositionSide.none] ?? 0n,

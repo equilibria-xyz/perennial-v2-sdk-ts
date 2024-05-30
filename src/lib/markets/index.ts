@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient } from 'viem'
 
-import { SupportedChainId, chainIdToChainMap } from '../../constants'
+import { InterfaceFeeBps, SupportedChainId, chainIdToChainMap } from '../../constants'
 import { MarketsAccountCheckpointsQuery } from '../../types/gql/graphql'
 import { MarketOracles, MarketSnapshot, UserMarketSnapshot, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
@@ -29,6 +29,15 @@ import {
 } from './tx'
 
 type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient'>
+
+type MarketsModuleConfig = {
+  chainId: SupportedChainId
+  graphClient: GraphQLClient
+  publicClient: PublicClient
+  pythClient: EvmPriceServiceConnection
+  walletClient?: WalletClient
+  interfaceFeeBps?: InterfaceFeeBps
+}
 export class MarketsModule {
   /**
    * Markets module class
@@ -38,23 +47,12 @@ export class MarketsModule {
    * @param config.graphClient GraphQL Client
    * @param config.pythClient Pyth Client
    * @param config.walletClient Wallet Client
+   * @param config.interfaceFeeBps Interface Fee rates and recipient {@link InterfaceFeeBps}
    * @returns Markets module instance
    */
-  private config: {
-    chainId: SupportedChainId
-    graphClient: GraphQLClient
-    publicClient: PublicClient
-    pythClient: EvmPriceServiceConnection
-    walletClient?: WalletClient
-  }
+  private config: MarketsModuleConfig
 
-  constructor(config: {
-    chainId: SupportedChainId
-    publicClient: PublicClient
-    graphClient: GraphQLClient
-    pythClient: EvmPriceServiceConnection
-    walletClient?: WalletClient
-  }) {
+  constructor(config: MarketsModuleConfig) {
     this.config = config
   }
 
@@ -253,7 +251,7 @@ export class MarketsModule {
        * @param cancelOrderDetails List of {@link OpenOrder[]} to cancel when modifying the position
        * @param absDifferenceNotional BigInt - Absolute difference in notional
        * @param interfaceFee Object consisting of interfaceFee, referrerFee and ecosystemFee amounts
-       * @param interfaceFeeRate {@link InterfaceFeeRate}
+       * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Modify position transaction data.
        */
@@ -262,6 +260,7 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
+          interfaceFeeRate: this.config.interfaceFeeBps,
           ...args,
         })
       },
@@ -299,7 +298,7 @@ export class MarketsModule {
        * @param positionAbs BigInt - Desired absolute position size
        * @param selectedLimitComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
-       * @param interfaceFeeRate {@link InterfaceFeeRate}
+       * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param cancelOrderDetails {@link CancelOrderDetails}
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
@@ -309,6 +308,7 @@ export class MarketsModule {
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
+          interfaceFeeRate: this.config.interfaceFeeBps,
           ...args,
         })
       },
@@ -354,7 +354,7 @@ export class MarketsModule {
        * @param cancelOrderDetails List of open orders to cancel when modifying the position
        * @param absDifferenceNotional BigInt - Absolute difference in notional
        * @param interfaceFee Object consisting of interfaceFee, referrerFee and ecosystemFee amounts
-       * @param interfaceFeeRate {@link InterfaceFeeRate}
+       * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @returns Transaction Hash
        */
@@ -393,7 +393,7 @@ export class MarketsModule {
        * @param positionAbs BigInt - Desired absolute position size
        * @param selectedLimitComparison Trigger comparison for order execution. See TriggerComparison
        * @param referralFeeRate Object consisting of referralCode, referralTarget, share, discount, tier
-       * @param interfaceFeeRate Object consisting of interfaceFeeRate and feeRecipientAddress mapped to chain ID
+       * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param cancelOrderDetails List of open orders to cancel when placing the order
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
