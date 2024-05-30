@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
-import { SupportedChainId } from '..'
+import { InterfaceFeeBps, SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
@@ -15,6 +15,7 @@ export type SDKConfig = {
   chainId: SupportedChainId
   graphUrl: string
   pythUrl: string
+  interfaceFeeBps?: InterfaceFeeBps
 }
 export default class PerennialSDK {
   /**
@@ -26,6 +27,7 @@ export default class PerennialSDK {
    * @param config.chainId {@link SupportedChainId}
    * @param config.graphUrl SubGraph URL
    * @param config.pythUrl Pyth URL
+   * @param config.interfaceFeeBps Interface Fee rates and recipient. See {@link interfaceFeeBps} for implementation examples.
    *
    * @returns Perennial SDK instance
    *
@@ -67,6 +69,7 @@ export default class PerennialSDK {
       walletClient: config.walletClient,
       graphClient: this._graphClient,
       pythClient: this._pythClient,
+      interfaceFeeBps: this.config.interfaceFeeBps,
     })
     this.vaults = new VaultsModule({
       chainId: config.chainId,
