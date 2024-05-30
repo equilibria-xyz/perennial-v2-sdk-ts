@@ -1,5 +1,5 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
-import { Address, Hex, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
+import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
   AssetMetadata,
@@ -40,11 +40,10 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
     const [keeperOracle] = await oracle.read.oracles([global[0]])
 
     // TODO(arjun): Pull these from the registry once available
-    const underlyingId = metadata.pythFeedId as Hex
-    const underlyingPayoff = await pythFactory.read.toUnderlyingPayoff([underlyingId])
-    const [validFrom, providerId] = await Promise.all([
+    const providerId = metadata.providerId
+    const [validFrom, underlyingId] = await Promise.all([
       pythFactory.read.validFrom(),
-      pythFactory.read.fromUnderlying([underlyingId, underlyingPayoff.provider]),
+      pythFactory.read.toUnderlyingId([providerId]),
     ])
 
     return {
