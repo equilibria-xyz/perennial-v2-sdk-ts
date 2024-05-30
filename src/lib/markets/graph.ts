@@ -12,7 +12,13 @@ import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum } fr
 import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
-import { calcNotional, calcPriceImpactFromTradeFee, magnitude, side as positionSide } from '../../utils/positionUtils'
+import {
+  calcNotional,
+  calcPriceImpactFromTradeFee,
+  calcTradeFee,
+  magnitude,
+  side as positionSide,
+} from '../../utils/positionUtils'
 import { MarketSnapshot, UserMarketSnapshot } from './chain'
 
 export type Markets = {
@@ -145,14 +151,21 @@ export async function fetchActivePositionPnl({
   let orderFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.orderFee)
   let startCollateral = snapshot.pre.local.collateral
   let netDeposits = 0n
-  let keeperFees = snapshot.pendingPositions[0].keeper
-  let positionFees = snapshot.pendingPositions[0].fee
-  const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-    totalTradeFee: snapshot.pre.nextPosition.fee,
-    positionFee: marketSnapshot.parameter.positionFee ?? 0n,
+  let keeperFees = snapshot.checkpoint.settlementFee
+  let positionFees = snapshot.checkpoint.tradeFee
+  const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
+  const tradeFeeData = calcTradeFee({
+    positionDelta: pendingDelta,
+    marketSnapshot,
+    isMaker: side === PositionSide.maker,
+    direction: side,
   })
-  let priceImpactFees = pendingPriceImpactFee
-  const priceImpact = magnitude > 0n ? Big6Math.div(pendingPriceImpactFee, magnitude) : 0n
+  const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
+    tradeImpact: tradeFeeData.tradeImpact,
+    positionDelta: pendingDelta,
+  })
+  let priceImpactFees = tradeFeeData.tradeImpact
+  const priceImpact = pendingPriceImpactFee
 
   let averageEntryPrice = snapshot.prices[0]
   if (side === 'long') averageEntryPrice = averageEntryPrice + priceImpact
@@ -163,7 +176,6 @@ export async function fetchActivePositionPnl({
     startCollateral = graphPosition.startCollateral
 
     // Average entry is (openNotionalNow - openNotionalBeforeStart + pendingNotionalDeltaIfPositive) / (openSizeNow - openSizeBeforeStart - pendingSizeDeltaIfPositive)
-    const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
     const pendingNotional = Big6Math.mul(pendingDelta, snapshot.prices[0])
     // Add price impact fee for taker positions
     let avgEntryNumerator = graphPosition.openNotional + (pendingDelta > 0n ? pendingNotional : 0n)

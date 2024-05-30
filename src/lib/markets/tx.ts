@@ -3,7 +3,7 @@ import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem
 
 import { MultiInvokerAbi, PythFactoryAbi } from '../..'
 import { OrderTypes, PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
-import { ReferrerInterfaceFeeInfo, interfaceFeeBps } from '../../constants'
+import { InterfaceFeeBps, ReferrerInterfaceFeeInfo } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
 import { Big6Math, BigOrZero, notEmpty, nowSeconds } from '../../utils'
@@ -26,8 +26,6 @@ type WithChainIdAndPublicClient = {
   publicClient: PublicClient
 }
 
-export type InterfaceFeeRate = typeof interfaceFeeBps
-
 export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
@@ -43,7 +41,7 @@ export type BuildModifyPositionTxArgs = {
   cancelOrderDetails?: OpenOrder[]
   absDifferenceNotional?: bigint
   interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
-  interfaceFeeRate?: InterfaceFeeRate
+  interfaceFeeRate?: InterfaceFeeBps
   referralFeeRate?: ReferrerInterfaceFeeInfo
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
@@ -65,7 +63,7 @@ export async function buildModifyPositionTx({
   cancelOrderDetails,
   absDifferenceNotional,
   interfaceFee,
-  interfaceFeeRate = interfaceFeeBps,
+  interfaceFeeRate,
   referralFeeRate,
   onCommitmentError,
 }: BuildModifyPositionTxArgs) {
@@ -85,12 +83,10 @@ export async function buildModifyPositionTx({
     })
   }
 
-  let cancelOrders: { action: number; args: `0x${string}` }[] = []
+  let cancelOrders: MultiInvokerAction[] = []
 
   if (cancelOrderDetails?.length) {
-    cancelOrders = cancelOrderDetails.map(({ market, nonce }) =>
-      buildCancelOrder({ market: getAddress(market), nonce: BigInt(nonce) }),
-    )
+    cancelOrders = buildCancelOrderActions(cancelOrderDetails)
   }
 
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
@@ -100,12 +96,16 @@ export async function buildModifyPositionTx({
 
   // Interface fee
   const interfaceFees: Array<typeof EmptyInterfaceFee> = []
-  const feeRate = positionSide ? interfaceFeeBps[chainId].feeAmount[positionSide] : 0n
+  const feeRate = positionSide && interfaceFeeRate ? interfaceFeeRate.feeAmount[positionSide] : 0n
   const tradeFeeBips =
     absDifferenceNotional && interfaceFee?.interfaceFee
       ? Big6Math.div(interfaceFee.interfaceFee, absDifferenceNotional)
       : 0n
-  if (interfaceFee?.interfaceFee && tradeFeeBips <= Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))) {
+  if (
+    interfaceFee?.interfaceFee &&
+    interfaceFeeRate &&
+    tradeFeeBips <= Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))
+  ) {
     const referrerFee = interfaceFee.referrerFee
     const ecosystemFee = interfaceFee.ecosystemFee
 
@@ -120,7 +120,7 @@ export async function buildModifyPositionTx({
     if (ecosystemFee > 0n) {
       interfaceFees.push({
         unwrap: false, // default recipient holds DSU
-        receiver: interfaceFeeRate[chainId].feeRecipientAddress,
+        receiver: interfaceFeeRate.feeRecipientAddress,
         amount: ecosystemFee,
       })
     }
@@ -149,6 +149,7 @@ export async function buildModifyPositionTx({
       referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
       referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
       positionDelta: positionAbs ?? 0n,
+      interfaceFeeBps: interfaceFeeRate,
     })
     stopLossAction = buildPlaceTriggerOrder({
       market: marketAddress,
@@ -166,10 +167,10 @@ export async function buildModifyPositionTx({
             }
           : undefined,
       interfaceFee2:
-        stopLossInterfaceFee.ecosystemFee > 0n
+        stopLossInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
           ? {
               unwrap: false,
-              receiver: interfaceFeeRate[chainId].feeRecipientAddress,
+              receiver: interfaceFeeRate.feeRecipientAddress,
               amount: stopLossInterfaceFee.ecosystemFee,
             }
           : undefined,
@@ -185,6 +186,7 @@ export async function buildModifyPositionTx({
       referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
       referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
       positionDelta: positionAbs ?? 0n,
+      interfaceFeeBps: interfaceFeeRate,
     })
 
     takeProfitAction = buildPlaceTriggerOrder({
@@ -203,10 +205,10 @@ export async function buildModifyPositionTx({
             }
           : undefined,
       interfaceFee2:
-        takeProfitInterfaceFee.ecosystemFee > 0n
+        takeProfitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
           ? {
               unwrap: false,
-              receiver: interfaceFeeRate[chainId].feeRecipientAddress,
+              receiver: interfaceFeeRate.feeRecipientAddress,
               amount: takeProfitInterfaceFee.ecosystemFee,
             }
           : undefined,
@@ -295,7 +297,7 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
   }
 }
 
-export type CancelOrderDetails = { market: Address; nonce: bigint }
+export type CancelOrderDetails = { market: Address; nonce: bigint } | OpenOrder
 
 export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
@@ -313,8 +315,8 @@ export type BuildPlaceOrderTxArgs = {
   positionAbs: bigint
   selectedLimitComparison?: TriggerComparison
   referralFeeRate?: ReferrerInterfaceFeeInfo
-  interfaceFeeRate?: InterfaceFeeRate
-  cancelOrderDetails?: CancelOrderDetails
+  interfaceFeeRate?: InterfaceFeeBps
+  cancelOrderDetails?: CancelOrderDetails[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -337,7 +339,7 @@ export async function buildPlaceOrderTx({
   selectedLimitComparison,
   cancelOrderDetails,
   referralFeeRate,
-  interfaceFeeRate = interfaceFeeBps,
+  interfaceFeeRate,
   onCommitmentError,
 }: BuildPlaceOrderTxArgs) {
   if (!address || !chainId || !pythClient) {
@@ -360,15 +362,16 @@ export async function buildPlaceOrderTx({
 
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
-  let cancelAction
+  let cancelActions: MultiInvokerAction[] = []
   let updateAction
   let limitOrderAction
   let stopLossAction
   let takeProfitAction
 
   if (cancelOrderDetails) {
-    cancelAction = buildCancelOrder(cancelOrderDetails)
+    cancelActions = buildCancelOrderActions(cancelOrderDetails)
   }
+
   const asset = addressToAsset(marketAddress)
   const marketSnapshot = asset && marketSnapshots?.market[asset]
 
@@ -395,6 +398,7 @@ export async function buildPlaceOrderTx({
       referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
       referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
       positionDelta: delta,
+      interfaceFeeBps: interfaceFeeRate,
     })
     limitOrderAction = buildPlaceTriggerOrder({
       market: marketAddress,
@@ -412,10 +416,10 @@ export async function buildPlaceOrderTx({
             }
           : undefined,
       interfaceFee2:
-        limitInterfaceFee.ecosystemFee > 0n
+        limitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
           ? {
               unwrap: false,
-              receiver: interfaceFeeRate[chainId].feeRecipientAddress,
+              receiver: interfaceFeeRate.feeRecipientAddress,
               amount: limitInterfaceFee.ecosystemFee,
             }
           : undefined,
@@ -431,6 +435,7 @@ export async function buildPlaceOrderTx({
       referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
       referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
       positionDelta: stopLossDelta,
+      interfaceFeeBps: interfaceFeeRate,
     })
     stopLossAction = buildPlaceTriggerOrder({
       market: marketAddress,
@@ -448,10 +453,10 @@ export async function buildPlaceOrderTx({
             }
           : undefined,
       interfaceFee2:
-        stopLossInterfaceFee.ecosystemFee > 0n
+        stopLossInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
           ? {
               unwrap: false,
-              receiver: interfaceFeeBps[chainId].feeRecipientAddress,
+              receiver: interfaceFeeRate.feeRecipientAddress,
               amount: stopLossInterfaceFee.ecosystemFee,
             }
           : undefined,
@@ -468,6 +473,7 @@ export async function buildPlaceOrderTx({
       referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
       referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
       positionDelta: takeProfitDelta,
+      interfaceFeeBps: interfaceFeeRate,
     })
 
     takeProfitAction = buildPlaceTriggerOrder({
@@ -486,10 +492,10 @@ export async function buildPlaceOrderTx({
             }
           : undefined,
       interfaceFee2:
-        takeProfitInterfaceFee.ecosystemFee > 0n
+        takeProfitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
           ? {
               unwrap: false,
-              receiver: interfaceFeeBps[chainId].feeRecipientAddress,
+              receiver: interfaceFeeRate.feeRecipientAddress,
               amount: takeProfitInterfaceFee.ecosystemFee,
             }
           : undefined,
@@ -497,7 +503,7 @@ export async function buildPlaceOrderTx({
   }
 
   const actions: MultiInvokerAction[] = [
-    cancelAction,
+    ...cancelActions,
     updateAction,
     limitOrderAction,
     stopLossAction,
@@ -559,21 +565,23 @@ export async function buildPlaceOrderTx({
   }
 }
 
-export type CancelOrderTuple = [Address, bigint]
+function buildCancelOrderActions(orders: CancelOrderDetails[]) {
+  return orders.map(({ market, nonce }) => {
+    const marketAddress = getAddress(market)
+    const formattedNonce = BigInt(nonce)
+    return buildCancelOrder({ market: marketAddress, nonce: formattedNonce })
+  })
+}
 
 export function buildCancelOrderTx({
   chainId,
   orderDetails,
 }: {
   chainId: SupportedChainId
-  orderDetails: CancelOrderTuple[]
+  orderDetails: CancelOrderDetails[]
 }) {
-  const actions: MultiInvokerAction[] = orderDetails.map(([market, nonce]) =>
-    buildCancelOrder({
-      market,
-      nonce,
-    }),
-  )
+  const actions: MultiInvokerAction[] = buildCancelOrderActions(orderDetails)
+
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: MultiInvokerAbi,

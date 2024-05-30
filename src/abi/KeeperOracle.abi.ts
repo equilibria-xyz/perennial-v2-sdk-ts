@@ -79,6 +79,11 @@ export const KeeperOracleAbi = [
     type: 'error',
   },
   {
+    inputs: [],
+    name: 'PriceStorageInvalidError',
+    type: 'error',
+  },
+  {
     anonymous: false,
     inputs: [
       {
@@ -223,7 +228,7 @@ export const KeeperOracleAbi = [
           },
         ],
         internalType: 'struct OracleVersion',
-        name: 'oracleVersion',
+        name: '',
         type: 'tuple',
       },
     ],

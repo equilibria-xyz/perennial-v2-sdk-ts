@@ -1,4 +1,4 @@
-import { Address, getAddress } from 'viem'
+import { Address, Hex, getAddress } from 'viem'
 import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
 
 import { OracleFactoryAddresses } from '../constants'
@@ -60,7 +60,8 @@ export type AssetMetadataType = {
     tvTicker: string
     baseCurrency: SupportedAsset
     quoteCurrency: QuoteCurrency
-    pythFeedId: string
+    providerId: Hex
+    pythFeedId: string // TODO(arjun): remove PythFeedId if possible
     transform: (value: bigint) => bigint
     untransform: (value: bigint) => bigint
   }
@@ -74,6 +75,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.BTC/USD',
     baseCurrency: SupportedAsset.btc,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     pythFeedId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     transform: linearTransform,
     untransform: linearTransform,
@@ -85,6 +87,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.ETH/USD',
     baseCurrency: SupportedAsset.eth,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     pythFeedId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     transform: linearTransform,
     untransform: linearTransform,
@@ -96,6 +99,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.ARB/USD',
     baseCurrency: SupportedAsset.arb,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5',
     pythFeedId: '0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5',
     transform: linearTransform,
     untransform: linearTransform,
@@ -108,6 +112,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.SOL/USD',
     baseCurrency: SupportedAsset.sol,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
     pythFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
     transform: linearTransform,
     untransform: linearTransform,
@@ -119,6 +124,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.MATIC/USD',
     baseCurrency: SupportedAsset.matic,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52',
     pythFeedId: '0x5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52',
     transform: linearTransform,
     untransform: linearTransform,
@@ -130,6 +136,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.TIA/USD',
     baseCurrency: SupportedAsset.tia,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x09f7c1d7dfbb7df2b8fe3d3d87ee94a2259d212da4f30c1f0540d066dfa44723',
     pythFeedId: '0x09f7c1d7dfbb7df2b8fe3d3d87ee94a2259d212da4f30c1f0540d066dfa44723',
     transform: linearTransform,
     untransform: linearTransform,
@@ -141,6 +148,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.RLB/USD',
     baseCurrency: SupportedAsset.rlb,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x2f2d17abbc1e781bd87b4a5d52c8b2856886f5c482fa3593cebf6795040ab0b6',
     pythFeedId: '0x2f2d17abbc1e781bd87b4a5d52c8b2856886f5c482fa3593cebf6795040ab0b6',
     transform: linearTransform,
     untransform: linearTransform,
@@ -153,6 +161,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.LINK/USD',
     baseCurrency: SupportedAsset.link,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
     pythFeedId: '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
     transform: linearTransform,
     untransform: linearTransform,
@@ -164,6 +173,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.BNB/USD',
     baseCurrency: SupportedAsset.bnb,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
     pythFeedId: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
     transform: linearTransform,
     untransform: linearTransform,
@@ -175,6 +185,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.XRP/USD',
     baseCurrency: SupportedAsset.xrp,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
     pythFeedId: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
     transform: linearTransform,
     untransform: linearTransform,
@@ -186,6 +197,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.BTC/USD',
     baseCurrency: SupportedAsset.msqBTC,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x403d2f23c2015aee67e9311896907cc05c139b2c771a92ae48a2c0e50e6883a4',
     pythFeedId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     transform: microPowerTwoTransform,
     untransform: microPowerTwoUntransform,
@@ -197,6 +209,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.ETH/USD',
     baseCurrency: SupportedAsset.cmsqETH,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x002aa13b58df1c483e925045e9a580506812ed5bc85c188d3d8b501501294ad4',
     pythFeedId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     transform: centimilliPowerTwoTransform,
     untransform: centimilliPowerTwoUntransform,
@@ -208,6 +221,7 @@ export const AssetMetadata: AssetMetadataType = {
     tvTicker: 'Crypto.JUP/USD',
     baseCurrency: SupportedAsset.jup,
     quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996',
     pythFeedId: '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996',
     transform: linearTransform,
     untransform: linearTransform,
@@ -277,9 +291,9 @@ export const triggerOrderTypes = [OrderTypes.stopLoss, OrderTypes.takeProfit]
 function isSupportedAsset(asset: any): asset is SupportedAsset {
   return Object.values(SupportedAsset).includes(asset)
 }
-
+// Default interface fee rates and recipient for perennial.
 export const interfaceFeeBps: {
-  [chainId in SupportedChainId]: { feeAmount: { [key in PositionSide]: bigint }; feeRecipientAddress: Address }
+  [chainId in SupportedChainId]: InterfaceFeeBps
 } = {
   [arbitrumSepolia.id]: {
     feeAmount: {
@@ -320,3 +334,8 @@ export type ReferrerInterfaceFeeInfo =
     }
   | null
   | undefined
+
+export type InterfaceFeeBps = {
+  feeAmount: { [key in PositionSide]: bigint }
+  feeRecipientAddress: Address
+}

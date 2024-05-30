@@ -39,6 +39,7 @@ export {
   type BuildModifyPositionTxArgs,
   type BuildPlaceOrderTxArgs,
   type BuildSubmitVaaTxArgs,
+  type CancelOrderDetails,
 } from './lib/markets/tx'
 
 // Vault - Chain
@@ -140,6 +141,7 @@ export {
   triggerOrderTypes,
   interfaceFeeBps,
   type ReferrerInterfaceFeeInfo,
+  type InterfaceFeeBps,
 } from './constants/markets'
 
 /* #################### ABIs #################### */

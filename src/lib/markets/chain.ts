@@ -1,5 +1,5 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
-import { Address, Hex, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
+import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
   AssetMetadata,
@@ -40,10 +40,10 @@ export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChai
     const [keeperOracle] = await oracle.read.oracles([global[0]])
 
     // TODO(arjun): Pull these from the registry once available
-    const underlyingId = metadata.pythFeedId as Hex
-    const [validFrom, providerId] = await Promise.all([
+    const providerId = metadata.providerId
+    const [validFrom, underlyingId] = await Promise.all([
       pythFactory.read.validFrom(),
-      pythFactory.read.fromUnderlyingId([underlyingId]),
+      pythFactory.read.toUnderlyingId([providerId]),
     ])
 
     return {
@@ -90,6 +90,8 @@ export type MarketSnapshot = ChainMarketSnapshot & {
   }
   socializationFactor: bigint
   isSocialized: boolean
+  makerTotal: bigint
+  takerTotal: bigint
 }
 
 export type UserMarketSnapshot = ChainUserMarketSnapshot & {
@@ -171,6 +173,10 @@ export async function fetchMarketSnapshots({
       const socializationFactor = !Big6Math.isZero(major)
         ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
         : Big6Math.ONE
+      const makerTotal = snapshot.pendingOrder.makerPos + snapshot.pendingOrder.makerNeg
+      const takerPos = snapshot.pendingOrder.longPos + snapshot.pendingOrder.shortNeg
+      const takerNeg = snapshot.pendingOrder.shortPos + snapshot.pendingOrder.longNeg
+      const takerTotal = takerPos + takerNeg
       acc[snapshot.asset] = {
         ...snapshot,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -190,6 +196,8 @@ export async function fetchMarketSnapshots({
         },
         socializationFactor,
         isSocialized: socializationFactor < Big6Math.ONE,
+        makerTotal,
+        takerTotal,
       }
       return acc
     },
