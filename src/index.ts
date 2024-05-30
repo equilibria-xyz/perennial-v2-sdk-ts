@@ -39,6 +39,7 @@ export {
   type BuildModifyPositionTxArgs,
   type BuildPlaceOrderTxArgs,
   type BuildSubmitVaaTxArgs,
+  type CancelOrderDetails,
 } from './lib/markets/tx'
 
 // Vault - Chain

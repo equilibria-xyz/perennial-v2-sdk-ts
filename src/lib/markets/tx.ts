@@ -85,12 +85,10 @@ export async function buildModifyPositionTx({
     })
   }
 
-  let cancelOrders: { action: number; args: `0x${string}` }[] = []
+  let cancelOrders: MultiInvokerAction[] = []
 
   if (cancelOrderDetails?.length) {
-    cancelOrders = cancelOrderDetails.map(({ market, nonce }) =>
-      buildCancelOrder({ market: getAddress(market), nonce: BigInt(nonce) }),
-    )
+    cancelOrders = buildCancelOrderActions(cancelOrderDetails)
   }
 
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
@@ -295,7 +293,7 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
   }
 }
 
-export type CancelOrderDetails = { market: Address; nonce: bigint }
+export type CancelOrderDetails = { market: Address; nonce: bigint } | OpenOrder
 
 export type BuildPlaceOrderTxArgs = {
   pythClient: EvmPriceServiceConnection
@@ -314,7 +312,7 @@ export type BuildPlaceOrderTxArgs = {
   selectedLimitComparison?: TriggerComparison
   referralFeeRate?: ReferrerInterfaceFeeInfo
   interfaceFeeRate?: InterfaceFeeRate
-  cancelOrderDetails?: CancelOrderDetails
+  cancelOrderDetails?: CancelOrderDetails[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -360,15 +358,16 @@ export async function buildPlaceOrderTx({
 
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
-  let cancelAction
+  let cancelActions: MultiInvokerAction[] = []
   let updateAction
   let limitOrderAction
   let stopLossAction
   let takeProfitAction
 
   if (cancelOrderDetails) {
-    cancelAction = buildCancelOrder(cancelOrderDetails)
+    cancelActions = buildCancelOrderActions(cancelOrderDetails)
   }
+
   const asset = addressToAsset(marketAddress)
   const marketSnapshot = asset && marketSnapshots?.market[asset]
 
@@ -497,7 +496,7 @@ export async function buildPlaceOrderTx({
   }
 
   const actions: MultiInvokerAction[] = [
-    cancelAction,
+    ...cancelActions,
     updateAction,
     limitOrderAction,
     stopLossAction,
@@ -559,21 +558,23 @@ export async function buildPlaceOrderTx({
   }
 }
 
-export type CancelOrderTuple = [Address, bigint]
+function buildCancelOrderActions(orders: CancelOrderDetails[]) {
+  return orders.map(({ market, nonce }) => {
+    const marketAddress = getAddress(market)
+    const formattedNonce = BigInt(nonce)
+    return buildCancelOrder({ market: marketAddress, nonce: formattedNonce })
+  })
+}
 
 export function buildCancelOrderTx({
   chainId,
   orderDetails,
 }: {
   chainId: SupportedChainId
-  orderDetails: CancelOrderTuple[]
+  orderDetails: CancelOrderDetails[]
 }) {
-  const actions: MultiInvokerAction[] = orderDetails.map(([market, nonce]) =>
-    buildCancelOrder({
-      market,
-      nonce,
-    }),
-  )
+  const actions: MultiInvokerAction[] = buildCancelOrderActions(orderDetails)
+
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: MultiInvokerAbi,

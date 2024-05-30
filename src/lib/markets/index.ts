@@ -21,6 +21,7 @@ import {
   BuildModifyPositionTxArgs,
   BuildPlaceOrderTxArgs,
   BuildSubmitVaaTxArgs,
+  CancelOrderDetails,
   buildCancelOrderTx,
   buildModifyPositionTx,
   buildPlaceOrderTx,
@@ -316,7 +317,7 @@ export class MarketsModule {
        * @param orderDetails {@link CancelOrderTuple[]} List of order details (as a tuple of Address and order nonce) to cancel
        * @returns Cancel order transaction data.
        */
-      cancelOrder: (orderDetails: [Address, bigint][]) => {
+      cancelOrder: (orderDetails: CancelOrderDetails[]) => {
         return buildCancelOrderTx({
           chainId: this.config.chainId,
           orderDetails,
@@ -407,7 +408,7 @@ export class MarketsModule {
        * @param orderDetails List of order details (as a tuple of Address and order nonce) to cancel
        * @returns Transaction Hash.
        */
-      cancelOrder: async (orderDetails: [Address, bigint][]) => {
+      cancelOrder: async (orderDetails: CancelOrderDetails[]) => {
         const tx = this.build.cancelOrder(orderDetails)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
