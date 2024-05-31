@@ -6,6 +6,9 @@ import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 export type JumpRateUtilizationCurve = AbiParametersToPrimitiveTypes<
   ExtractAbiFunction<typeof MarketAbi, 'riskParameter'>['outputs']
 >[0]['utilizationCurve']
-export type MultiInvokerAction = AbiParametersToPrimitiveTypes<
-  ExtractAbiFunction<typeof MultiInvokerAbi, 'invoke'>['inputs']
->[0][0]
+export type MultiInvokerAction = Exclude<
+  AbiParametersToPrimitiveTypes<ExtractAbiFunction<typeof MultiInvokerAbi, 'invoke'>['inputs']>[0][0],
+  string
+>
+
+export type OptionalAddress = { address?: Address }

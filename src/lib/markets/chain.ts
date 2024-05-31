@@ -126,8 +126,8 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
 export async function fetchMarketSnapshots({
   publicClient,
   pythClient,
-  chainId = DefaultChain.id,
-  address = zeroAddress,
+  chainId,
+  address,
   marketOracles,
   onError,
   onSuccess,

@@ -1,6 +1,6 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
-import { Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
+import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
 import { InterfaceFeeBps, SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
@@ -11,28 +11,31 @@ import { VaultsModule } from '../lib/vaults'
 
 export type SDKConfig = {
   rpcUrl: string
-  walletClient?: WalletClient
   chainId: SupportedChainId
   graphUrl: string
   pythUrl: string
+  walletClient?: WalletClient
   interfaceFeeBps?: InterfaceFeeBps
+  operatingFor?: Address
 }
+
+/**
+ * Perennial SDK class
+ *
+ * @param config SDK configuration
+ * @param config.rpcUrl Rpc URL
+ * @param config.walletClient Wallet Client
+ * @param config.chainId {@link SupportedChainId}
+ * @param config.graphUrl SubGraph URL
+ * @param config.pythUrl Pyth URL
+ * @param config.interfaceFeeBps Interface Fee rates and recipient. See {@link interfaceFeeBps} for implementation examples.
+ * @param config.operatingFor If set, the SDK will read data and send multi-invoker transactions on behalf of this address.
+ *
+ * @returns Perennial SDK instance
+ *
+ * @beta
+ */
 export default class PerennialSDK {
-  /**
-   * Perennial SDK class
-   *
-   * @param config SDK configuration
-   * @param config.rpcUrl Rpc URL
-   * @param config.walletClient Wallet Client
-   * @param config.chainId {@link SupportedChainId}
-   * @param config.graphUrl SubGraph URL
-   * @param config.pythUrl Pyth URL
-   * @param config.interfaceFeeBps Interface Fee rates and recipient. See {@link interfaceFeeBps} for implementation examples.
-   *
-   * @returns Perennial SDK instance
-   *
-   * @beta
-   */
   private config: SDKConfig
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
@@ -70,6 +73,7 @@ export default class PerennialSDK {
       graphClient: this._graphClient,
       pythClient: this._pythClient,
       interfaceFeeBps: this.config.interfaceFeeBps,
+      operatingFor: this.config.operatingFor,
     })
     this.vaults = new VaultsModule({
       chainId: config.chainId,
@@ -77,11 +81,13 @@ export default class PerennialSDK {
       walletClient: config.walletClient,
       graphClient: this._graphClient,
       pythClient: this._pythClient,
+      operatingFor: this.config.operatingFor,
     })
     this.operator = new OperatorModule({
       chainId: config.chainId,
       publicClient: this._publicClient,
       walletClient: config.walletClient,
+      operatingFor: this.config.operatingFor,
     })
 
     this._walletClient = config.walletClient

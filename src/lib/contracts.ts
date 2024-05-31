@@ -156,16 +156,16 @@ export function getKeeperOracleContract(keeperOracleAddress: Address, publicClie
   })
 }
 
+/**
+ * Contracts module class
+ * @param config SDK configuration
+ * @param config.chainId {@link SupportedChainId}
+ * @param config.publicClient {@link PublicClient}
+ * @param config.signer {@link WalletClient}
+ *
+ * @returns Contracts module instance
+ */
 export class ContractsModule {
-  /**
-   * Contracts module class
-   * @param config SDK configuration
-   * @param config.chainId {@link SupportedChainId}
-   * @param config.publicClient {@link PublicClient}
-   * @param config.signer {@link WalletClient}
-   *
-   * @returns Contracts module instance
-   */
   private config: {
     chainId: SupportedChainId
     publicClient: PublicClient

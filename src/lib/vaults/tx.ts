@@ -89,6 +89,7 @@ const buildPerformVaultUpdateTx = async ({
   vaultAddress,
   marketOracles,
   vaultSnapshots,
+  address,
 }: BaseVaultUpdateTxArgs & { baseAction: MultiInvokerAction }) => {
   const vaultType = chainVaultsWithAddress(chainId).find(({ vaultAddress: v }) => v === vaultAddress)
   if (!vaultType) throw new Error('Invalid Vault')
@@ -123,7 +124,7 @@ const buildPerformVaultUpdateTx = async ({
   const data = encodeFunctionData({
     abi: multiInvoker.abi,
     functionName: 'invoke',
-    args: [actions],
+    args: address ? [address, actions] : [actions],
   })
 
   return {

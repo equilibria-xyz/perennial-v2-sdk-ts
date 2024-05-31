@@ -1,4 +1,4 @@
-import { Address, PublicClient, WalletClient, encodeFunctionData } from 'viem'
+import { Address, PublicClient, WalletClient, encodeFunctionData, zeroAddress } from 'viem'
 
 import {
   Big6Math,
@@ -12,10 +12,12 @@ import {
   VaultFactoryAbi,
   VaultFactoryAddresses,
   chainIdToChainMap,
+  getMultiInvokerContract,
   getUSDCContract,
   getVaultFactoryContract,
 } from '..'
 import { getMarketFactoryContract } from '..'
+import { OptionalAddress } from '../types/perennial'
 
 /**
  * Builds a transaction to approve USDC for the MultiInvoker contract.
@@ -82,6 +84,37 @@ export async function buildApproveVaultFactoryTx({ chainId }: { chainId: Support
 
   return {
     to: VaultFactoryAddresses[chainId],
+    value: 0n,
+    data,
+  }
+}
+
+/**
+ * Builds a transaction to update the MultiInvoker operator.
+ *
+ * @param chainId {@link SupportedChainId}
+ * @param operator - The operator address.
+ * @param enabled - Set the address as enabled or disabled.
+ *
+ * @returns Transaction calldata, destination address and transaction value.
+ */
+export async function buildUpdateMultiInvokerOperatorTx({
+  chainId,
+  operator,
+  enabled,
+}: {
+  chainId: SupportedChainId
+  operator: Address
+  enabled: boolean
+}) {
+  const data = encodeFunctionData({
+    abi: MarketFactoryAbi,
+    functionName: 'updateOperator',
+    args: [operator, enabled],
+  })
+
+  return {
+    to: MultiInvokerAddresses[chainId],
     value: 0n,
     data,
   }
@@ -160,50 +193,119 @@ export async function checkVaultFactoryApproval({
   return isVaultFactoryApproved
 }
 
+/**
+ * Checks if the provided operator address is approved to operator on behalf of the address in the MultiInvoker contract.
+ *
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient Public Client
+ * @param address Wallet Address
+ * @param operator Operator Address
+ *
+ * @returns Whether the Operator is approve in the MultiInvoker contract.
+ */
+export async function checkMultiInvokerOperatorApproval({
+  chainId,
+  publicClient,
+  address,
+  operator,
+}: {
+  chainId: SupportedChainId
+  publicClient: PublicClient
+  address: Address
+  operator: Address
+}) {
+  const isOperatorApproved = await getMultiInvokerContract(chainId, publicClient).read.operators([address, operator])
+  return isOperatorApproved
+}
+
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'address'>
+
+/**
+ * Operator module class
+ *
+ * @param config SDK configuration
+ * @param config.chainId {@link SupportedChainId}
+ * @param config.publicClient Public Client
+ * @param config.walletClient Wallet Client
+ * @param config.operatingFor If set, the module will read data on behalf of this address.
+ *
+ * @returns Operator module instance
+ */
 export class OperatorModule {
-  /**
-   * Operator module class
-   *
-   * @param config SDK configuration
-   * @param config.chainId {@link SupportedChainId}
-   * @param config.publicClient Public Client
-   * @param config.walletClient Wallet Client
-   *
-   * @returns Operator module instance
-   */
   private config: {
     chainId: SupportedChainId
     publicClient: PublicClient
     walletClient?: WalletClient
+    operatingFor?: Address
   }
+  private defaultAddress: Address = zeroAddress
 
-  constructor(config: { chainId: SupportedChainId; publicClient: PublicClient; walletClient?: WalletClient }) {
+  constructor(config: {
+    chainId: SupportedChainId
+    publicClient: PublicClient
+    walletClient?: WalletClient
+    operatingFor?: Address
+  }) {
     this.config = config
+    this.defaultAddress = config.operatingFor ?? config.walletClient?.account?.address ?? this.defaultAddress
   }
 
   get read() {
     return {
       /**
        * Get USDC allowance for the MultiInvoker contract
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns The USDC allowance
        */
-      usdcAllowance: ({ address }: { address: Address }) =>
-        getUSDCAllowance({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+      usdcAllowance: (args: OmitBound<Parameters<typeof getUSDCAllowance>[0]> & OptionalAddress = {}) =>
+        getUSDCAllowance({
+          chainId: this.config.chainId,
+          address: this.defaultAddress,
+          publicClient: this.config.publicClient,
+          ...args,
+        }),
       /**
        * Check if the provided address is approved to interact with the market factory
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Whether the MarketFactory contract is approved
        */
-      marketFactoryApproval: ({ address }: { address: Address }) =>
-        checkMarketFactoryApproval({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+      marketFactoryApproval: (
+        args: OmitBound<Parameters<typeof checkMarketFactoryApproval>[0]> & OptionalAddress = {},
+      ) =>
+        checkMarketFactoryApproval({
+          chainId: this.config.chainId,
+          address: this.defaultAddress,
+          publicClient: this.config.publicClient,
+          ...args,
+        }),
       /**
        * Check if the provided address is approved to interact with the vault factory
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Whether the VaultFactory contract is approved
        */
-      vaultFactoryApproval: ({ address }: { address: Address }) =>
-        checkVaultFactoryApproval({ chainId: this.config.chainId, address, publicClient: this.config.publicClient }),
+      vaultFactoryApproval: (args: OmitBound<Parameters<typeof checkVaultFactoryApproval>[0]> & OptionalAddress = {}) =>
+        checkVaultFactoryApproval({
+          chainId: this.config.chainId,
+          address: this.defaultAddress,
+          publicClient: this.config.publicClient,
+          ...args,
+        }),
+
+      /**
+       * Check if the provided operator address is approved to operator on behalf of the address in the MultiInvoker contract
+       * @param operator Operator Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
+       * @returns Whether the Operator is approve in the MultiInvoker contract
+       */
+      multiInvokerOperatorApproval: (
+        args: OmitBound<Parameters<typeof checkMultiInvokerOperatorApproval>[0]> & OptionalAddress,
+      ) =>
+        checkMultiInvokerOperatorApproval({
+          chainId: this.config.chainId,
+          address: this.defaultAddress,
+          publicClient: this.config.publicClient,
+          ...args,
+        }),
     }
   }
 
@@ -226,6 +328,15 @@ export class OperatorModule {
        * @returns Transaction calldata, destination address and transaction value
        */
       approveVaultFactoryTx: () => buildApproveVaultFactoryTx({ chainId: this.config.chainId }),
+
+      /**
+       * Build a transaction to update the MultiInvoker operator
+       * @param operator - The operator address
+       * @param enabled - Set the address as enabled or disabled
+       * @returns Transaction calldata, destination address and transaction value
+       */
+      approveMultiInvokerOperatorTx: (args: OmitBound<Parameters<typeof buildUpdateMultiInvokerOperatorTx>[0]>) =>
+        buildUpdateMultiInvokerOperatorTx({ chainId: this.config.chainId, ...args }),
     }
   }
 
@@ -270,6 +381,18 @@ export class OperatorModule {
        */
       approveVaultFactory: async () => {
         const tx = await this.build.approveVaultFactoryTx()
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+
+      /**
+       * updates the MultiInvoker operator
+       * @param operator - The operator address
+       * @param enabled - Set the address as enabled or disabled
+       * @returns Transaction hash
+       */
+      approveMultiInvokerOperator: async (...args: Parameters<typeof this.build.approveMultiInvokerOperatorTx>) => {
+        const tx = await this.build.approveMultiInvokerOperatorTx(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
