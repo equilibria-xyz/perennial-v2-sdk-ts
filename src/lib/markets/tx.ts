@@ -259,7 +259,7 @@ export async function buildModifyPositionTx({
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
-    args: [actions],
+    args: [address, actions],
   })
   return {
     data,
@@ -273,7 +273,6 @@ export type BuildSubmitVaaTxArgs = {
   pythClient: EvmPriceServiceConnection
   marketAddress: Address
   marketOracles: MarketOracles
-  address: Address
 }
 
 export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, pythClient }: BuildSubmitVaaTxArgs) {
@@ -556,7 +555,7 @@ export async function buildPlaceOrderTx({
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
-    args: [actions],
+    args: [address, actions],
   })
   return {
     data,
@@ -573,19 +572,18 @@ function buildCancelOrderActions(orders: CancelOrderDetails[]) {
   })
 }
 
-export function buildCancelOrderTx({
-  chainId,
-  orderDetails,
-}: {
+export type BuildCancelOrderTxArgs = {
   chainId: SupportedChainId
+  address: Address
   orderDetails: CancelOrderDetails[]
-}) {
+}
+export function buildCancelOrderTx({ chainId, address, orderDetails }: BuildCancelOrderTxArgs) {
   const actions: MultiInvokerAction[] = buildCancelOrderActions(orderDetails)
 
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: MultiInvokerAbi,
-    args: [actions],
+    args: [address, actions],
   })
   return {
     data,

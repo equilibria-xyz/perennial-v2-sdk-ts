@@ -1,6 +1,6 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
-import { PublicClient, WalletClient } from 'viem'
+import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import {
   BuildClaimTxArgs,
@@ -13,6 +13,8 @@ import {
 } from '..'
 import { buildCommitPrice, buildCommitmentsForOracles, notEmpty } from '../..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
+import { OptionalAddress } from '../../types/perennial'
+import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
 
@@ -64,27 +66,30 @@ export const fetchVaultCommitments = async ({
   }))
 }
 
-type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient'>
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient' | 'address'>
 
+/**
+ * Vaults module class
+ * @param config SDK configuration
+ * @param config.chainId {@link SupportedChainId}
+ * @param config.publicClient Public Client
+ * @param config.graphClient GraphQl Client
+ * @param config.pythClient Pyth Client
+ * @param config.walletClient Wallet Client
+ * @param config.operatingFor If set, the module will read data and send multi-invoker transactions on behalf of this address.
+ *
+ * @returns Vaults module instance
+ */
 export class VaultsModule {
-  /**
-   * Vaults module class
-   * @param config SDK configuration
-   * @param config.chainId {@link SupportedChainId}
-   * @param config.publicClient Public Client
-   * @param config.graphClient GraphQl Client
-   * @param config.pythClient Pyth Client
-   * @param config.walletClient Wallet Client
-   *
-   * @returns Vaults module instance
-   */
   private config: {
     chainId: SupportedChainId
     publicClient: PublicClient
     graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
     walletClient?: WalletClient
+    operatingFor?: Address
   }
+  private defaultAddress: Address = zeroAddress
 
   constructor(config: {
     chainId: SupportedChainId
@@ -92,34 +97,29 @@ export class VaultsModule {
     graphClient: GraphQLClient
     pythClient: EvmPriceServiceConnection
     walletClient?: WalletClient
+    operatingFor?: Address
   }) {
     this.config = config
+    this.config.operatingFor = config.operatingFor ?? config.walletClient?.account?.address ?? this.defaultAddress
   }
 
   get read() {
     return {
       /**
        * Fetches the vault snapshots
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param marketOracles {@link MarketOracles}
        * @param onError Error callback
        * @param onSuccess Success callback
        * @returns {@link VaultSnapshots}
        */
-      vaultSnapshots: ({
-        address,
-        marketOracles,
-        onError,
-        onSuccess,
-      }: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]>) => {
+      vaultSnapshots: (args: OmitBound<Parameters<typeof fetchVaultSnapshots>[0]> & OptionalAddress = {}) => {
         return fetchVaultSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          address,
-          marketOracles,
-          onError,
-          onSuccess,
+          address: this.defaultAddress,
+          ...args,
         })
       },
       /**
@@ -128,28 +128,27 @@ export class VaultsModule {
        * @param marketOracles {@link MarketOracles}
        * @returns The vault commitments.
        */
-      vaultCommitments: ({
-        preMarketSnapshots,
-        marketOracles,
-      }: OmitBound<Parameters<typeof fetchVaultCommitments>[0]>) => {
+      vaultCommitments: (args: OmitBound<Parameters<typeof fetchVaultCommitments>[0]>) => {
         return fetchVaultCommitments({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          preMarketSnapshots,
-          marketOracles,
+          ...args,
         })
       },
       /**
        * Fetches the vault position history
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns The vault position history.
        */
-      vaultPositionHistory: ({ address }: OmitBound<Parameters<typeof fetchVaultPositionHistory>[0]>) => {
+      vaultPositionHistory: (
+        args: OmitBound<Parameters<typeof fetchVaultPositionHistory>[0]> & OptionalAddress = {},
+      ) => {
         return fetchVaultPositionHistory({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          address,
+          address: this.defaultAddress,
+          ...args,
         })
       },
       /**
@@ -159,16 +158,10 @@ export class VaultsModule {
        * @param latestBlockNumber Latest block number
        * @returns The vault 7d accumulations.
        */
-      vault7dAccumulations: ({
-        vaultAddress,
-        vaultSnapshot,
-        latestBlockNumber,
-      }: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
+      vault7dAccumulations: (args: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
         return fetchVault7dAccumulations({
           graphClient: this.config.graphClient,
-          vaultAddress,
-          vaultSnapshot,
-          latestBlockNumber,
+          ...args,
         })
       },
     }
@@ -180,17 +173,19 @@ export class VaultsModule {
        * Build a transaction to deposit into a vault
        * @param vaultAddress Vault Address
        * @param amount Amount to deposit
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Vault deposit transaction data.
        */
-      deposit: ({ vaultAddress, address, amount }: OmitBound<BuildDepositTxArgs>) => {
+      deposit: (args: OmitBound<BuildDepositTxArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
         return buildDepositTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          vaultAddress,
+          ...args,
           address,
-          amount,
         })
       },
       /**
@@ -203,42 +198,36 @@ export class VaultsModule {
        * @param marketOracles {@link MarketOracles}
        * @param vaultSnapshots {@link VaultSnapshots}
        */
-      redeem: ({
-        vaultAddress,
-        address,
-        amount,
-        assets,
-        max,
-        vaultSnapshots,
-        marketOracles,
-      }: OmitBound<BuildRedeemSharesTxArgs>) => {
+      redeem: (args: OmitBound<BuildRedeemSharesTxArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
         return buildRedeemSharesTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
-          vaultAddress,
+          ...args,
           address,
-          amount,
-          assets,
-          max,
-          vaultSnapshots,
-          marketOracles,
         })
       },
       /**
        * Build a transaction to claim rewards from a vault
        * @param vaultAddress Vault Address
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param marketOracles {@link MarketOracles}
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Vault claim transaction data.
        */
-      claim: (args: OmitBound<BuildClaimTxArgs>) => {
+      claim: (args: OmitBound<BuildClaimTxArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
         return buildClaimTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
           ...args,
+          address,
         })
       },
     }
@@ -264,8 +253,8 @@ export class VaultsModule {
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Transaction hash
        * */
-      deposit: async ({ vaultAddress, address, amount }: OmitBound<BuildDepositTxArgs>) => {
-        const tx = await this.build.deposit({ vaultAddress, address, amount })
+      deposit: async (...args: Parameters<typeof this.build.deposit>) => {
+        const tx = await this.build.deposit(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -279,31 +268,15 @@ export class VaultsModule {
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Transaction hash
        */
-      redeem: async ({
-        vaultAddress,
-        address,
-        amount,
-        assets,
-        max,
-        vaultSnapshots,
-        marketOracles,
-      }: OmitBound<BuildRedeemSharesTxArgs>) => {
-        const tx = await this.build.redeem({
-          vaultAddress,
-          address,
-          amount,
-          assets,
-          max,
-          vaultSnapshots,
-          marketOracles,
-        })
+      redeem: async (...args: Parameters<typeof this.build.redeem>) => {
+        const tx = await this.build.redeem(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
       /**
        * Claim rewards from a vault
        * @param vaultAddress Vault Address
-       * @param address Wallet Address
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param marketOracles {@link MarketOracles}
        * @param vaultSnapshots {@link VaultSnapshots}
        * @returns Transaction hash
