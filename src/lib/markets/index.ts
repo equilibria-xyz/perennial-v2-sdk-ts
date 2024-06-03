@@ -4,7 +4,9 @@ import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import { InterfaceFeeBps, SupportedChainId, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/perennial'
+import { Big6Math, notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
+import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
@@ -23,9 +25,11 @@ import {
   BuildPlaceOrderTxArgs,
   BuildSubmitVaaTxArgs,
   buildCancelOrderTx,
+  buildLimitOrderTx,
   buildModifyPositionTx,
-  buildPlaceOrderTx,
+  buildStopLossTx,
   buildSubmitVaaTx,
+  buildTakeProfitTx,
 } from './tx'
 
 type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address'>
@@ -266,7 +270,7 @@ export class MarketsModule {
         })
       },
       /**
-       * Build a place order transaction. Can be used to set limit, stop loss and
+       * Build a place order transaction. Can be used to set combined limit, stop loss and
        * take profit orders.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param marketAddress Market Address
@@ -287,18 +291,53 @@ export class MarketsModule {
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
        */
-      placeOrder: (args: OmitBound<BuildPlaceOrderTxArgs> & OptionalAddress) => {
+      placeOrder: async (args: OmitBound<BuildPlaceOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
 
-        return buildPlaceOrderTx({
-          chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
-          publicClient: this.config.publicClient,
-          interfaceFeeRate: this.config.interfaceFeeBps,
-          ...args,
-          address,
-        })
+        let limitOrderTx
+        let takeProfitTx
+        let stopLossTx
+        if (args.limitPrice) {
+          limitOrderTx = await buildLimitOrderTx({
+            chainId: this.config.chainId,
+            pythClient: this.config.pythClient,
+            publicClient: this.config.publicClient,
+            interfaceFeeRate: this.config.interfaceFeeBps,
+            ...args,
+            limitPrice: args.limitPrice,
+            address,
+          })
+        }
+
+        if (args.takeProfit) {
+          takeProfitTx = await buildTakeProfitTx({
+            chainId: this.config.chainId,
+            pythClient: this.config.pythClient,
+            publicClient: this.config.publicClient,
+            interfaceFeeRate: this.config.interfaceFeeBps,
+            ...args,
+            takeProfit: args.takeProfit,
+            delta: -Big6Math.abs(args.delta),
+            address,
+          })
+        }
+
+        if (args.stopLoss) {
+          stopLossTx = await buildStopLossTx({
+            chainId: this.config.chainId,
+            pythClient: this.config.pythClient,
+            publicClient: this.config.publicClient,
+            interfaceFeeRate: this.config.interfaceFeeBps,
+            ...args,
+            stopLoss: args.stopLoss,
+            delta: -Big6Math.abs(args.delta),
+            address,
+          })
+        }
+
+        const multiInvokerTxs = [limitOrderTx, takeProfitTx, stopLossTx].filter(notEmpty)
+        return mergeMultiInvokerTxs(multiInvokerTxs)
       },
       /**
        * Build a cancel order transaction

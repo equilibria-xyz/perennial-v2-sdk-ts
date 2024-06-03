@@ -34,7 +34,9 @@ export {
 export {
   buildCancelOrderTx,
   buildModifyPositionTx,
-  buildPlaceOrderTx,
+  buildLimitOrderTx,
+  buildTakeProfitTx,
+  buildStopLossTx,
   buildSubmitVaaTx,
   type BuildModifyPositionTxArgs,
   type BuildPlaceOrderTxArgs,
