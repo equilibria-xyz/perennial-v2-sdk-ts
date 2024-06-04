@@ -26,7 +26,7 @@ type WithChainIdAndPublicClient = {
   publicClient: PublicClient
 }
 
-export type BuildModifyPositionTxArgs = {
+export type BuildUpdateMarketTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
@@ -34,11 +34,7 @@ export type BuildModifyPositionTxArgs = {
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
-  positionSide?: PositionSide
-  stopLoss?: bigint
-  takeProfit?: bigint
-  settlementFee?: bigint
-  cancelOrderDetails?: OpenOrder[]
+  side?: PositionSide
   absDifferenceNotional?: bigint
   interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
   interfaceFeeRate?: InterfaceFeeBps
@@ -46,7 +42,7 @@ export type BuildModifyPositionTxArgs = {
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
-export async function buildModifyPositionTx({
+export async function buildUpdateMarketTx({
   chainId,
   publicClient,
   marketAddress,
@@ -54,19 +50,15 @@ export async function buildModifyPositionTx({
   marketOracles,
   pythClient,
   address,
-  positionSide,
-  positionAbs,
+  side,
+  positionAbs = 0n,
   collateralDelta,
-  stopLoss,
-  takeProfit,
-  settlementFee,
-  cancelOrderDetails,
   absDifferenceNotional,
   interfaceFee,
   interfaceFeeRate,
   referralFeeRate,
   onCommitmentError,
-}: BuildModifyPositionTxArgs) {
+}: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   if (!marketOracles) {
@@ -83,12 +75,6 @@ export async function buildModifyPositionTx({
     })
   }
 
-  let cancelOrders: MultiInvokerAction[] = []
-
-  if (cancelOrderDetails?.length) {
-    cancelOrders = buildCancelOrderActions(cancelOrderDetails)
-  }
-
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
@@ -96,7 +82,7 @@ export async function buildModifyPositionTx({
 
   // Interface fee
   const interfaceFees: Array<typeof EmptyInterfaceFee> = []
-  const feeRate = positionSide && interfaceFeeRate ? interfaceFeeRate.feeAmount[positionSide] : 0n
+  const feeRate = side && interfaceFeeRate ? interfaceFeeRate.feeAmount[side] : 0n
   const tradeFeeBips =
     absDifferenceNotional && interfaceFee?.interfaceFee
       ? Big6Math.div(interfaceFee.interfaceFee, absDifferenceNotional)
@@ -130,49 +116,16 @@ export async function buildModifyPositionTx({
 
   const updateAction = buildUpdateMarket({
     market: marketAddress,
-    maker: positionSide === PositionSide.maker ? positionAbs : undefined, // Absolute position size
-    long: positionSide === PositionSide.long ? positionAbs : undefined,
-    short: positionSide === PositionSide.short ? positionAbs : undefined,
+    maker: side === PositionSide.maker ? positionAbs : undefined, // Absolute position size
+    long: side === PositionSide.long ? positionAbs : undefined,
+    short: side === PositionSide.short ? positionAbs : undefined,
     collateral: collateralDelta ?? 0n, // Delta collateral
     wrap: true,
     interfaceFee: interfaceFees.at(0),
     interfaceFee2: interfaceFees.at(1),
   })
 
-  const isNotMaker = positionSide !== PositionSide.maker && positionSide !== PositionSide.none
-  let stopLossAction
-  if (stopLoss && positionSide && isNotMaker && settlementFee) {
-    stopLossAction = buildTriggerOrder({
-      chainId,
-      price: stopLoss,
-      side: positionSide,
-      referralFeeRate,
-      interfaceFeeRate,
-      positionDelta: -(positionAbs ?? 0n),
-      marketAddress,
-      maxFee: settlementFee * 2n,
-      triggerComparison: positionSide === PositionSide.short ? TriggerComparison.gte : TriggerComparison.lte,
-    })
-  }
-
-  let takeProfitAction
-  if (takeProfit && positionSide && isNotMaker && settlementFee) {
-    takeProfitAction = buildTriggerOrder({
-      chainId,
-      price: takeProfit,
-      side: positionSide,
-      referralFeeRate,
-      interfaceFeeRate,
-      positionDelta: -(positionAbs ?? 0n),
-      marketAddress,
-      maxFee: settlementFee * 2n,
-      triggerComparison: positionSide === PositionSide.short ? TriggerComparison.lte : TriggerComparison.gte,
-    })
-  }
-
-  const actions: MultiInvokerAction[] = [updateAction, stopLossAction, takeProfitAction, ...cancelOrders].filter(
-    notEmpty,
-  )
+  const actions: MultiInvokerAction[] = [updateAction]
 
   // Default to price being stale if we don't have any market snapshots
   let isPriceStale = true
@@ -211,6 +164,7 @@ export async function buildModifyPositionTx({
 
     actions.unshift(commitAction)
   }
+
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
@@ -222,6 +176,26 @@ export async function buildModifyPositionTx({
     value: 1n,
   }
 }
+
+export type BuildModifyPositionTxArgs = {
+  marketAddress: Address
+  marketSnapshots?: MarketSnapshots
+  marketOracles?: MarketOracles
+  pythClient: EvmPriceServiceConnection
+  address: Address
+  collateralDelta?: bigint
+  positionAbs?: bigint
+  positionSide?: PositionSide
+  stopLoss?: bigint
+  takeProfit?: bigint
+  settlementFee?: bigint
+  cancelOrderDetails?: OpenOrder[]
+  absDifferenceNotional?: bigint
+  interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
+  interfaceFeeRate?: InterfaceFeeBps
+  referralFeeRate?: ReferrerInterfaceFeeInfo
+  onCommitmentError?: () => any
+} & WithChainIdAndPublicClient
 
 export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
@@ -256,17 +230,15 @@ export type CancelOrderDetails = { market: Address; nonce: bigint } | OpenOrder
 type BuildTriggerOrderBaseArgs = {
   address: Address
   marketAddress: Address
-  orderType: OrderTypes
   side: PositionSide
   delta: bigint
-  positionAbs: bigint
   selectedLimitComparison?: TriggerComparison
   referralFeeRate?: ReferrerInterfaceFeeInfo
   interfaceFeeRate?: InterfaceFeeBps
-  cancelOrderDetails?: CancelOrderDetails[]
   pythClient: EvmPriceServiceConnection
   marketOracles?: MarketOracles
   marketSnapshots?: MarketSnapshots
+  maxFee?: bigint
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -340,7 +312,7 @@ export async function buildLimitOrderTx({
         ? Big6Math.min(limitPrice, marketSnapshot?.global.latestPrice ?? 0n)
         : Big6Math.max(limitPrice, marketSnapshot?.global.latestPrice ?? 0n),
     price: limitPrice,
-    side: side as PositionSide.long | PositionSide.short,
+    positionSide: side as PositionSide.long | PositionSide.short,
     referralFeeRate,
     interfaceFeeRate,
     positionDelta: delta,
@@ -407,7 +379,7 @@ export async function buildLimitOrderTx({
 
 export type BuildStopLossTxArgs = {
   stopLoss: bigint
-} & BuildPlaceOrderTxArgs
+} & BuildTriggerOrderBaseArgs
 
 export async function buildStopLossTx({
   address,
@@ -419,18 +391,19 @@ export async function buildStopLossTx({
   referralFeeRate,
   interfaceFeeRate,
   publicClient,
+  maxFee,
 }: BuildStopLossTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const stopLossAction = buildTriggerOrder({
     chainId,
     price: stopLoss,
-    side: side as PositionSide.long | PositionSide.short,
+    positionSide: side as PositionSide.long | PositionSide.short,
     referralFeeRate,
     interfaceFeeRate,
     positionDelta: delta,
     marketAddress,
-    maxFee: OrderExecutionDeposit,
+    maxFee: maxFee ?? OrderExecutionDeposit,
     triggerComparison: side === PositionSide.short ? TriggerComparison.gte : TriggerComparison.lte,
   })
   const actions: MultiInvokerAction[] = [stopLossAction]
@@ -450,7 +423,7 @@ export async function buildStopLossTx({
 
 export type BuildTakeProfitTxArgs = {
   takeProfit: bigint
-} & BuildPlaceOrderTxArgs
+} & BuildTriggerOrderBaseArgs
 
 export async function buildTakeProfitTx({
   address,
@@ -462,18 +435,19 @@ export async function buildTakeProfitTx({
   referralFeeRate,
   interfaceFeeRate,
   publicClient,
+  maxFee,
 }: BuildTakeProfitTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const takeProfitAction = buildTriggerOrder({
     chainId,
     price: takeProfit,
-    side: side as PositionSide.long | PositionSide.short,
+    positionSide: side as PositionSide.long | PositionSide.short,
     referralFeeRate,
     interfaceFeeRate,
     positionDelta: delta,
     marketAddress,
-    maxFee: OrderExecutionDeposit,
+    maxFee: maxFee ?? OrderExecutionDeposit,
     triggerComparison: side === PositionSide.short ? TriggerComparison.lte : TriggerComparison.gte,
   })
   const actions: MultiInvokerAction[] = [takeProfitAction]
@@ -497,6 +471,7 @@ export type BuildPlaceOrderTxArgs = {
   stopLoss?: bigint
   takeProfit?: bigint
   collateralDelta?: bigint
+  positionAbs: bigint
 } & BuildTriggerOrderBaseArgs
 
 function buildCancelOrderActions(orders: CancelOrderDetails[]) {
@@ -531,7 +506,7 @@ export type BuildTriggerOrderArgs = {
   chainId: SupportedChainId
   price: bigint
   latestPrice?: bigint
-  side: PositionSide.long | PositionSide.short
+  positionSide: PositionSide.long | PositionSide.short
   referralFeeRate?: ReferrerInterfaceFeeInfo
   interfaceFeeRate?: InterfaceFeeBps
   positionDelta: bigint
@@ -544,7 +519,7 @@ export function buildTriggerOrder({
   chainId,
   latestPrice,
   price,
-  side,
+  positionSide,
   referralFeeRate,
   interfaceFeeRate,
   positionDelta,
@@ -555,7 +530,7 @@ export function buildTriggerOrder({
   const interfaceFee = calcInterfaceFee({
     chainId,
     latestPrice: latestPrice ?? price,
-    side,
+    side: positionSide,
     referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
     referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
     positionDelta,
@@ -564,7 +539,7 @@ export function buildTriggerOrder({
 
   return buildPlaceTriggerOrder({
     market: marketAddress,
-    side,
+    side: positionSide,
     triggerPrice: price,
     comparison: triggerComparison,
     maxFee,

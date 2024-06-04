@@ -33,15 +33,17 @@ export {
 // Market - Transactions
 export {
   buildCancelOrderTx,
-  buildModifyPositionTx,
+  buildUpdateMarketTx,
   buildLimitOrderTx,
   buildTakeProfitTx,
   buildStopLossTx,
   buildSubmitVaaTx,
-  type BuildModifyPositionTxArgs,
-  type BuildPlaceOrderTxArgs,
   type BuildSubmitVaaTxArgs,
   type CancelOrderDetails,
+  type BuildLimitOrderTxArgs,
+  type BuildTakeProfitTxArgs,
+  type BuildStopLossTxArgs,
+  type BuildUpdateMarketTxArgs,
 } from './lib/markets/tx'
 
 // Vault - Chain
