@@ -2,13 +2,21 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { OrderTypes, PositionSide, SupportedChainId, chainIdToChainMap } from '../../constants'
+import {
+  InterfaceFee,
+  OrderTypes,
+  PositionSide,
+  SupportedChainId,
+  TriggerComparison,
+  chainIdToChainMap,
+} from '../../constants'
 import { OptionalAddress } from '../../types/perennial'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
-import { fetchMarketOracles, fetchMarketSnapshots } from './chain'
+import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
+  OpenOrder,
   fetchActivePositionHistory,
   fetchActivePositionPnl,
   fetchHistoricalPositions,
@@ -22,12 +30,12 @@ import {
 import {
   BuildCancelOrderTxArgs,
   BuildLimitOrderTxArgs,
-  BuildModifyPositionTxArgs,
-  BuildPlaceOrderTxArgs,
   BuildStopLossTxArgs,
   BuildSubmitVaaTxArgs,
   BuildTakeProfitTxArgs,
+  BuildTriggerOrderBaseArgs,
   BuildUpdateMarketTxArgs,
+  WithChainIdAndPublicClient,
   buildCancelOrderTx,
   buildLimitOrderTx,
   buildStopLossTx,
@@ -37,6 +45,56 @@ import {
 } from './tx'
 
 type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address'>
+
+export type BuildModifyPositionTxArgs = {
+  marketAddress: Address
+  marketSnapshots?: MarketSnapshots
+  marketOracles?: MarketOracles
+  pythClient: EvmPriceServiceConnection
+  address: Address
+  collateralDelta?: bigint
+  positionAbs?: bigint
+  positionSide: PositionSide
+  stopLossPrice?: bigint
+  takeProfitPrice?: bigint
+  settlementFee?: bigint
+  cancelOrderDetails?: OpenOrder[]
+  absDifferenceNotional?: bigint
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
+  stopLossFees?: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  takeProfitFees?: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  onCommitmentError?: () => any
+} & WithChainIdAndPublicClient
+
+export type BuildPlaceOrderTxArgs = {
+  orderType: OrderTypes
+  limitPrice?: bigint
+  stopLossPrice?: bigint
+  takeProfitPrice?: bigint
+  collateralDelta?: bigint
+  positionAbs: bigint
+  triggerComparison: TriggerComparison
+  limitOrderFees: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  takeProfitFees: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  stopLossFees: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  onCommitmentError?: () => any
+} & Omit<BuildTriggerOrderBaseArgs, 'interfaceFee' | 'referralFee'>
 
 type MarketsModuleConfig = {
   chainId: SupportedChainId
@@ -224,7 +282,6 @@ export class MarketsModule {
   get build() {
     return {
       /**
-       * @deprecated Use {@link build.updateMarket} instead
        * Build a modify position transaction. Can be used to increase/decrease an
        * existing position, open/close a position and deposit or withdraw collateral.
        * @param marketAddress Market Address
@@ -234,8 +291,8 @@ export class MarketsModule {
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
        * @param positionSide {@link PositionSide}
-       * @param stopLoss BigInt - Optional stop loss price to fully close the position
-       * @param takeProfit BigInt - Optional take profit price to fully close the position
+       * @param stopLossPrice BigInt - Optional stop loss price to fully close the position
+       * @param takeProfitPrice BigInt - Optional take profit price to fully close the position
        * @param settlementFee BigInt - settlement fee
        * @param cancelOrderDetails List of {@link OpenOrder[]} to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
@@ -262,14 +319,13 @@ export class MarketsModule {
         })
         const isTaker = args.positionSide === PositionSide.short || args.positionSide === PositionSide.long
 
-        if (args.stopLoss && isTaker && args.settlementFee) {
+        if (args.stopLossPrice && isTaker && args.settlementFee) {
           stopLossTx = await buildStopLossTx({
-            pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
             address,
             chainId: this.config.chainId,
             marketAddress: args.marketAddress,
-            stopLoss: args.stopLoss,
+            stopLossPrice: args.stopLossPrice,
             side: args.positionSide as PositionSide.long | PositionSide.short,
             delta: -(args.positionAbs ?? 0n),
             interfaceFee: args.stopLossFees?.interfaceFee,
@@ -278,14 +334,13 @@ export class MarketsModule {
           })
         }
 
-        if (args.takeProfit && isTaker && args.settlementFee) {
+        if (args.takeProfitPrice && isTaker && args.settlementFee) {
           takeProfitTx = await buildTakeProfitTx({
-            pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
             address,
             chainId: this.config.chainId,
             marketAddress: args.marketAddress,
-            takeProfit: args.takeProfit,
+            takeProfitPrice: args.takeProfitPrice,
             side: args.positionSide as PositionSide.long | PositionSide.short,
             delta: -(args.positionAbs ?? 0n),
             maxFee: args.settlementFee * 2n,
@@ -348,10 +403,6 @@ export class MarketsModule {
        * @param selectedLimitComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @param interfaceFeeRate {@link InterfaceFeeBps}
-       * @param pythClient Pyth Client
-       * @param marketOracles {@link MarketOracles}
-       * @param marketSnapshots {@link MarketSnapshots}
-       * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
        * @param collateralDelta BigInt - Collateral delta
        * @returns Limit order transaction data.
@@ -362,7 +413,6 @@ export class MarketsModule {
 
         return buildLimitOrderTx({
           chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
           ...args,
           address,
@@ -379,7 +429,7 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param maxFee Maximum fee override - defaults to {@link OrderExecutionDeposit}
-       * @param stopLoss BigInt - Stop loss price
+       * @param stopLossPrice BigInt - Stop loss price
        * @returns Stop loss transaction data.
        */
       stopLoss: (args: OmitBound<BuildStopLossTxArgs> & OptionalAddress) => {
@@ -388,7 +438,6 @@ export class MarketsModule {
 
         return buildStopLossTx({
           chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
           ...args,
           address,
@@ -405,7 +454,7 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param maxFee Maximum fee override - defaults to {@link OrderExecutionDeposit}
-       * @param takeProfit BigInt - Stop loss price
+       * @param takeProfitPrice BigInt - Stop loss price
        * @returns Take profit transaction data.
        */
       takeProfit: (args: OmitBound<BuildTakeProfitTxArgs> & OptionalAddress) => {
@@ -414,7 +463,6 @@ export class MarketsModule {
 
         return buildTakeProfitTx({
           chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
           ...args,
           address,
@@ -436,7 +484,6 @@ export class MarketsModule {
         })
       },
       /**
-       * @deprecated Use {@link build.limitOrder}, {@link build.stopLoss} and {@link build.takeProfit} instead.
        * Build a place order transaction. Can be used to set combined limit, stop loss and
        * take profit orders.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
@@ -445,15 +492,16 @@ export class MarketsModule {
        * @param marketSnapshots {@link MarketSnapshots}
        * @param orderType {@link OrderTypes}
        * @param limitPrice BigInt - Limit price
-       * @param stopLoss BigInt - Stop price
-       * @param takeProfit BigInt - Take profit price
+       * @param stopLossPrice BigInt - Stop price
+       * @param takeProfitPrice BigInt - Take profit price
        * @param side Order side
        * @param collateralDelta BigInt - Collateral delta
        * @param delta BigInt - Position size delta
        * @param positionAbs BigInt - Desired absolute position size
-       * @param selectedLimitComparison Trigger comparison for order execution. See {@link TriggerComparison}
-       * @param interfaceFee {@link InterfaceFee}
-       * @param referralFee {@link InterfaceFee}
+       * @param triggerComparison Trigger comparison for order execution. See {@link TriggerComparison}
+       * @param limitOrderFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
+       * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
+       * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param cancelOrderDetails {@link CancelOrderDetails}
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
@@ -462,49 +510,71 @@ export class MarketsModule {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
 
+        let updateMarketTx
         let limitOrderTx
         let takeProfitTx
         let stopLossTx
-        if (args.orderType === OrderTypes.limit && args.limitPrice) {
-          limitOrderTx = await buildLimitOrderTx({
+
+        if (args.collateralDelta) {
+          updateMarketTx = await buildUpdateMarketTx({
             chainId: this.config.chainId,
             pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
-            ...args,
+            address,
+            marketAddress: args.marketAddress,
+            collateralDelta: args.collateralDelta,
+            side: args.side,
+            onCommitmentError: args.onCommitmentError,
+          })
+        }
+        if (args.orderType === OrderTypes.limit && args.limitPrice) {
+          limitOrderTx = await buildLimitOrderTx({
+            chainId: this.config.chainId,
+            publicClient: this.config.publicClient,
             limitPrice: args.limitPrice,
             address,
+            marketAddress: args.marketAddress,
+            side: args.side,
+            delta: args.delta,
+            interfaceFee: args.limitOrderFees?.interfaceFee,
+            referralFee: args.limitOrderFees?.referralFee,
+            triggerComparison: args.triggerComparison,
           })
         }
 
-        if (args.takeProfit && args.orderType !== OrderTypes.stopLoss) {
+        if (args.takeProfitPrice && args.orderType !== OrderTypes.stopLoss) {
           const takeProfitDelta = args.orderType === OrderTypes.limit ? -args.positionAbs : args.delta
 
           takeProfitTx = await buildTakeProfitTx({
             chainId: this.config.chainId,
-            pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
-            ...args,
-            takeProfit: args.takeProfit,
+            takeProfitPrice: args.takeProfitPrice,
             delta: takeProfitDelta,
             address,
+            marketAddress: args.marketAddress,
+            side: args.side,
+            interfaceFee: args.takeProfitFees?.interfaceFee,
+            referralFee: args.takeProfitFees?.referralFee,
           })
         }
 
-        if (args.stopLoss && args.orderType !== OrderTypes.takeProfit) {
+        if (args.stopLossPrice && args.orderType !== OrderTypes.takeProfit) {
           const stopLossDelta = args.orderType === OrderTypes.limit ? -args.positionAbs : args.delta
 
           stopLossTx = await buildStopLossTx({
             chainId: this.config.chainId,
-            pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
-            ...args,
-            stopLoss: args.stopLoss,
+            stopLossPrice: args.stopLossPrice,
             delta: stopLossDelta,
             address,
+            marketAddress: args.marketAddress,
+            side: args.side,
+            interfaceFee: args.stopLossFees?.interfaceFee,
+            referralFee: args.stopLossFees?.referralFee,
           })
         }
 
-        const multiInvokerTxs = [limitOrderTx, takeProfitTx, stopLossTx].filter(notEmpty)
+        const multiInvokerTxs = [updateMarketTx, limitOrderTx, takeProfitTx, stopLossTx].filter(notEmpty)
         return mergeMultiInvokerTxs(multiInvokerTxs)
       },
       /**
@@ -539,7 +609,6 @@ export class MarketsModule {
 
     return {
       /**
-       * @deprecated Use {@link write.updateMarket} instead
        * Send a modify position transaction. Can be used to increase/decrease an
        * existing position, open/close a position and deposit or withdraw collateral.
        * @param marketAddress Market Address
