@@ -240,6 +240,8 @@ export class MarketsModule {
        * @param cancelOrderDetails List of {@link OpenOrder[]} to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
+       * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
+       * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @returns Modify position transaction data.
        */
       modifyPosition: async (args: OmitBound<BuildModifyPositionTxArgs> & OptionalAddress) => {
@@ -262,29 +264,33 @@ export class MarketsModule {
 
         if (args.stopLoss && isTaker && args.settlementFee) {
           stopLossTx = await buildStopLossTx({
-            chainId: this.config.chainId,
             pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
-            ...args,
+            address,
+            chainId: this.config.chainId,
+            marketAddress: args.marketAddress,
             stopLoss: args.stopLoss,
             side: args.positionSide as PositionSide.long | PositionSide.short,
-            maxFee: args.settlementFee * 2n,
             delta: -(args.positionAbs ?? 0n),
-            address,
+            interfaceFee: args.stopLossFees?.interfaceFee,
+            referralFee: args.stopLossFees?.referralFee,
+            maxFee: args.settlementFee * 2n,
           })
         }
 
         if (args.takeProfit && isTaker && args.settlementFee) {
           takeProfitTx = await buildTakeProfitTx({
-            chainId: this.config.chainId,
             pythClient: this.config.pythClient,
             publicClient: this.config.publicClient,
-            ...args,
+            address,
+            chainId: this.config.chainId,
+            marketAddress: args.marketAddress,
             takeProfit: args.takeProfit,
             side: args.positionSide as PositionSide.long | PositionSide.short,
-            maxFee: args.settlementFee * 2n,
             delta: -(args.positionAbs ?? 0n),
-            address,
+            maxFee: args.settlementFee * 2n,
+            interfaceFee: args.takeProfitFees?.interfaceFee,
+            referralFee: args.takeProfitFees?.referralFee,
           })
         }
 

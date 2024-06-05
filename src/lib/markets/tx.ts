@@ -27,7 +27,7 @@ export type BuildUpdateMarketTxArgs = {
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
-  side?: PositionSide
+  side: PositionSide
   interfaceFee?: InterfaceFee
   referralFee?: InterfaceFee
   onCommitmentError?: () => any
@@ -140,7 +140,7 @@ export type BuildModifyPositionTxArgs = {
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
-  positionSide?: PositionSide
+  positionSide: PositionSide
   stopLoss?: bigint
   takeProfit?: bigint
   settlementFee?: bigint
@@ -148,6 +148,14 @@ export type BuildModifyPositionTxArgs = {
   absDifferenceNotional?: bigint
   interfaceFee?: InterfaceFee
   referralFee?: InterfaceFee
+  stopLossFees?: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
+  takeProfitFees?: {
+    interfaceFee?: InterfaceFee
+    referralFee?: InterfaceFee
+  }
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
