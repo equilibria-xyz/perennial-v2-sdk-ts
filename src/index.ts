@@ -144,8 +144,8 @@ export {
   orderTypes,
   triggerOrderTypes,
   interfaceFeeBps,
-  type ReferrerInterfaceFeeInfo,
   type InterfaceFeeBps,
+  type InterfaceFee,
 } from './constants/markets'
 
 /* #################### ABIs #################### */

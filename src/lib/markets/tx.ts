@@ -3,18 +3,11 @@ import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem
 
 import { MultiInvokerAbi, PythFactoryAbi } from '../..'
 import { OrderTypes, PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
-import { InterfaceFeeBps, ReferrerInterfaceFeeInfo } from '../../constants'
+import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
-import { Big6Math, BigOrZero, notEmpty, nowSeconds } from '../../utils'
-import {
-  EmptyInterfaceFee,
-  buildCancelOrder,
-  buildCommitPrice,
-  buildPlaceTriggerOrder,
-  buildUpdateMarket,
-} from '../../utils/multiinvoker'
-import { calcInterfaceFee } from '../../utils/positionUtils'
+import { BigOrZero, notEmpty, nowSeconds } from '../../utils'
+import { buildCancelOrder, buildCommitPrice, buildPlaceTriggerOrder, buildUpdateMarket } from '../../utils/multiinvoker'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
 import { getMultiInvokerContract, getOracleContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
@@ -35,10 +28,8 @@ export type BuildUpdateMarketTxArgs = {
   collateralDelta?: bigint
   positionAbs?: bigint
   side?: PositionSide
-  absDifferenceNotional?: bigint
-  interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
-  interfaceFeeRate?: InterfaceFeeBps
-  referralFeeRate?: ReferrerInterfaceFeeInfo
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -53,10 +44,8 @@ export async function buildUpdateMarketTx({
   side,
   positionAbs = 0n,
   collateralDelta,
-  absDifferenceNotional,
   interfaceFee,
-  interfaceFeeRate,
-  referralFeeRate,
+  referralFee,
   onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
@@ -80,40 +69,6 @@ export async function buildUpdateMarketTx({
 
   const asset = addressToAsset(marketAddress)
 
-  // Interface fee
-  const interfaceFees: Array<typeof EmptyInterfaceFee> = []
-  const feeRate = side && interfaceFeeRate ? interfaceFeeRate.feeAmount[side] : 0n
-  const tradeFeeBips =
-    absDifferenceNotional && interfaceFee?.interfaceFee
-      ? Big6Math.div(interfaceFee.interfaceFee, absDifferenceNotional)
-      : 0n
-  if (
-    interfaceFee?.interfaceFee &&
-    interfaceFeeRate &&
-    tradeFeeBips <= Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))
-  ) {
-    const referrerFee = interfaceFee.referrerFee
-    const ecosystemFee = interfaceFee.ecosystemFee
-
-    // If there is a referrer fee, send it to the referrer as USDC
-    if (referralFeeRate && referrerFee > 0n)
-      interfaceFees.push({
-        unwrap: true,
-        receiver: getAddress(referralFeeRate.referralTarget),
-        amount: referrerFee,
-      })
-
-    if (ecosystemFee > 0n) {
-      interfaceFees.push({
-        unwrap: false, // default recipient holds DSU
-        receiver: interfaceFeeRate.feeRecipientAddress,
-        amount: ecosystemFee,
-      })
-    }
-  } else if (tradeFeeBips > Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))) {
-    console.error('Fee exceeds rate - waiving.', address)
-  }
-
   const updateAction = buildUpdateMarket({
     market: marketAddress,
     maker: side === PositionSide.maker ? positionAbs : undefined, // Absolute position size
@@ -121,8 +76,8 @@ export async function buildUpdateMarketTx({
     short: side === PositionSide.short ? positionAbs : undefined,
     collateral: collateralDelta ?? 0n, // Delta collateral
     wrap: true,
-    interfaceFee: interfaceFees.at(0),
-    interfaceFee2: interfaceFees.at(1),
+    interfaceFee: referralFee,
+    interfaceFee2: interfaceFee,
   })
 
   const actions: MultiInvokerAction[] = [updateAction]
@@ -191,9 +146,8 @@ export type BuildModifyPositionTxArgs = {
   settlementFee?: bigint
   cancelOrderDetails?: OpenOrder[]
   absDifferenceNotional?: bigint
-  interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
-  interfaceFeeRate?: InterfaceFeeBps
-  referralFeeRate?: ReferrerInterfaceFeeInfo
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -233,12 +187,12 @@ type BuildTriggerOrderBaseArgs = {
   side: PositionSide
   delta: bigint
   selectedLimitComparison?: TriggerComparison
-  referralFeeRate?: ReferrerInterfaceFeeInfo
-  interfaceFeeRate?: InterfaceFeeBps
   pythClient: EvmPriceServiceConnection
   marketOracles?: MarketOracles
   marketSnapshots?: MarketSnapshots
   maxFee?: bigint
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -260,8 +214,8 @@ export async function buildLimitOrderTx({
   side,
   delta = 0n,
   selectedLimitComparison,
-  referralFeeRate,
-  interfaceFeeRate,
+  interfaceFee,
+  referralFee,
   onCommitmentError,
 }: BuildLimitOrderTxArgs) {
   if (!address || !chainId || !pythClient) {
@@ -305,16 +259,10 @@ export async function buildLimitOrderTx({
       : TriggerComparison.gte
 
   const limitOrderAction = buildTriggerOrder({
-    chainId,
-    latestPrice:
-      // Set interface fee price as latest price if order will execute immediately (as a market order)
-      comparison === 'lte'
-        ? Big6Math.min(limitPrice, marketSnapshot?.global.latestPrice ?? 0n)
-        : Big6Math.max(limitPrice, marketSnapshot?.global.latestPrice ?? 0n),
     price: limitPrice,
     positionSide: side as PositionSide.long | PositionSide.short,
-    referralFeeRate,
-    interfaceFeeRate,
+    interfaceFee,
+    referralFee,
     positionDelta: delta,
     marketAddress,
     maxFee: OrderExecutionDeposit,
@@ -388,19 +336,18 @@ export async function buildStopLossTx({
   stopLoss,
   side,
   delta = 0n,
-  referralFeeRate,
-  interfaceFeeRate,
+  interfaceFee,
+  referralFee,
   publicClient,
   maxFee,
 }: BuildStopLossTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const stopLossAction = buildTriggerOrder({
-    chainId,
     price: stopLoss,
     positionSide: side as PositionSide.long | PositionSide.short,
-    referralFeeRate,
-    interfaceFeeRate,
+    interfaceFee,
+    referralFee,
     positionDelta: delta,
     marketAddress,
     maxFee: maxFee ?? OrderExecutionDeposit,
@@ -432,19 +379,18 @@ export async function buildTakeProfitTx({
   takeProfit,
   side,
   delta = 0n,
-  referralFeeRate,
-  interfaceFeeRate,
+  interfaceFee,
+  referralFee,
   publicClient,
   maxFee,
 }: BuildTakeProfitTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const takeProfitAction = buildTriggerOrder({
-    chainId,
     price: takeProfit,
     positionSide: side as PositionSide.long | PositionSide.short,
-    referralFeeRate,
-    interfaceFeeRate,
+    interfaceFee,
+    referralFee,
     positionDelta: delta,
     marketAddress,
     maxFee: maxFee ?? OrderExecutionDeposit,
@@ -503,12 +449,10 @@ export function buildCancelOrderTx({ chainId, address, orderDetails }: BuildCanc
 }
 
 export type BuildTriggerOrderArgs = {
-  chainId: SupportedChainId
   price: bigint
-  latestPrice?: bigint
   positionSide: PositionSide.long | PositionSide.short
-  referralFeeRate?: ReferrerInterfaceFeeInfo
-  interfaceFeeRate?: InterfaceFeeBps
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
   positionDelta: bigint
   marketAddress: Address
   maxFee: bigint
@@ -516,27 +460,15 @@ export type BuildTriggerOrderArgs = {
 }
 
 export function buildTriggerOrder({
-  chainId,
-  latestPrice,
   price,
   positionSide,
-  referralFeeRate,
-  interfaceFeeRate,
+  interfaceFee,
+  referralFee,
   positionDelta,
   marketAddress,
   maxFee,
   triggerComparison,
 }: BuildTriggerOrderArgs) {
-  const interfaceFee = calcInterfaceFee({
-    chainId,
-    latestPrice: latestPrice ?? price,
-    side: positionSide,
-    referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-    referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-    positionDelta,
-    interfaceFeeBps: interfaceFeeRate,
-  })
-
   return buildPlaceTriggerOrder({
     market: marketAddress,
     side: positionSide,
@@ -544,21 +476,7 @@ export function buildTriggerOrder({
     comparison: triggerComparison,
     maxFee,
     delta: positionDelta,
-    interfaceFee:
-      referralFeeRate && interfaceFee.referrerFee
-        ? {
-            unwrap: true,
-            receiver: getAddress(referralFeeRate.referralTarget),
-            amount: interfaceFee.referrerFee,
-          }
-        : undefined,
-    interfaceFee2:
-      interfaceFee.ecosystemFee > 0n && interfaceFeeRate
-        ? {
-            unwrap: false,
-            receiver: interfaceFeeRate.feeRecipientAddress,
-            amount: interfaceFee.ecosystemFee,
-          }
-        : undefined,
+    interfaceFee,
+    interfaceFee2: referralFee,
   })
 }
