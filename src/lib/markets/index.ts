@@ -15,6 +15,7 @@ import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
+import { OrderExecutionDeposit } from './constants'
 import {
   OpenOrder,
   fetchActivePositionHistory,
@@ -57,9 +58,7 @@ export type BuildModifyPositionTxArgs = {
   positionSide: PositionSide
   stopLossPrice?: bigint
   takeProfitPrice?: bigint
-  settlementFee?: bigint
   cancelOrderDetails?: OpenOrder[]
-  absDifferenceNotional?: bigint
   interfaceFee?: InterfaceFee
   referralFee?: InterfaceFee
   stopLossFees?: {
@@ -293,7 +292,6 @@ export class MarketsModule {
        * @param positionSide {@link PositionSide}
        * @param stopLossPrice BigInt - Optional stop loss price to fully close the position
        * @param takeProfitPrice BigInt - Optional take profit price to fully close the position
-       * @param settlementFee BigInt - settlement fee
        * @param cancelOrderDetails List of {@link OpenOrder[]} to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
@@ -319,7 +317,7 @@ export class MarketsModule {
         })
         const isTaker = args.positionSide === PositionSide.short || args.positionSide === PositionSide.long
 
-        if (args.stopLossPrice && isTaker && args.settlementFee) {
+        if (args.stopLossPrice && isTaker) {
           stopLossTx = await buildStopLossTx({
             publicClient: this.config.publicClient,
             address,
@@ -330,11 +328,11 @@ export class MarketsModule {
             delta: -(args.positionAbs ?? 0n),
             interfaceFee: args.stopLossFees?.interfaceFee,
             referralFee: args.stopLossFees?.referralFee,
-            maxFee: args.settlementFee * 2n,
+            maxFee: OrderExecutionDeposit,
           })
         }
 
-        if (args.takeProfitPrice && isTaker && args.settlementFee) {
+        if (args.takeProfitPrice && isTaker) {
           takeProfitTx = await buildTakeProfitTx({
             publicClient: this.config.publicClient,
             address,
@@ -343,7 +341,7 @@ export class MarketsModule {
             takeProfitPrice: args.takeProfitPrice,
             side: args.positionSide as PositionSide.long | PositionSide.short,
             delta: -(args.positionAbs ?? 0n),
-            maxFee: args.settlementFee * 2n,
+            maxFee: OrderExecutionDeposit,
             interfaceFee: args.takeProfitFees?.interfaceFee,
             referralFee: args.takeProfitFees?.referralFee,
           })
@@ -372,7 +370,6 @@ export class MarketsModule {
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
        * @param side {@link PositionSide}
-       * @param absDifferenceNotional BigInt - Absolute difference in notional
        * @param interfaceFee Object consisting of interfaceFee, referrerFee and ecosystemFee amounts
        * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
@@ -380,7 +377,7 @@ export class MarketsModule {
        * @param publicClient Public Client
        * @returns Update market transaction data.
        */
-      updateMarket: (args: OmitBound<BuildUpdateMarketTxArgs> & OptionalAddress) => {
+      update: (args: OmitBound<BuildUpdateMarketTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
 
@@ -622,7 +619,6 @@ export class MarketsModule {
        * @param takeProfit BigInt - Optional take profit price to fully close the position
        * @param settlementFee BigInt - settlement fee
        * @param cancelOrderDetails List of open orders to cancel when modifying the position
-       * @param absDifferenceNotional BigInt - Absolute difference in notional
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @returns Transaction Hash
@@ -643,15 +639,14 @@ export class MarketsModule {
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
        * @param side {@link PositionSide}
-       * @param absDifferenceNotional BigInt - Absolute difference in notional
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param onCommitmentError Callback for commitment error
        * @param publicClient Public Client
        * @returns Transaction Hash.
        */
-      updateMarket: async (...args: Parameters<typeof this.build.updateMarket>) => {
-        const tx = await this.build.updateMarket(...args)
+      update: async (...args: Parameters<typeof this.build.update>) => {
+        const tx = await this.build.update(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },
@@ -730,7 +725,6 @@ export class MarketsModule {
         return hash
       },
       /**
-       * @deprecated Use {@link write.limitOrder}, {@link write.stopLoss} and {@link write.takeProfit} instead.
        * Send a place order transaction. Can be used to set limit, stop loss and
        * take profit orders.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
