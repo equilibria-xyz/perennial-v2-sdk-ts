@@ -3,6 +3,7 @@ import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import {
+  FULL_CLOSE_MAGIC_VALUE,
   InterfaceFee,
   OrderTypes,
   PositionSide,
@@ -325,7 +326,7 @@ export class MarketsModule {
             marketAddress: args.marketAddress,
             stopLossPrice: args.stopLossPrice,
             side: args.positionSide as PositionSide.long | PositionSide.short,
-            delta: -(args.positionAbs ?? 0n),
+            delta: FULL_CLOSE_MAGIC_VALUE,
             interfaceFee: args.stopLossFees?.interfaceFee,
             referralFee: args.stopLossFees?.referralFee,
             maxFee: OrderExecutionDeposit,
@@ -340,7 +341,7 @@ export class MarketsModule {
             marketAddress: args.marketAddress,
             takeProfitPrice: args.takeProfitPrice,
             side: args.positionSide as PositionSide.long | PositionSide.short,
-            delta: -(args.positionAbs ?? 0n),
+            delta: FULL_CLOSE_MAGIC_VALUE,
             maxFee: OrderExecutionDeposit,
             interfaceFee: args.takeProfitFees?.interfaceFee,
             referralFee: args.takeProfitFees?.referralFee,
@@ -540,7 +541,7 @@ export class MarketsModule {
         }
 
         if (args.takeProfitPrice && args.orderType !== OrderTypes.stopLoss) {
-          const takeProfitDelta = args.orderType === OrderTypes.limit ? -args.positionAbs : args.delta
+          const takeProfitDelta = args.orderType === OrderTypes.limit ? FULL_CLOSE_MAGIC_VALUE : args.delta
 
           takeProfitTx = await buildTakeProfitTx({
             chainId: this.config.chainId,
@@ -556,7 +557,7 @@ export class MarketsModule {
         }
 
         if (args.stopLossPrice && args.orderType !== OrderTypes.takeProfit) {
-          const stopLossDelta = args.orderType === OrderTypes.limit ? -args.positionAbs : args.delta
+          const stopLossDelta = args.orderType === OrderTypes.limit ? FULL_CLOSE_MAGIC_VALUE : args.delta
 
           stopLossTx = await buildStopLossTx({
             chainId: this.config.chainId,
