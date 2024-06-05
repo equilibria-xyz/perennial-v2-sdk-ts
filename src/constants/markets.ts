@@ -345,5 +345,3 @@ export type InterfaceFee = {
   receiver: Address
   amount: bigint
 }
-
-export const FULL_CLOSE_MAGIC_VALUE = 0n
