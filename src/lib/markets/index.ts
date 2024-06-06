@@ -78,7 +78,6 @@ export type BuildPlaceOrderTxArgs = {
   stopLossPrice?: bigint
   takeProfitPrice?: bigint
   collateralDelta?: bigint
-  positionAbs: bigint
   triggerComparison: TriggerComparison
   limitOrderFees: {
     interfaceFee?: InterfaceFee
@@ -494,7 +493,6 @@ export class MarketsModule {
        * @param side Order side
        * @param collateralDelta BigInt - Collateral delta
        * @param delta BigInt - Position size delta
-       * @param positionAbs BigInt - Desired absolute position size
        * @param triggerComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param limitOrderFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
@@ -617,7 +615,6 @@ export class MarketsModule {
        * @param positionSide {@link PositionSide}
        * @param stopLoss BigInt - Optional stop loss price to fully close the position
        * @param takeProfit BigInt - Optional take profit price to fully close the position
-       * @param settlementFee BigInt - settlement fee
        * @param cancelOrderDetails List of open orders to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
