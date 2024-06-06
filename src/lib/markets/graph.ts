@@ -8,7 +8,7 @@ import {
   MarketsAccountCheckpointsQuery,
   PositionSide as PositionSideGraph,
 } from '../../types/gql/graphql'
-import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum } from '../../utils'
+import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum, unique } from '../../utils'
 import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
@@ -893,11 +893,57 @@ export async function fetchOpenOrders({
     markets: markets.map(({ marketAddress }) => marketAddress),
     first: pageSize,
     skip: pageParam * pageSize,
-    side: isMaker ? [0, 3] : [1, 2, 3], // 4 = collateral withdrawal
+    side: isMaker ? [0, 3] : [1, 2, 3], // 3 = collateral withdrawal
+  })
+
+  const associatedCollateral = gql(`
+  query AssociatedCollateral($account: Bytes!, $markets: [Bytes!]!, $transactionHashes: [Bytes!]!, $first: Int!, $skip: Int!) {
+    updateds(
+      where: { account: $account, market_in: $markets, transactionHash_in: $transactionHashes, collateral_gt: 0 },
+      orderBy: blockTimestamp, orderDirection: desc, first: $first, skip: $skip
+    ) {
+      market, collateral, transactionHash
+    }
+  }
+  `)
+
+  // Only look at the transaction hashes of the open orders that have a positive position delta
+  const transactionHashes = unique(
+    openOrders
+      .filter(({ order_delta, order_side }) => BigInt(order_side) !== 3n && BigInt(order_delta) > 0n)
+      .map((o) => o.transactionHash),
+  )
+
+  let collateralUpdateMap = {} as Record<string, bigint>
+  if (transactionHashes.length > 0) {
+    const { updateds: collateralUpdates } = await queryAll((page) =>
+      graphClient.request(associatedCollateral, {
+        account: address,
+        markets: markets.map(({ marketAddress }) => marketAddress),
+        transactionHashes,
+        first: pageSize,
+        skip: page * pageSize,
+      }),
+    )
+
+    collateralUpdateMap = collateralUpdates.reduce((acc, u) => {
+      const key = `${u.transactionHash}_${u.market}`.toLowerCase()
+      if (!acc[key]) acc[key] = 0n
+      acc[key] += BigInt(u.collateral)
+      return acc
+    }, collateralUpdateMap)
+  }
+
+  const openOrdersWithCollateral = openOrders.map((order) => {
+    const collateral = collateralUpdateMap[`${order.transactionHash}_${order.market}`.toLowerCase()]
+    return {
+      ...order,
+      linkedDeposit: BigInt(order.order_delta) > 0n ? collateral ?? 0n : 0n,
+    }
   })
 
   return {
-    openOrders,
+    openOrders: openOrdersWithCollateral,
     nextPageParam: openOrders.length === pageSize ? pageParam + 1 : undefined,
   }
 }

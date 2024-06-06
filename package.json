@@ -10,7 +10,8 @@
   "packageManager": "pnpm@9.1.3",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist && pnpm run gen:lens-artifact && pnpm run gen:gql-typings && pnpm exec tsc -p tsconfig.build.json",
+    "clean": "rimraf dist cache artifacts",
+    "build": "pnpm run clean && pnpm run gen:lens-artifact && pnpm run gen:gql-typings && pnpm exec tsc -p tsconfig.build.json",
     "build:watch": "nodemon --exec 'pnpm exec tsc -p tsconfig.build.json' --watch src/ -e ts --ignore src/abi/",
     "prepublishOnly": "pnpm run build",
     "gen:lens-artifact": "pnpm exec hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens.abi.ts",
