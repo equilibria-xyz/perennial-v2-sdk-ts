@@ -2,31 +2,24 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
 import { MultiInvokerAbi, PythFactoryAbi } from '../..'
-import { OrderTypes, PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
-import { InterfaceFeeBps, ReferrerInterfaceFeeInfo } from '../../constants'
+import { PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
+import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
-import { Big6Math, BigOrZero, notEmpty, nowSeconds } from '../../utils'
-import {
-  EmptyInterfaceFee,
-  buildCancelOrder,
-  buildCommitPrice,
-  buildPlaceTriggerOrder,
-  buildUpdateMarket,
-} from '../../utils/multiinvoker'
-import { calcInterfaceFee } from '../../utils/positionUtils'
+import { BigOrZero, nowSeconds } from '../../utils'
+import { buildCancelOrder, buildCommitPrice, buildPlaceTriggerOrder, buildUpdateMarket } from '../../utils/multiinvoker'
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
 import { getMultiInvokerContract, getOracleContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'
 
-type WithChainIdAndPublicClient = {
+export type WithChainIdAndPublicClient = {
   chainId: SupportedChainId
   publicClient: PublicClient
 }
 
-export type BuildModifyPositionTxArgs = {
+export type BuildUpdateMarketTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
@@ -34,19 +27,13 @@ export type BuildModifyPositionTxArgs = {
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
-  positionSide?: PositionSide
-  stopLoss?: bigint
-  takeProfit?: bigint
-  settlementFee?: bigint
-  cancelOrderDetails?: OpenOrder[]
-  absDifferenceNotional?: bigint
-  interfaceFee?: { interfaceFee: bigint; referrerFee: bigint; ecosystemFee: bigint }
-  interfaceFeeRate?: InterfaceFeeBps
-  referralFeeRate?: ReferrerInterfaceFeeInfo
+  side: PositionSide
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
-export async function buildModifyPositionTx({
+export async function buildUpdateMarketTx({
   chainId,
   publicClient,
   marketAddress,
@@ -54,19 +41,13 @@ export async function buildModifyPositionTx({
   marketOracles,
   pythClient,
   address,
-  positionSide,
-  positionAbs,
+  side,
+  positionAbs = 0n,
   collateralDelta,
-  stopLoss,
-  takeProfit,
-  settlementFee,
-  cancelOrderDetails,
-  absDifferenceNotional,
   interfaceFee,
-  interfaceFeeRate,
-  referralFeeRate,
+  referralFee,
   onCommitmentError,
-}: BuildModifyPositionTxArgs) {
+}: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   if (!marketOracles) {
@@ -83,141 +64,23 @@ export async function buildModifyPositionTx({
     })
   }
 
-  let cancelOrders: MultiInvokerAction[] = []
-
-  if (cancelOrderDetails?.length) {
-    cancelOrders = buildCancelOrderActions(cancelOrderDetails)
-  }
-
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
 
   const asset = addressToAsset(marketAddress)
 
-  // Interface fee
-  const interfaceFees: Array<typeof EmptyInterfaceFee> = []
-  const feeRate = positionSide && interfaceFeeRate ? interfaceFeeRate.feeAmount[positionSide] : 0n
-  const tradeFeeBips =
-    absDifferenceNotional && interfaceFee?.interfaceFee
-      ? Big6Math.div(interfaceFee.interfaceFee, absDifferenceNotional)
-      : 0n
-  if (
-    interfaceFee?.interfaceFee &&
-    interfaceFeeRate &&
-    tradeFeeBips <= Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))
-  ) {
-    const referrerFee = interfaceFee.referrerFee
-    const ecosystemFee = interfaceFee.ecosystemFee
-
-    // If there is a referrer fee, send it to the referrer as USDC
-    if (referralFeeRate && referrerFee > 0n)
-      interfaceFees.push({
-        unwrap: true,
-        receiver: getAddress(referralFeeRate.referralTarget),
-        amount: referrerFee,
-      })
-
-    if (ecosystemFee > 0n) {
-      interfaceFees.push({
-        unwrap: false, // default recipient holds DSU
-        receiver: interfaceFeeRate.feeRecipientAddress,
-        amount: ecosystemFee,
-      })
-    }
-  } else if (tradeFeeBips > Big6Math.mul(feeRate, Big6Math.fromFloatString('1.05'))) {
-    console.error('Fee exceeds rate - waiving.', address)
-  }
-
   const updateAction = buildUpdateMarket({
     market: marketAddress,
-    maker: positionSide === PositionSide.maker ? positionAbs : undefined, // Absolute position size
-    long: positionSide === PositionSide.long ? positionAbs : undefined,
-    short: positionSide === PositionSide.short ? positionAbs : undefined,
+    maker: side === PositionSide.maker ? positionAbs : undefined, // Absolute position size
+    long: side === PositionSide.long ? positionAbs : undefined,
+    short: side === PositionSide.short ? positionAbs : undefined,
     collateral: collateralDelta ?? 0n, // Delta collateral
     wrap: true,
-    interfaceFee: interfaceFees.at(0),
-    interfaceFee2: interfaceFees.at(1),
+    interfaceFee: referralFee,
+    interfaceFee2: interfaceFee,
   })
 
-  const isNotMaker = positionSide !== PositionSide.maker && positionSide !== PositionSide.none
-  let stopLossAction
-  if (stopLoss && positionSide && isNotMaker && settlementFee) {
-    const stopLossInterfaceFee = calcInterfaceFee({
-      chainId,
-      latestPrice: stopLoss,
-      side: positionSide,
-      referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-      referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-      positionDelta: positionAbs ?? 0n,
-      interfaceFeeBps: interfaceFeeRate,
-    })
-    stopLossAction = buildPlaceTriggerOrder({
-      market: marketAddress,
-      side: positionSide,
-      triggerPrice: stopLoss,
-      comparison: positionSide === PositionSide.short ? 'gte' : 'lte',
-      maxFee: settlementFee * 2n,
-      delta: -(positionAbs ?? 0n),
-      interfaceFee:
-        referralFeeRate && stopLossInterfaceFee.referrerFee
-          ? {
-              unwrap: true,
-              receiver: getAddress(referralFeeRate.referralTarget),
-              amount: stopLossInterfaceFee.referrerFee,
-            }
-          : undefined,
-      interfaceFee2:
-        stopLossInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
-          ? {
-              unwrap: false,
-              receiver: interfaceFeeRate.feeRecipientAddress,
-              amount: stopLossInterfaceFee.ecosystemFee,
-            }
-          : undefined,
-    })
-  }
-
-  let takeProfitAction
-  if (takeProfit && positionSide && isNotMaker && settlementFee) {
-    const takeProfitInterfaceFee = calcInterfaceFee({
-      chainId,
-      latestPrice: takeProfit,
-      side: positionSide,
-      referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-      referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-      positionDelta: positionAbs ?? 0n,
-      interfaceFeeBps: interfaceFeeRate,
-    })
-
-    takeProfitAction = buildPlaceTriggerOrder({
-      market: marketAddress,
-      side: positionSide,
-      triggerPrice: takeProfit,
-      comparison: positionSide === PositionSide.short ? 'lte' : 'gte',
-      delta: -(positionAbs ?? 0n),
-      maxFee: settlementFee * 2n,
-      interfaceFee:
-        referralFeeRate && takeProfitInterfaceFee.referrerFee
-          ? {
-              unwrap: true,
-              receiver: getAddress(referralFeeRate.referralTarget),
-              amount: takeProfitInterfaceFee.referrerFee,
-            }
-          : undefined,
-      interfaceFee2:
-        takeProfitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
-          ? {
-              unwrap: false,
-              receiver: interfaceFeeRate.feeRecipientAddress,
-              amount: takeProfitInterfaceFee.ecosystemFee,
-            }
-          : undefined,
-    })
-  }
-
-  const actions: MultiInvokerAction[] = [updateAction, stopLossAction, takeProfitAction, ...cancelOrders].filter(
-    notEmpty,
-  )
+  const actions: MultiInvokerAction[] = [updateAction]
 
   // Default to price being stale if we don't have any market snapshots
   let isPriceStale = true
@@ -256,6 +119,7 @@ export async function buildModifyPositionTx({
 
     actions.unshift(commitAction)
   }
+
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
@@ -298,265 +162,149 @@ export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, 
 
 export type CancelOrderDetails = { market: Address; nonce: bigint } | OpenOrder
 
-export type BuildPlaceOrderTxArgs = {
-  pythClient: EvmPriceServiceConnection
+export type BuildTriggerOrderBaseArgs = {
   address: Address
-  marketOracles?: MarketOracles
   marketAddress: Address
-  marketSnapshots?: MarketSnapshots
-  orderType: OrderTypes
-  limitPrice?: bigint
-  stopLoss?: bigint
-  takeProfit?: bigint
   side: PositionSide
-  collateralDelta?: bigint
   delta: bigint
-  positionAbs: bigint
-  selectedLimitComparison?: TriggerComparison
-  referralFeeRate?: ReferrerInterfaceFeeInfo
-  interfaceFeeRate?: InterfaceFeeBps
-  cancelOrderDetails?: CancelOrderDetails[]
-  onCommitmentError?: () => any
+  maxFee?: bigint
+  interfaceFee?: InterfaceFee
+  referralFee?: InterfaceFee
 } & WithChainIdAndPublicClient
 
-export async function buildPlaceOrderTx({
+export type BuildLimitOrderTxArgs = {
+  limitPrice: bigint
+  triggerComparison: TriggerComparison
+} & BuildTriggerOrderBaseArgs
+
+export async function buildLimitOrderTx({
   address,
   chainId,
-  pythClient,
-  marketOracles,
   publicClient,
   marketAddress,
-  orderType,
   limitPrice,
-  marketSnapshots,
-  collateralDelta,
-  stopLoss,
-  takeProfit,
   side,
   delta = 0n,
-  positionAbs,
-  selectedLimitComparison,
-  cancelOrderDetails,
-  referralFeeRate,
-  interfaceFeeRate,
-  onCommitmentError,
-}: BuildPlaceOrderTxArgs) {
-  if (!address || !chainId || !pythClient) {
+  triggerComparison,
+  interfaceFee,
+  referralFee,
+}: BuildLimitOrderTxArgs) {
+  if (!address || !chainId || !publicClient) {
     return
-  }
-
-  if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient)
-  }
-
-  if (!marketSnapshots) {
-    marketSnapshots = await fetchMarketSnapshots({
-      publicClient,
-      chainId,
-      address,
-      marketOracles,
-      pythClient,
-    })
   }
 
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
-  let cancelActions: MultiInvokerAction[] = []
-  let updateAction
-  let limitOrderAction
-  let stopLossAction
-  let takeProfitAction
+  const limitOrderAction = buildPlaceTriggerOrder({
+    triggerPrice: limitPrice,
+    side: side as PositionSide.long | PositionSide.short,
+    interfaceFee,
+    interfaceFee2: referralFee,
+    delta,
+    market: marketAddress,
+    maxFee: OrderExecutionDeposit,
+    comparison: triggerComparison,
+  })
 
-  if (cancelOrderDetails) {
-    cancelActions = buildCancelOrderActions(cancelOrderDetails)
-  }
-
-  const asset = addressToAsset(marketAddress)
-  const marketSnapshot = asset && marketSnapshots?.market[asset]
-
-  if (orderType === OrderTypes.limit && limitPrice) {
-    if (collateralDelta) {
-      updateAction = buildUpdateMarket({
-        market: marketAddress,
-        maker: undefined,
-        long: undefined,
-        short: undefined,
-        collateral: collateralDelta,
-        wrap: true,
-      })
-    }
-    const comparison = selectedLimitComparison ? selectedLimitComparison : side === PositionSide.long ? 'lte' : 'gte'
-    const limitInterfaceFee = calcInterfaceFee({
-      chainId,
-      latestPrice:
-        // Set interface fee price as latest price if order will execute immediately (as a market order)
-        comparison === 'lte'
-          ? Big6Math.min(limitPrice, marketSnapshot?.global.latestPrice ?? 0n)
-          : Big6Math.max(limitPrice, marketSnapshot?.global.latestPrice ?? 0n),
-      side,
-      referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-      referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-      positionDelta: delta,
-      interfaceFeeBps: interfaceFeeRate,
-    })
-    limitOrderAction = buildPlaceTriggerOrder({
-      market: marketAddress,
-      side: side as PositionSide.long | PositionSide.short,
-      triggerPrice: limitPrice,
-      comparison,
-      maxFee: OrderExecutionDeposit,
-      delta,
-      interfaceFee:
-        referralFeeRate && limitInterfaceFee.referrerFee
-          ? {
-              unwrap: true,
-              receiver: getAddress(referralFeeRate.referralTarget),
-              amount: limitInterfaceFee.referrerFee,
-            }
-          : undefined,
-      interfaceFee2:
-        limitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
-          ? {
-              unwrap: false,
-              receiver: interfaceFeeRate.feeRecipientAddress,
-              amount: limitInterfaceFee.ecosystemFee,
-            }
-          : undefined,
-    })
-  }
-
-  if (stopLoss && orderType !== OrderTypes.takeProfit) {
-    const stopLossDelta = orderType === OrderTypes.limit ? -positionAbs : delta
-    const stopLossInterfaceFee = calcInterfaceFee({
-      chainId,
-      latestPrice: stopLoss,
-      side,
-      referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-      referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-      positionDelta: stopLossDelta,
-      interfaceFeeBps: interfaceFeeRate,
-    })
-    stopLossAction = buildPlaceTriggerOrder({
-      market: marketAddress,
-      side: side as PositionSide.long | PositionSide.short,
-      triggerPrice: stopLoss,
-      comparison: side === PositionSide.short ? 'gte' : 'lte',
-      maxFee: OrderExecutionDeposit,
-      delta: stopLossDelta,
-      interfaceFee:
-        referralFeeRate && stopLossInterfaceFee.referrerFee
-          ? {
-              unwrap: true,
-              receiver: getAddress(referralFeeRate.referralTarget),
-              amount: stopLossInterfaceFee.referrerFee,
-            }
-          : undefined,
-      interfaceFee2:
-        stopLossInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
-          ? {
-              unwrap: false,
-              receiver: interfaceFeeRate.feeRecipientAddress,
-              amount: stopLossInterfaceFee.ecosystemFee,
-            }
-          : undefined,
-    })
-  }
-
-  if (takeProfit && orderType !== OrderTypes.stopLoss) {
-    const takeProfitDelta = orderType === OrderTypes.limit ? -positionAbs : delta
-
-    const takeProfitInterfaceFee = calcInterfaceFee({
-      chainId,
-      latestPrice: takeProfit,
-      side,
-      referrerInterfaceFeeDiscount: referralFeeRate?.discount ?? 0n,
-      referrerInterfaceFeeShare: referralFeeRate?.share ?? 0n,
-      positionDelta: takeProfitDelta,
-      interfaceFeeBps: interfaceFeeRate,
-    })
-
-    takeProfitAction = buildPlaceTriggerOrder({
-      market: marketAddress,
-      side: side as PositionSide.long | PositionSide.short,
-      triggerPrice: takeProfit,
-      comparison: side === PositionSide.short ? 'lte' : 'gte',
-      maxFee: OrderExecutionDeposit,
-      delta: takeProfitDelta,
-      interfaceFee:
-        referralFeeRate && takeProfitInterfaceFee.referrerFee
-          ? {
-              unwrap: true,
-              receiver: getAddress(referralFeeRate.referralTarget),
-              amount: takeProfitInterfaceFee.referrerFee,
-            }
-          : undefined,
-      interfaceFee2:
-        takeProfitInterfaceFee.ecosystemFee > 0n && interfaceFeeRate
-          ? {
-              unwrap: false,
-              receiver: interfaceFeeRate.feeRecipientAddress,
-              amount: takeProfitInterfaceFee.ecosystemFee,
-            }
-          : undefined,
-    })
-  }
-
-  const actions: MultiInvokerAction[] = [
-    ...cancelActions,
-    updateAction,
-    limitOrderAction,
-    stopLossAction,
-    takeProfitAction,
-  ].filter(notEmpty)
-
-  if (orderType === OrderTypes.limit && collateralDelta) {
-    const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
-    if (!oracleInfo) return
-    const asset = addressToAsset(marketAddress)
-    let isPriceStale = false
-    if (marketSnapshot && marketSnapshots && asset) {
-      const {
-        parameter: { maxPendingGlobal, maxPendingLocal },
-        riskParameter: { staleAfter },
-        pendingPositions,
-      } = marketSnapshot
-      const lastUpdated = await getOracleContract(oracleInfo.address, publicClient).read.latest()
-      isPriceStale = BigInt(nowSeconds()) - lastUpdated.timestamp > staleAfter / 2n
-      // If there is a backlog of pending positions, we need to commit the price
-      isPriceStale = isPriceStale || BigInt(pendingPositions.length) >= maxPendingGlobal
-      // If there is a backlog of pending positions for this user, we need to commit the price
-      isPriceStale =
-        isPriceStale || BigOrZero(marketSnapshots.user?.[asset]?.pendingPositions?.length) >= maxPendingLocal
-    }
-
-    // Only add the price commit if the price is stale
-    if (isPriceStale) {
-      const [{ version, ids, value, updateData }] = await buildCommitmentsForOracles({
-        chainId,
-        pyth: pythClient,
-        publicClient,
-        marketOracles: [oracleInfo],
-        onError: onCommitmentError,
-      })
-
-      const commitAction = buildCommitPrice({
-        keeperFactory: oracleInfo.providerAddress,
-        version,
-        value,
-        ids,
-        vaa: updateData,
-        revertOnFailure: false,
-      })
-
-      actions.unshift(commitAction)
-    }
-  }
+  const actions: MultiInvokerAction[] = [limitOrderAction]
 
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: multiInvoker.abi,
     args: [address, actions],
   })
+  return {
+    data,
+    to: multiInvoker.address,
+    value: 1n,
+  }
+}
+
+export type BuildStopLossTxArgs = {
+  stopLossPrice: bigint
+} & BuildTriggerOrderBaseArgs
+
+export async function buildStopLossTx({
+  address,
+  chainId,
+  marketAddress,
+  stopLossPrice,
+  side,
+  delta = 0n,
+  interfaceFee,
+  referralFee,
+  publicClient,
+  maxFee,
+}: BuildStopLossTxArgs) {
+  if (delta > 0n) {
+    throw new Error('Position delta must be negative for stop loss transactions')
+  }
+  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
+
+  const stopLossAction = buildPlaceTriggerOrder({
+    triggerPrice: stopLossPrice,
+    side: side as PositionSide.long | PositionSide.short,
+    interfaceFee,
+    interfaceFee2: referralFee,
+    delta,
+    market: marketAddress,
+    maxFee: maxFee ?? OrderExecutionDeposit,
+    comparison: side === PositionSide.short ? TriggerComparison.gte : TriggerComparison.lte,
+  })
+  const actions: MultiInvokerAction[] = [stopLossAction]
+
+  const data = encodeFunctionData({
+    functionName: 'invoke',
+    abi: multiInvoker.abi,
+    args: [address, actions],
+  })
+
+  return {
+    data,
+    to: multiInvoker.address,
+    value: 1n,
+  }
+}
+
+export type BuildTakeProfitTxArgs = {
+  takeProfitPrice: bigint
+} & BuildTriggerOrderBaseArgs
+
+export async function buildTakeProfitTx({
+  address,
+  chainId,
+  marketAddress,
+  takeProfitPrice,
+  side,
+  delta = 0n,
+  interfaceFee,
+  referralFee,
+  publicClient,
+  maxFee,
+}: BuildTakeProfitTxArgs) {
+  if (delta > 0n) {
+    throw new Error('Position delta must be negative for take profit transactions')
+  }
+  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
+
+  const takeProfitAction = buildPlaceTriggerOrder({
+    triggerPrice: takeProfitPrice,
+    side: side as PositionSide.long | PositionSide.short,
+    interfaceFee,
+    interfaceFee2: referralFee,
+    delta,
+    market: marketAddress,
+    maxFee: maxFee ?? OrderExecutionDeposit,
+    comparison: side === PositionSide.short ? TriggerComparison.lte : TriggerComparison.gte,
+  })
+  const actions: MultiInvokerAction[] = [takeProfitAction]
+
+  const data = encodeFunctionData({
+    functionName: 'invoke',
+    abi: multiInvoker.abi,
+    args: [address, actions],
+  })
+
   return {
     data,
     to: multiInvoker.address,

@@ -339,3 +339,9 @@ export type InterfaceFeeBps = {
   feeAmount: { [key in PositionSide]: bigint }
   feeRecipientAddress: Address
 }
+
+export type InterfaceFee = {
+  unwrap: boolean
+  receiver: Address
+  amount: bigint
+}
