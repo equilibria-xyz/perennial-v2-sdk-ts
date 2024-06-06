@@ -1,8 +1,6 @@
 import { Address, Hex, getAddress } from 'viem'
 import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
 
-import { OracleFactoryAddresses } from '../constants'
-import { Big6Math } from '../utils'
 import { notEmpty } from '../utils/arrayUtils'
 import {
   centimilliPowerTwoTransform,
@@ -291,38 +289,6 @@ export const triggerOrderTypes = [OrderTypes.stopLoss, OrderTypes.takeProfit]
 function isSupportedAsset(asset: any): asset is SupportedAsset {
   return Object.values(SupportedAsset).includes(asset)
 }
-// Default interface fee rates and recipient for perennial.
-export const interfaceFeeBps: {
-  [chainId in SupportedChainId]: InterfaceFeeBps
-} = {
-  [arbitrumSepolia.id]: {
-    feeAmount: {
-      [PositionSide.short]: Big6Math.fromFloatString('0.0001'), // 1bps
-      [PositionSide.long]: Big6Math.fromFloatString('0.0001'), // 1bps
-      [PositionSide.maker]: 0n,
-      [PositionSide.none]: 0n,
-    },
-    feeRecipientAddress: OracleFactoryAddresses[arbitrumSepolia.id],
-  },
-  [arbitrum.id]: {
-    feeAmount: {
-      [PositionSide.short]: Big6Math.fromFloatString('0.0001'), // 1bps,
-      [PositionSide.long]: Big6Math.fromFloatString('0.0001'), // 1bps,
-      [PositionSide.maker]: 0n,
-      [PositionSide.none]: 0n,
-    },
-    feeRecipientAddress: OracleFactoryAddresses[arbitrum.id],
-  },
-  [base.id]: {
-    feeAmount: {
-      [PositionSide.short]: 0n,
-      [PositionSide.long]: 0n,
-      [PositionSide.maker]: 0n,
-      [PositionSide.none]: 0n,
-    },
-    feeRecipientAddress: OracleFactoryAddresses[base.id],
-  },
-}
 
 export type ReferrerInterfaceFeeInfo =
   | {
@@ -334,11 +300,6 @@ export type ReferrerInterfaceFeeInfo =
     }
   | null
   | undefined
-
-export type InterfaceFeeBps = {
-  feeAmount: { [key in PositionSide]: bigint }
-  feeRecipientAddress: Address
-}
 
 export type InterfaceFee = {
   unwrap: boolean
