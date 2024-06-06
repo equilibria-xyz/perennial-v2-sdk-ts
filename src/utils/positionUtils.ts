@@ -443,6 +443,7 @@ export function calcTotalPositionChangeFee({
   positionDelta,
   direction,
   referrerInterfaceFeeDiscount,
+  interfaceFeeBps,
 }: {
   chainId: SupportedChainId
   positionDelta: bigint
@@ -450,6 +451,7 @@ export function calcTotalPositionChangeFee({
   direction: PositionSide
   positionStatus?: PositionStatus
   referrerInterfaceFeeDiscount: bigint
+  interfaceFeeBps?: InterfaceFeeBps
 }) {
   const tradeFee = calcTradeFee({
     positionDelta,
@@ -465,6 +467,7 @@ export function calcTotalPositionChangeFee({
     side: direction,
     referrerInterfaceFeeDiscount,
     referrerInterfaceFeeShare: 0n,
+    interfaceFeeBps,
   })
 
   const settlementFee = positionDelta !== 0n && marketSnapshot ? marketSnapshot.parameter.settlementFee : 0n
