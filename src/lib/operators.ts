@@ -17,7 +17,7 @@ import {
   getVaultFactoryContract,
 } from '..'
 import { getMarketFactoryContract } from '..'
-import { OptionalAddress } from '../types/perennial'
+import { OptionalAddress } from '../types/shared'
 
 /**
  * Builds a transaction to approve USDC for the MultiInvoker contract.

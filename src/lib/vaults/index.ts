@@ -13,7 +13,7 @@ import {
 } from '..'
 import { buildCommitPrice, buildCommitmentsForOracles, notEmpty } from '../..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
-import { OptionalAddress } from '../../types/perennial'
+import { OptionalAddress } from '../../types/shared'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 import { fetchVault7dAccumulations } from './graph'
