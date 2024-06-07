@@ -17,7 +17,6 @@ import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OrderExecutionDeposit, TriggerOrderFullCloseMagicValue } from './constants'
 import {
-  OpenOrder,
   fetchActivePositionHistory,
   fetchActivePositionPnl,
   fetchHistoricalPositions,
@@ -36,6 +35,7 @@ import {
   BuildTakeProfitTxArgs,
   BuildTriggerOrderBaseArgs,
   BuildUpdateMarketTxArgs,
+  CancelOrderDetails,
   WithChainIdAndPublicClient,
   buildCancelOrderTx,
   buildLimitOrderTx,
@@ -58,7 +58,7 @@ export type BuildModifyPositionTxArgs = {
   positionSide: PositionSide
   stopLossPrice?: bigint
   takeProfitPrice?: bigint
-  cancelOrderDetails?: OpenOrder[]
+  cancelOrderDetails?: CancelOrderDetails[]
   interfaceFee?: InterfaceFee
   referralFee?: InterfaceFee
   stopLossFees?: {
@@ -79,15 +79,16 @@ export type BuildPlaceOrderTxArgs = {
   takeProfitPrice?: bigint
   collateralDelta?: bigint
   triggerComparison: TriggerComparison
-  limitOrderFees: {
+  cancelOrderDetails?: CancelOrderDetails[]
+  limitOrderFees?: {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
-  takeProfitFees: {
+  takeProfitFees?: {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
-  stopLossFees: {
+  stopLossFees?: {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
@@ -291,7 +292,7 @@ export class MarketsModule {
        * @param positionSide {@link PositionSide}
        * @param stopLossPrice BigInt - Optional stop loss price to fully close the position
        * @param takeProfitPrice BigInt - Optional take profit price to fully close the position
-       * @param cancelOrderDetails List of {@link OpenOrder[]} to cancel when modifying the position
+       * @param cancelOrderDetails List of {@link CancelOrderDetails[]} to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
@@ -493,11 +494,11 @@ export class MarketsModule {
        * @param side Order side
        * @param collateralDelta BigInt - Collateral delta
        * @param delta BigInt - Position size delta
+       * @param cancelOrderDetails List of {@link CancelOrderDetails[]} to cancel
        * @param triggerComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param limitOrderFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
-       * @param cancelOrderDetails {@link CancelOrderDetails}
        * @param onCommitmentError Callback for commitment error
        * @returns Place order transaction data.
        */
@@ -509,6 +510,7 @@ export class MarketsModule {
         let limitOrderTx
         let takeProfitTx
         let stopLossTx
+        let cancelOrderTx
 
         if (args.collateralDelta) {
           updateMarketTx = await buildUpdateMarketTx({
@@ -569,12 +571,20 @@ export class MarketsModule {
           })
         }
 
-        const multiInvokerTxs = [updateMarketTx, limitOrderTx, takeProfitTx, stopLossTx].filter(notEmpty)
+        if (args.cancelOrderDetails?.length) {
+          cancelOrderTx = buildCancelOrderTx({
+            chainId: this.config.chainId,
+            address,
+            orderDetails: args.cancelOrderDetails,
+          })
+        }
+
+        const multiInvokerTxs = [updateMarketTx, limitOrderTx, takeProfitTx, stopLossTx, cancelOrderTx].filter(notEmpty)
         return mergeMultiInvokerTxs(multiInvokerTxs)
       },
       /**
        * Build a cancel order transaction
-       * @param orderDetails {@link CancelOrderTuple[]} List of order details (as a tuple of Address and order nonce) to cancel
+       * @param orderDetails List of {@link CancelOrderDetails} to cancel
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Cancel order transaction data.
        */
@@ -615,7 +625,7 @@ export class MarketsModule {
        * @param positionSide {@link PositionSide}
        * @param stopLoss BigInt - Optional stop loss price to fully close the position
        * @param takeProfit BigInt - Optional take profit price to fully close the position
-       * @param cancelOrderDetails List of open orders to cancel when modifying the position
+       * @param cancelOrderDetails List of {@link CancelOrderDetails} to cancel when modifying the position
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @returns Transaction Hash
@@ -739,7 +749,7 @@ export class MarketsModule {
        * @param selectedLimitComparison Trigger comparison for order execution. See TriggerComparison
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
-       * @param cancelOrderDetails List of open orders to cancel when placing the order
+       * @param cancelOrderDetails List of {@link CancelOrderDetails} to cancel when placing the order
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
        */
