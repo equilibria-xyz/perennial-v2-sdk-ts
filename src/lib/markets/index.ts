@@ -77,6 +77,8 @@ export type BuildModifyPositionTxArgs = {
 export type BuildPlaceOrderTxArgs = {
   orderType: OrderTypes
   limitPrice?: bigint
+  marketSnapshots?: MarketSnapshots
+  marketOracles?: MarketOracles
   stopLossPrice?: bigint
   takeProfitPrice?: bigint
   collateralDelta?: bigint
@@ -523,6 +525,8 @@ export class MarketsModule {
             marketAddress: args.marketAddress,
             collateralDelta: args.collateralDelta,
             side: args.side,
+            marketOracles: args.marketOracles,
+            marketSnapshots: args.marketSnapshots,
             onCommitmentError: args.onCommitmentError,
           })
         }
