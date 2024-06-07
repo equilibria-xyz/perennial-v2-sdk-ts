@@ -1,6 +1,6 @@
 import { Address, GetContractReturnType, PublicClient, WalletClient, getContract } from 'viem'
 
-import { DefaultChain, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
+import { DefaultChain, EmptysetReserveAbi, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
@@ -8,6 +8,7 @@ import { PythFactoryAbi } from '../abi/PythFactory.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'
 import {
   DSUAddresses,
+  EmptysetReserveAddresses,
   MarketFactoryAddresses,
   MultiInvokerAddresses,
   PythFactoryAddresses,
@@ -39,6 +40,20 @@ export const getUSDCContract = (chainId: SupportedChainId = DefaultChain.id, pub
   const contract = getContract({
     address: USDCAddresses[chainId],
     abi: ERC20Abi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+/**
+ * Returns the EmptysetReserve contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The EmptysetReserve contract instance.
+ */
+export const getEmptysetReserveContarct = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
+  const contract = getContract({
+    address: EmptysetReserveAddresses[chainId],
+    abi: EmptysetReserveAbi,
     client: { public: publicClient },
   })
   return contract
@@ -188,6 +203,13 @@ export class ContractsModule {
    */
   public getUSDCContract() {
     return getUSDCContract(this.config.chainId, this.config.publicClient)
+  }
+  /**
+   * Returns the EmptysetReserve contract instance.
+   * @returns The EmptysetReserve contract instance.
+   */
+  public getEmptysetReserveContract() {
+    return getEmptysetReserveContarct(this.config.chainId, this.config.publicClient)
   }
   /**
    * Returns the MultiInvoker contract instance.
