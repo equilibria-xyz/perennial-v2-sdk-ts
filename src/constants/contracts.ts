@@ -35,6 +35,12 @@ export const DSUAddresses: AddressMapping = {
   [base.id]: getAddress('0x7b4Adf64B0d60fF97D672E473420203D52562A84'),
 }
 
+export const EmptysetReserveAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0x0d49c416103Cbd276d9c3cd96710dB264e3A0c27'),
+  [arbitrumSepolia.id]: getAddress('0x841d7C994aC0Bb17CcD65a021E686e3cFafE2118'),
+  [base.id]: getAddress('0x5FA881826AD000D010977645450292701bc2f56D'),
+}
+
 export const USDCAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'),
   [arbitrumSepolia.id]: getAddress('0x16b38364bA6f55B6E150cC7f52D22E89643f3535'),

@@ -30,6 +30,7 @@ import {
 } from './graph'
 import {
   BuildCancelOrderTxArgs,
+  BuildClaimFeeTxArgs,
   BuildLimitOrderTxArgs,
   BuildStopLossTxArgs,
   BuildSubmitVaaTxArgs,
@@ -38,6 +39,7 @@ import {
   BuildUpdateMarketTxArgs,
   WithChainIdAndPublicClient,
   buildCancelOrderTx,
+  buildClaimFeeTx,
   buildLimitOrderTx,
   buildStopLossTx,
   buildSubmitVaaTx,
@@ -588,6 +590,15 @@ export class MarketsModule {
           address,
         })
       },
+
+      /**
+       * Build a claim fee transaction
+       * @notice This method only claims for the transaction sending address. OperatingFor is not supported
+       * @param marketAddress Market Address to claim fees for
+       */
+      claimFee: (args: OmitBound<BuildClaimFeeTxArgs>) => {
+        return buildClaimFeeTx({ ...args })
+      },
     }
   }
 
@@ -756,6 +767,16 @@ export class MarketsModule {
        */
       cancelOrder: async (...args: Parameters<typeof this.build.cancelOrder>) => {
         const tx = this.build.cancelOrder(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+
+      /**
+       * Send a claim fee transaction
+       * @param marketAddress Market Address to claim fees for
+       */
+      claimFee: async (...args: Parameters<typeof this.build.claimFee>) => {
+        const tx = this.build.claimFee(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },

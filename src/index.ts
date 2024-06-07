@@ -87,11 +87,13 @@ export {
   OracleFactoryAddresses,
   DSUAddresses,
   USDCAddresses,
+  EmptysetReserveAddresses,
 } from './constants/contracts'
 
 export {
   getUSDCContract,
   getDSUContract,
+  getEmptysetReserveContarct,
   getMultiInvokerContract,
   getMarketFactoryContract,
   getVaultFactoryContract,
@@ -159,6 +161,7 @@ export { VaultFactoryAbi } from './abi/VaultFactory.abi'
 export { VaultLensAbi } from './abi/VaultLens.abi'
 export { KeeperOracleAbi } from './abi/KeeperOracle.abi'
 export { PythFactoryAbi } from './abi/PythFactory.abi'
+export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
 
 /* #################### Types #################### */
 

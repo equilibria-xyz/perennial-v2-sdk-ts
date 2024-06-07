@@ -1,7 +1,7 @@
 import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
-import { MultiInvokerAbi, PythFactoryAbi } from '../..'
+import { MarketAbi, MultiInvokerAbi, PythFactoryAbi } from '../..'
 import { PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
 import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
@@ -336,6 +336,21 @@ export function buildCancelOrderTx({ chainId, address, orderDetails }: BuildCanc
   return {
     data,
     to: MultiInvokerAddresses[chainId],
+    value: 0n,
+  }
+}
+
+export type BuildClaimFeeTxArgs = {
+  marketAddress: Address
+}
+export function buildClaimFeeTx({ marketAddress }: BuildClaimFeeTxArgs) {
+  const data = encodeFunctionData({
+    functionName: 'claimFee',
+    abi: MarketAbi,
+  })
+  return {
+    data,
+    to: marketAddress,
     value: 0n,
   }
 }
