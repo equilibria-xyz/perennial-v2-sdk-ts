@@ -10,5 +10,3 @@ export type MultiInvokerAction = Exclude<
   AbiParametersToPrimitiveTypes<ExtractAbiFunction<typeof MultiInvokerAbi, 'invoke'>['inputs']>[0][0],
   string
 >
-
-export type OptionalAddress = { address?: Address }

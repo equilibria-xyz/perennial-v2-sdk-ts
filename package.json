@@ -29,6 +29,7 @@
   "devDependencies": {
     "@equilibria/perennial-v2": "1.2.0-rc3",
     "@equilibria/perennial-v2-vault": "1.2.0-rc0",
+    "abitype": "^1.0.2",
     "@equilibria/root": "2.2.0",
     "@graphql-codegen/cli": "^3.3.1",
     "@graphql-codegen/client-preset": "^3.0.1",

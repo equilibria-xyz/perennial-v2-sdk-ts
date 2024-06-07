@@ -10,7 +10,7 @@ import {
   TriggerComparison,
   chainIdToChainMap,
 } from '../../constants'
-import { OptionalAddress } from '../../types/perennial'
+import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
