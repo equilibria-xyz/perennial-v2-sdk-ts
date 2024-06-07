@@ -1,7 +1,7 @@
 import { Address, encodeErrorResult } from 'viem'
 
 import { MarketAbi } from '..'
-import { InterfaceFeeBps, PositionSide, PositionStatus, SupportedAsset, SupportedChainId } from '../constants'
+import { PositionSide, PositionStatus, SupportedAsset, SupportedChainId } from '../constants'
 import { MaxUint256 } from '../constants/units'
 import { MarketSnapshot, MarketSnapshots, UserMarketSnapshot } from '../lib'
 import { Big6Math, formatBig6Percent } from './big6Utils'
@@ -396,7 +396,6 @@ export function calcInterfaceFee({
   positionStatus = PositionStatus.resolved,
   latestPrice,
   positionDelta,
-  side,
   referrerInterfaceFeeDiscount,
   referrerInterfaceFeeShare,
   interfaceFeeBps,
@@ -408,12 +407,11 @@ export function calcInterfaceFee({
   side: PositionSide
   referrerInterfaceFeeDiscount: bigint
   referrerInterfaceFeeShare: bigint
-  interfaceFeeBps?: InterfaceFeeBps
+  interfaceFeeBps?: bigint
 }) {
-  const feeInfo = interfaceFeeBps
-  if (!latestPrice || !positionDelta || !feeInfo || positionStatus === PositionStatus.failed) {
+  if (!latestPrice || !positionDelta || !interfaceFeeBps || positionStatus === PositionStatus.failed) {
     return {
-      interfaceFeeBps: feeInfo?.feeAmount[PositionSide.none] ?? 0n,
+      interfaceFeeBps: interfaceFeeBps ?? 0n,
       interfaceFee: 0n,
       referrerFee: 0n,
       ecosystemFee: 0n,
@@ -421,8 +419,7 @@ export function calcInterfaceFee({
   }
 
   const notional = calcNotional(positionDelta, latestPrice)
-  const feeAmount = feeInfo.feeAmount[side]
-  const discountedFeeAmount = feeAmount - Big6Math.mul(feeAmount, referrerInterfaceFeeDiscount)
+  const discountedFeeAmount = interfaceFeeBps - Big6Math.mul(interfaceFeeBps, referrerInterfaceFeeDiscount)
   const discountedInterfaceFee = Big6Math.mul(notional, discountedFeeAmount)
   const referrerFee = Big6Math.mul(discountedInterfaceFee, referrerInterfaceFeeShare)
   const ecosystemFee = discountedInterfaceFee - referrerFee
@@ -451,7 +448,7 @@ export function calcTotalPositionChangeFee({
   direction: PositionSide
   positionStatus?: PositionStatus
   referrerInterfaceFeeDiscount: bigint
-  interfaceFeeBps?: InterfaceFeeBps
+  interfaceFeeBps?: bigint
 }) {
   const tradeFee = calcTradeFee({
     positionDelta,

@@ -143,8 +143,6 @@ export {
   OrderTypes,
   orderTypes,
   triggerOrderTypes,
-  interfaceFeeBps,
-  type InterfaceFeeBps,
   type InterfaceFee,
 } from './constants/markets'
 
