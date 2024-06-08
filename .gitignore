@@ -142,3 +142,4 @@ cache
 docs-site
 docs/*
 .vercel
+.vscode
