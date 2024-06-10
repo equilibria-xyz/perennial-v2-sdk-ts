@@ -6,6 +6,7 @@ import {
   InterfaceFee,
   OrderTypes,
   PositionSide,
+  SupportedAsset,
   SupportedChainId,
   TriggerComparison,
   chainIdToChainMap,
@@ -106,6 +107,7 @@ type MarketsModuleConfig = {
   pythClient: EvmPriceServiceConnection
   walletClient?: WalletClient
   operatingFor?: Address
+  supportedMarkets?: SupportedAsset[]
 }
 
 /**
@@ -117,6 +119,7 @@ type MarketsModuleConfig = {
  * @param config.pythClient Pyth Client
  * @param config.walletClient Wallet Client
  * @param config.operatingFor If set, the module will read data and send multi-invoker transactions on behalf of this address.
+ * @param config.supportedMarkets Subset of availalbe markets to support.
  * @returns Markets module instance
  */
 export class MarketsModule {
@@ -135,7 +138,7 @@ export class MarketsModule {
        * @returns The {@link MarketOracles}.
        */
       marketOracles: () => {
-        return fetchMarketOracles(this.config.chainId, this.config.publicClient)
+        return fetchMarketOracles(this.config.chainId, this.config.publicClient, this.config.supportedMarkets)
       },
       /**
        * Fetches the {@link MarketSnapshots}

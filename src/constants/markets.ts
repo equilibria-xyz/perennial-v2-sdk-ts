@@ -255,10 +255,12 @@ export const ChainMarkets: {
   },
 }
 
-export const chainAssetsWithAddress = (chainId: SupportedChainId) => {
+export const chainAssetsWithAddress = (chainId: SupportedChainId, supportedMarkets?: SupportedAsset[]) => {
   return Object.entries(ChainMarkets[chainId])
     .map(([asset, marketAddress]) => (isSupportedAsset(asset) && !!marketAddress ? { asset, marketAddress } : null))
-    .filter(notEmpty)
+    .filter((entry): entry is { asset: SupportedAsset; marketAddress: `0x${string}` } => {
+      return notEmpty(entry) && (!supportedMarkets || supportedMarkets.includes(entry.asset))
+    })
 }
 
 export const addressToAsset = (address: Address) => {

@@ -27,8 +27,12 @@ export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOra
  * @param chainId Chain ID {@link SupportedChainId}
  * @param publicClient Public Client
  */
-export async function fetchMarketOracles(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
-  const markets = chainAssetsWithAddress(chainId)
+export async function fetchMarketOracles(
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+  supportedMarkets?: SupportedAsset[],
+) {
+  const markets = chainAssetsWithAddress(chainId, supportedMarkets)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
     const metadata = AssetMetadata[asset]
     const market = getMarketContract(marketAddress, publicClient)
