@@ -154,6 +154,7 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
           address: this.defaultAddress,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
@@ -699,8 +700,6 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param pythClient Pyth Client
-       * @param marketOracles {@link MarketOracles}
-       * @param marketSnapshots {@link MarketSnapshots}
        * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
        * @param collateralDelta BigInt - Collateral delta

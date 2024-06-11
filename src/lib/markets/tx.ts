@@ -49,9 +49,14 @@ export async function buildUpdateMarketTx({
   onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
+  const asset = addressToAsset(marketAddress)
+
+  if (!asset) {
+    throw new Error('Could not determine asset for market')
+  }
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient)
+    marketOracles = await fetchMarketOracles(chainId, publicClient, [asset])
   }
 
   if (!marketSnapshots) {
@@ -61,13 +66,12 @@ export async function buildUpdateMarketTx({
       address,
       marketOracles,
       pythClient,
+      markets: [asset],
     })
   }
 
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
-
-  const asset = addressToAsset(marketAddress)
 
   const updateAction = buildUpdateMarket({
     market: marketAddress,
