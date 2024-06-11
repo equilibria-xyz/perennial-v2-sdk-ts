@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { GraphQLClient } from 'graphql-request'
 import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
-import { SupportedChainId } from '..'
+import { SupportedAsset, SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
@@ -16,6 +16,7 @@ export type SDKConfig = {
   pythUrl: string
   walletClient?: WalletClient
   operatingFor?: Address
+  supportedMarkets?: SupportedAsset[]
 }
 
 /**
@@ -28,6 +29,7 @@ export type SDKConfig = {
  * @param config.graphUrl SubGraph URL
  * @param config.pythUrl Pyth URL
  * @param config.operatingFor If set, the SDK will read data and send multi-invoker transactions on behalf of this address.
+ * @param config.supportedMarkets Subset of availalbe markets to support.
  *
  * @returns Perennial SDK instance
  *
@@ -71,6 +73,7 @@ export default class PerennialSDK {
       graphClient: this._graphClient,
       pythClient: this._pythClient,
       operatingFor: this.config.operatingFor,
+      supportedMarkets: config.supportedMarkets,
     })
     this.vaults = new VaultsModule({
       chainId: config.chainId,
