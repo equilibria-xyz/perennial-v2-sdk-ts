@@ -72,6 +72,7 @@ export type BuildModifyPositionTxArgs = {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
+  supportedMarkets?: SupportedAsset[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -97,6 +98,7 @@ export type BuildPlaceOrderTxArgs = {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
+  supportedMarkets?: SupportedAsset[]
   onCommitmentError?: () => any
 } & Omit<BuildTriggerOrderBaseArgs, 'interfaceFee' | 'referralFee'>
 
@@ -154,6 +156,7 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
           address: this.defaultAddress,
+          supportedMarkets: this.config.supportedMarkets,
           ...args,
         })
       },
@@ -304,6 +307,7 @@ export class MarketsModule {
        * @param referralFee {@link InterfaceFee}
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
+       * @param supportedMarkets Subset of availalbe markets to support.
        * @returns Modify position transaction data.
        */
       modifyPosition: async (args: OmitBound<BuildModifyPositionTxArgs> & OptionalAddress) => {
@@ -318,6 +322,7 @@ export class MarketsModule {
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
+          supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
           ...args,
           side: args.positionSide,
           address,
@@ -380,6 +385,7 @@ export class MarketsModule {
        * @param interfaceFee Object consisting of interfaceFee, referrerFee and ecosystemFee amounts
        * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
+       * @param supportedMarkets Subset of availalbe markets to support.
        * @param onCommitmentError Callback for commitment error
        * @param publicClient Public Client
        * @returns Update market transaction data.
@@ -392,6 +398,7 @@ export class MarketsModule {
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
+          supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
           ...args,
           address,
         })
@@ -530,6 +537,7 @@ export class MarketsModule {
             side: args.side,
             marketOracles: args.marketOracles,
             marketSnapshots: args.marketSnapshots,
+            supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
             onCommitmentError: args.onCommitmentError,
           })
         }
@@ -699,8 +707,6 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param pythClient Pyth Client
-       * @param marketOracles {@link MarketOracles}
-       * @param marketSnapshots {@link MarketSnapshots}
        * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
        * @param collateralDelta BigInt - Collateral delta
@@ -768,6 +774,7 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param cancelOrderDetails List of {@link CancelOrderDetails} to cancel when placing the order
+       * @param supportedMarkets Subset of availalbe markets to support.
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
        */
