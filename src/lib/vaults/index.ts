@@ -68,6 +68,15 @@ export const fetchVaultCommitments = async ({
 
 type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient' | 'address'>
 
+type VaultConfig = {
+  chainId: SupportedChainId
+  publicClient: PublicClient
+  graphClient: GraphQLClient
+  pythClient: EvmPriceServiceConnection
+  walletClient?: WalletClient
+  operatingFor?: Address
+}
+
 /**
  * Vaults module class
  * @param config SDK configuration
@@ -81,24 +90,10 @@ type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphCl
  * @returns Vaults module instance
  */
 export class VaultsModule {
-  private config: {
-    chainId: SupportedChainId
-    publicClient: PublicClient
-    graphClient: GraphQLClient
-    pythClient: EvmPriceServiceConnection
-    walletClient?: WalletClient
-    operatingFor?: Address
-  }
+  private config: VaultConfig
   private defaultAddress: Address = zeroAddress
 
-  constructor(config: {
-    chainId: SupportedChainId
-    publicClient: PublicClient
-    graphClient: GraphQLClient
-    pythClient: EvmPriceServiceConnection
-    walletClient?: WalletClient
-    operatingFor?: Address
-  }) {
+  constructor(config: VaultConfig) {
     this.config = config
     this.config.operatingFor = config.operatingFor ?? config.walletClient?.account?.address ?? this.defaultAddress
   }
