@@ -124,7 +124,7 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
  * @param chainId Chain ID {@link SupportedChainId}
  * @param address Wallet Address
  * @param marketOracles {@link MarketOracles}
- * @param supportedMarkets Subset of availalbe markets to support.
+ * @param markets Subset of availalbe markets to support.
  * @param onError Error callback
  * @param onSuccess Success callback
  */
@@ -134,7 +134,7 @@ export async function fetchMarketSnapshots({
   chainId,
   address,
   marketOracles,
-  supportedMarkets,
+  markets,
   onError,
   onSuccess,
 }: {
@@ -143,7 +143,7 @@ export async function fetchMarketSnapshots({
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
-  supportedMarkets?: SupportedAsset[]
+  markets?: SupportedAsset[]
   onError?: () => void
   onSuccess?: () => void
 }) {
@@ -151,7 +151,7 @@ export async function fetchMarketSnapshots({
     return
   }
   if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient, supportedMarkets)
+    marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
   }
   const snapshotData = await fetchMarketSnapshotsAfterSettle({
     chainId,

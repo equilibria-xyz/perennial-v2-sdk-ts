@@ -72,7 +72,6 @@ export type BuildModifyPositionTxArgs = {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
-  supportedMarkets?: SupportedAsset[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -98,7 +97,6 @@ export type BuildPlaceOrderTxArgs = {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
-  supportedMarkets?: SupportedAsset[]
   onCommitmentError?: () => any
 } & Omit<BuildTriggerOrderBaseArgs, 'interfaceFee' | 'referralFee'>
 
@@ -156,7 +154,7 @@ export class MarketsModule {
           publicClient: this.config.publicClient,
           pythClient: this.config.pythClient,
           address: this.defaultAddress,
-          supportedMarkets: this.config.supportedMarkets,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
@@ -769,7 +767,6 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param cancelOrderDetails List of {@link CancelOrderDetails} to cancel when placing the order
-       * @param supportedMarkets Subset of availalbe markets to support.
        * @param onCommitmentError Callback for commitment error
        * @returns Transaction Hash.
        */

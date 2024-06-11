@@ -66,7 +66,7 @@ export async function buildUpdateMarketTx({
       address,
       marketOracles,
       pythClient,
-      supportedMarkets: [asset],
+      markets: [asset],
     })
   }
 
