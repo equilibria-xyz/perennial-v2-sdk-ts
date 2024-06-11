@@ -307,7 +307,6 @@ export class MarketsModule {
        * @param referralFee {@link InterfaceFee}
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
-       * @param supportedMarkets Subset of availalbe markets to support.
        * @returns Modify position transaction data.
        */
       modifyPosition: async (args: OmitBound<BuildModifyPositionTxArgs> & OptionalAddress) => {
@@ -322,7 +321,6 @@ export class MarketsModule {
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
-          supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
           ...args,
           side: args.positionSide,
           address,
@@ -385,7 +383,6 @@ export class MarketsModule {
        * @param interfaceFee Object consisting of interfaceFee, referrerFee and ecosystemFee amounts
        * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
-       * @param supportedMarkets Subset of availalbe markets to support.
        * @param onCommitmentError Callback for commitment error
        * @param publicClient Public Client
        * @returns Update market transaction data.
@@ -398,7 +395,6 @@ export class MarketsModule {
           chainId: this.config.chainId,
           pythClient: this.config.pythClient,
           publicClient: this.config.publicClient,
-          supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
           ...args,
           address,
         })
@@ -537,7 +533,6 @@ export class MarketsModule {
             side: args.side,
             marketOracles: args.marketOracles,
             marketSnapshots: args.marketSnapshots,
-            supportedMarkets: args.supportedMarkets ?? this.config.supportedMarkets,
             onCommitmentError: args.onCommitmentError,
           })
         }

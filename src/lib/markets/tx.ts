@@ -2,7 +2,7 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
 import { MarketAbi, MultiInvokerAbi, PythFactoryAbi } from '../..'
-import { PositionSide, SupportedAsset, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
+import { PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
 import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
@@ -30,7 +30,6 @@ export type BuildUpdateMarketTxArgs = {
   side: PositionSide
   interfaceFee?: InterfaceFee
   referralFee?: InterfaceFee
-  supportedMarkets?: SupportedAsset[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -47,13 +46,17 @@ export async function buildUpdateMarketTx({
   collateralDelta,
   interfaceFee,
   referralFee,
-  supportedMarkets,
   onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
+  const asset = addressToAsset(marketAddress)
+
+  if (!asset) {
+    throw new Error('Could not determine asset for market')
+  }
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient, supportedMarkets)
+    marketOracles = await fetchMarketOracles(chainId, publicClient, [asset])
   }
 
   if (!marketSnapshots) {
@@ -63,14 +66,12 @@ export async function buildUpdateMarketTx({
       address,
       marketOracles,
       pythClient,
-      supportedMarkets,
+      supportedMarkets: [asset],
     })
   }
 
   const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
   if (!oracleInfo) return
-
-  const asset = addressToAsset(marketAddress)
 
   const updateAction = buildUpdateMarket({
     market: marketAddress,
