@@ -4,11 +4,13 @@ import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import {
   InterfaceFee,
+  OrderExecutionDeposit,
   OrderTypes,
   PositionSide,
   SupportedAsset,
   SupportedChainId,
   TriggerComparison,
+  TriggerOrderFullCloseMagicValue,
   chainIdToChainMap,
 } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
@@ -16,7 +18,6 @@ import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
-import { OrderExecutionDeposit, TriggerOrderFullCloseMagicValue } from './constants'
 import {
   fetchActivePositionHistory,
   fetchActivePositionPnl,

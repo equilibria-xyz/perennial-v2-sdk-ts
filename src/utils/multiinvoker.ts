@@ -296,6 +296,11 @@ export const EmptyInterfaceFee: {
   unwrap: boolean
 } = { amount: 0n, receiver: zeroAddress, unwrap: false }
 
+/**
+ * Combines the transaction data from multiple MultiInvoker transactions into a single transaction
+ * @param transactionData - Array of transaction data to merge
+ * @returns Transaction data object - { data: Hex, value: bigint, to: Address }
+ */
 export const mergeMultiInvokerTxs = (
   transactionData: {
     data: Hex

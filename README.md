@@ -79,30 +79,6 @@ const sdk = new PerennialSdk({
 })
 ```
 
-**Interface Usage**
-
-For those looking to create an interface for the Perennial protocol, you can specify a fee to be applied seamlessly to any transaction created by your application. See below for
-
-```typescript
-import PerennialSdk, { Big6Math, PositionSide } from '@perennial/sdk'
-import { arbitrum } from 'viem/chains'
-import { useWalletClient } from 'wagmi'
-
-const RPC_URL = process.env.RPC_URL
-const GRAPH_URL = process.env.GRAPH_URL
-const PYTH_URL = process.env.PYTH_URL
-
-const walletClient = useWalletClient({ chainId: arbitrum.id })
-
-const sdk = new PerennialSdk({
-  chainId: arbitrum.id,
-  rpcUrl: RPC_URL,
-  graphUrl: GRAPH_URL,
-  pythUrl: PYTH_URL,
-  walletClient: walletClient.data,
-})
-```
-
 After the SDK has been initalized calls can be made like this:
 
 ```javascript
