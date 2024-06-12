@@ -2,7 +2,13 @@ import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
 import { MarketAbi, MultiInvokerAbi, PythFactoryAbi } from '../..'
-import { PositionSide, SupportedChainId, TriggerComparison, addressToAsset } from '../../constants'
+import {
+  OrderExecutionDeposit,
+  PositionSide,
+  SupportedChainId,
+  TriggerComparison,
+  addressToAsset,
+} from '../../constants'
 import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
@@ -11,7 +17,6 @@ import { buildCancelOrder, buildCommitPrice, buildPlaceTriggerOrder, buildUpdate
 import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
 import { getMultiInvokerContract, getOracleContract } from '../contracts'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
-import { OrderExecutionDeposit } from './constants'
 import { OpenOrder } from './graph'
 
 export type WithChainIdAndPublicClient = {

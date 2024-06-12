@@ -27,6 +27,11 @@ export function efficiency(maker: bigint, major: bigint) {
 }
 
 // LiquidationPrice = ((position * abs(price) + collateral) / (position * (1 + maintenanceRatio))
+/**
+ * Calculates the liquidation price for a position
+ * @param params - { marketSnapshot, collateral, position, limitPrice }
+ * @returns Liquidation price for long and short positions
+ */
 export const calcLiquidationPrice = ({
   marketSnapshot,
   collateral,
@@ -69,6 +74,13 @@ export const calcLiquidationPrice = ({
   return { long, short }
 }
 
+/**
+ * Calculates the leverage for a position
+ * @param price - Current price
+ * @param position - Position size
+ * @param collateral - Collateral
+ * @returns Leverage
+ */
 export const calcLeverage = (price: bigint, position: bigint, collateral: bigint) => {
   if (Big6Math.isZero(collateral)) return 0n
   return Big6Math.div(calcNotional(position, price), collateral)
@@ -79,7 +91,11 @@ export const calcMakerExposure = (userMaker: bigint, globalMaker: bigint, global
 
   return Big6Math.div(Big6Math.mul(userMaker, globalShort - globalLong), globalMaker)
 }
-
+/**
+ * Returns whether a position is closed or inactive
+ * @param status
+ * @returns True if the position is closed or resolved
+ */
 export const closedOrResolved = (status?: PositionStatus) =>
   status && [PositionStatus.closed, PositionStatus.resolved].includes(status)
 
@@ -112,6 +128,9 @@ export const calcMakerStats = ({
   }
 }
 
+/**
+ * Gets a user's position from a selected market
+ */
 export const getPositionFromSelectedMarket = ({
   isMaker,
   userMarketSnapshots,
@@ -149,6 +168,15 @@ export function getSideFromPosition(position?: UserMarketSnapshot['position']) {
         : PositionSide.none
 }
 
+/**
+ * Helper to get the status of a position
+ * @param magnitude
+ * @param nextMagnitude
+ * @param collateral
+ * @param hasVersionError
+ * @param priceUpdate
+ * @returns Position status {@link PositionStatus}
+ */
 export function getStatusForSnapshot(
   magnitude: bigint,
   nextMagnitude: bigint,
@@ -169,6 +197,11 @@ export function getStatusForSnapshot(
   return PositionStatus.resolved
 }
 
+/**
+ * Calculates liquidity for a market
+ * @param marketSnapshot
+ * @returns Available and total liquidity for long and short positions
+ */
 export function calcTakerLiquidity(marketSnapshot: MarketSnapshot) {
   const {
     nextPosition: { long, short, maker },
@@ -212,6 +245,11 @@ export const isActivePosition = (userMarketSnapshot?: UserMarketSnapshot) => {
   return userMarketSnapshot?.status !== PositionStatus.resolved
 }
 
+/**
+ * Calculates market skew
+ * @param marketSnapshot
+ * @returns Skew, long skew, and short skew
+ */
 export const calcSkew = (marketSnapshot?: MarketSnapshot) => {
   if (!marketSnapshot) return undefined
   const {
@@ -230,6 +268,11 @@ export const calcSkew = (marketSnapshot?: MarketSnapshot) => {
   }
 }
 
+/**
+ * Calculates the funding rates for a position organized by time period
+ * @param fundingRate
+ * @returns Funding rates for hourly, 8-hour, daily, and yearly periods
+ */
 export const calcFundingRates = (fundingRate: bigint = 0n) => {
   const rate = Big6Math.div(fundingRate, Year)
   const hourlyFunding = Big6Math.mul(rate, Hour)
@@ -252,6 +295,15 @@ export type TradeFeeInfo = {
   adiabaticFee: bigint
 }
 
+/**
+ * Calculates the trade fee for a position
+ * @param positionDelta - Position change
+ * @param marketSnapshot - Market snapshot
+ * @param isMaker - Is maker
+ * @param direction - Position direction
+ * @param referralFee - Referral fee
+ * @returns Trade fee info
+ */
 export const calcTradeFee = ({
   positionDelta,
   marketSnapshot,

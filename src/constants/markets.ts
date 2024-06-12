@@ -1,6 +1,7 @@
 import { Address, Hex, getAddress } from 'viem'
 import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
 
+import { Big6Math } from '../utils'
 import { notEmpty } from '../utils/arrayUtils'
 import {
   centimilliPowerTwoTransform,
@@ -226,6 +227,9 @@ export const AssetMetadata: AssetMetadataType = {
   },
 }
 
+/**
+ * @description Map of market addresses organized by chain ID and asset
+ */
 export const ChainMarkets: {
   [chainId in SupportedChainId]: {
     [asset in SupportedAsset]?: Address
@@ -263,6 +267,11 @@ export const chainAssetsWithAddress = (chainId: SupportedChainId, supportedMarke
     })
 }
 
+/**
+ * Helper to retrieve a market name from a market address
+ * @param address
+ * @returns SupportedAsset {@link SupportedAsset}
+ */
 export const addressToAsset = (address: Address) => {
   for (const chainId of Object.keys(ChainMarkets)) {
     for (const asset of Object.keys(ChainMarkets[Number(chainId) as SupportedChainId])) {
@@ -303,8 +312,29 @@ export type ReferrerInterfaceFeeInfo =
   | null
   | undefined
 
+/**
+ * @description Interface fee for the contract
+ */
 export type InterfaceFee = {
+  /**
+   * Indicates whether to unwrap the value from DSU to USDC
+   */
   unwrap: boolean
+  /**
+   * Fee recipient address
+   */
   receiver: Address
+  /**
+   * Fee amount
+   */
   amount: bigint
 }
+
+/**
+ * @description Deposit required for placing trigger orders
+ */
+export const OrderExecutionDeposit = Big6Math.fromFloatString('20')
+/**
+ * @description When passed to trigger orders, this value will fully close the position.
+ */
+export const TriggerOrderFullCloseMagicValue = 0n

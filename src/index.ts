@@ -146,6 +146,8 @@ export {
   orderTypes,
   triggerOrderTypes,
   type InterfaceFee,
+  OrderExecutionDeposit,
+  TriggerOrderFullCloseMagicValue,
 } from './constants/markets'
 
 /* #################### ABIs #################### */

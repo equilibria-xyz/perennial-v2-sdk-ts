@@ -24,6 +24,11 @@ function linearInterpolation(startX: bigint, startY: bigint, endX: bigint, endY:
   return Big6Math.mul(yRange, xRatio) + startY
 }
 
+/**
+ * Calculates the funding for each side of the market
+ * @param snapshot
+ * @returns The long, short and maker funding rates
+ */
 export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const {
     global: { pAccumulator },
