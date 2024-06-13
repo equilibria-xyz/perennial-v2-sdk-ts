@@ -12,7 +12,7 @@ import { VaultsModule } from '../lib/vaults'
 export type SDKConfig = {
   rpcUrl: string
   chainId: SupportedChainId
-  graphUrl: string
+  graphUrl?: string
   pythUrl: string
   walletClient?: WalletClient
   operatingFor?: Address
@@ -41,7 +41,7 @@ export default class PerennialSDK {
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
   private _pythClient: EvmPriceServiceConnection
-  private _graphClient: GraphQLClient
+  private _graphClient: GraphQLClient | undefined
   public contracts: ContractsModule
   public markets: MarketsModule
   public vaults: VaultsModule
@@ -60,7 +60,7 @@ export default class PerennialSDK {
       timeout: 30000,
       priceFeedRequestConfig: { binary: true },
     })
-    this._graphClient = new GraphQLClient(config.graphUrl)
+    this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({
       chainId: config.chainId,
       publicClient: this._publicClient,
@@ -111,6 +111,7 @@ export default class PerennialSDK {
   }
 
   get graphClient() {
+    if (!this._graphClient) throw new Error('Graph client not initialized')
     return this._graphClient
   }
 
