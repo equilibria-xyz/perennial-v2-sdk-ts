@@ -103,7 +103,7 @@ export type BuildPlaceOrderTxArgs = {
 
 type MarketsModuleConfig = {
   chainId: SupportedChainId
-  graphClient: GraphQLClient
+  graphClient?: GraphQLClient
   publicClient: PublicClient
   pythClient: EvmPriceServiceConnection
   walletClient?: WalletClient
@@ -169,6 +169,10 @@ export class MarketsModule {
        * @returns User's PnL for an active position.
        */
       activePositionPnl: (args: OmitBound<Parameters<typeof fetchActivePositionPnl>[0]> & OptionalAddress) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch active position PnL.')
+        }
+
         return fetchActivePositionPnl({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -184,6 +188,10 @@ export class MarketsModule {
        * @returns User's position history for an active position.
        */
       activePositionHistory: (args: OmitBound<Parameters<typeof fetchActivePositionHistory>[0]> & OptionalAddress) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch active position history.')
+        }
+
         return fetchActivePositionHistory({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -199,6 +207,10 @@ export class MarketsModule {
        * @returns User's position history.
        */
       historicalPositions: (args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]> & OptionalAddress) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch historical positions.')
+        }
+
         return fetchHistoricalPositions({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -216,6 +228,10 @@ export class MarketsModule {
        * @returns User's sub positions.
        */
       subPositions: (args: OmitBound<Parameters<typeof fetchSubPositions>[0]> & OptionalAddress) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch sub positions.')
+        }
+
         return fetchSubPositions({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -230,6 +246,10 @@ export class MarketsModule {
        * @returns User's trade history.
        */
       tradeHistory: (args: OmitBound<Parameters<typeof fetchTradeHistory>[0]> & OptionalAddress = {}) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch trade history.')
+        }
+
         return fetchTradeHistory({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -245,6 +265,10 @@ export class MarketsModule {
        * @returns User's open orders.
        */
       openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch open orders.')
+        }
+
         return fetchOpenOrders({
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
@@ -257,6 +281,10 @@ export class MarketsModule {
        * @returns Market 24hr volume data.
        */
       market24hrData: (args: OmitBound<Parameters<typeof fetchMarket24hrData>[0]>) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch market 24hr data.')
+        }
+
         return fetchMarket24hrData({
           graphClient: this.config.graphClient,
           ...args,
@@ -268,6 +296,10 @@ export class MarketsModule {
        * @returns Markets 24hr volume data.
        */
       markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrVolume>[0]>) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch markets 24hr data.')
+        }
+
         return fetchMarkets24hrVolume({
           graphClient: this.config.graphClient,
           ...args,
@@ -279,6 +311,10 @@ export class MarketsModule {
        * @returns Market 7d data.
        */
       market7dData: (args: OmitBound<Parameters<typeof fetchMarket7dData>[0]>) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch market 7d data.')
+        }
+
         return fetchMarket7dData({
           graphClient: this.config.graphClient,
           ...args,

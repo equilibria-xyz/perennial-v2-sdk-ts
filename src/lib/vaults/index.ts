@@ -71,7 +71,7 @@ type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphCl
 type VaultConfig = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  graphClient: GraphQLClient
+  graphClient?: GraphQLClient
   pythClient: EvmPriceServiceConnection
   walletClient?: WalletClient
   operatingFor?: Address
@@ -154,6 +154,10 @@ export class VaultsModule {
        * @returns The vault 7d accumulations.
        */
       vault7dAccumulations: (args: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
+        if (!this.config.graphClient) {
+          throw new Error('Graph client required to fetch vault7dAccumulations.')
+        }
+
         return fetchVault7dAccumulations({
           graphClient: this.config.graphClient,
           ...args,

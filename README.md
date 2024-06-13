@@ -35,7 +35,7 @@ $ npm install @perennial/sdk --save
 To initalize the package you'll need to specify three `env` variables:
 
 - `RPC_URL_ARBITRUM`: A RPC url for Arbitrum which **must** support `eth_call`
-- `GRAPH_URL_ARBITRUM`: A hosted subgraph url for the Perennial protocol.
+- `GRAPH_URL_ARBITRUM`: A hosted subgraph url for the Perennial protocol. This argument is optional, but graph dependant read methods will throw an error if it is omitted.
   - You can find the Perennial subgraph repo [here](https://github.com/equilibria-xyz/perennial-v2-subgraph)
 - `PYTH_URL`: A url for Pyth
 
