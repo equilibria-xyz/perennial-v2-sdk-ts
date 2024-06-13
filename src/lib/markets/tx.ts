@@ -47,7 +47,7 @@ export async function buildUpdateMarketTx({
   pythClient,
   address,
   side,
-  positionAbs = 0n,
+  positionAbs,
   collateralDelta,
   interfaceFee,
   referralFee,
