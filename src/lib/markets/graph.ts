@@ -29,7 +29,6 @@ export type Markets = {
 /**
  * Fetches position PnL for a given market and Address
  * @param address Wallet Address
- * @param market Market Address
  * @param userMarketSnapshot {@link UserMarketSnapshot}
  * @param marketSnapshot {@link MarketSnapshot}
  * @param includeClosedWithCollateral Include closed positions with collateral
@@ -37,14 +36,12 @@ export type Markets = {
  * @returns User's PnL for an active position.
  */
 export async function fetchActivePositionPnl({
-  market,
   marketSnapshot,
   userMarketSnapshot,
   address,
   graphClient,
   includeClosedWithCollateral = false,
 }: {
-  market: Address
   marketSnapshot: MarketSnapshot
   userMarketSnapshot: UserMarketSnapshot
   address: Address
@@ -102,8 +99,7 @@ export async function fetchActivePositionPnl({
     }
   `)
 
-  const asset = addressToAsset(market)
-  if (!address || !asset) return
+  const { market, asset } = marketSnapshot
 
   let checkpointData = await graphClient.request(queryAccountCheckpoints, {
     account: address,
