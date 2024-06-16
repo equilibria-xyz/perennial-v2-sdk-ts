@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
@@ -55,7 +55,7 @@ export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -105,7 +105,7 @@ type MarketsModuleConfig = {
   chainId: SupportedChainId
   graphClient?: GraphQLClient
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets?: SupportedAsset[]

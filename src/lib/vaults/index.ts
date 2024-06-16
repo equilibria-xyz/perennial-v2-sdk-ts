@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
@@ -35,7 +35,7 @@ export const fetchVaultCommitments = async ({
   publicClient,
 }: {
   chainId: SupportedChainId
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
   marketOracles: MarketOracles
   publicClient: PublicClient
@@ -72,7 +72,7 @@ type VaultConfig = {
   chainId: SupportedChainId
   publicClient: PublicClient
   graphClient?: GraphQLClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   walletClient?: WalletClient
   operatingFor?: Address
 }

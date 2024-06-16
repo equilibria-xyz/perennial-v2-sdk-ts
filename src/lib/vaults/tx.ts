@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, encodeFunctionData, zeroAddress } from 'viem'
 
 import { fetchVaultCommitments } from '.'
@@ -13,7 +13,7 @@ import { VaultSnapshot, VaultSnapshots, fetchVaultSnapshots } from './chain'
 type BaseVaultUpdateTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   vaultAddress: Address
   address?: Address
   marketOracles?: MarketOracles

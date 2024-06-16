@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
 import { getKeeperOracleContract } from '..'
@@ -7,16 +7,18 @@ import { unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
 import { nowSeconds } from './timeUtils'
 
+const DefaultPythOptions = { encoding: 'hex', parsed: true } as const
+
 export const getRecentVaa = async ({
   pyth,
   feeds,
   useBackupOnError = true,
   backupPythClient = BackupPythClient,
 }: {
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   feeds: { underlyingId: string; minValidTime: bigint }[]
   useBackupOnError?: boolean
-  backupPythClient?: EvmPriceServiceConnection
+  backupPythClient?: HermesClient
 }): Promise<
   {
     feedId: string
@@ -27,18 +29,15 @@ export const getRecentVaa = async ({
 > => {
   try {
     const uniqueFeeds = unique(feeds.map((f) => f.underlyingId))
-    const priceFeeds = await pyth.getLatestPriceFeeds(uniqueFeeds)
-    if (!priceFeeds) throw new Error('No price feeds found')
+    const priceFeeds = await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythOptions)
+    if (!priceFeeds || !priceFeeds.parsed) throw new Error('No price feeds found')
 
-    return priceFeeds.map((priceFeed) => {
-      const vaa = priceFeed.getVAA()
-      if (!vaa) throw new Error('No VAA found')
-
-      const publishTime = priceFeed.getPriceUnchecked().publishTime
+    return priceFeeds.parsed.map((priceFeed) => {
+      const publishTime = priceFeed.price.publish_time
       const minValidTime = feeds.find(({ underlyingId }) => `0x${underlyingId}` === priceFeed.id)?.minValidTime
       return {
         feedId: priceFeed.id,
-        vaa: `0x${Buffer.from(vaa, 'base64').toString('hex')}`,
+        vaa: `0x${priceFeeds.binary.data}`,
         publishTime,
         version: BigInt(publishTime) - (minValidTime ?? 4n),
       }
@@ -59,16 +58,21 @@ const getVaaForPublishTime = async ({
   feed,
   requestedPublishTime,
 }: {
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   requestedPublishTime: bigint
   feed: { underlyingId: string; minValidTime: bigint }
 }) => {
-  const [vaa, publishTime] = await pyth.getVaa(feed.underlyingId, Number(requestedPublishTime))
-  if (!vaa) throw new Error('No VAA found')
+  const priceUpdate = await pyth.getPriceUpdatesAtTimestamp(
+    Number(requestedPublishTime),
+    [feed.underlyingId],
+    DefaultPythOptions,
+  )
+  if (!priceUpdate || !priceUpdate.parsed?.at(0)) throw new Error('No VAA found')
+  const publishTime = priceUpdate.parsed[0].price.publish_time
 
   return {
     feedId: feed.underlyingId,
-    vaa: `0x${Buffer.from(vaa, 'base64').toString('hex')}`,
+    vaa: `0x${priceUpdate.binary.data[0]}`,
     publishTime,
     version: BigInt(publishTime) - feed.minValidTime,
   }
@@ -84,9 +88,9 @@ export const buildCommitmentsForOraclesIndividual = async ({
   onSuccess,
 }: {
   chainId: SupportedChainId
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   publicClient: PublicClient
-  backupPythClient?: EvmPriceServiceConnection | null
+  backupPythClient?: HermesClient | null
   marketOracles: {
     providerAddress: Address
     providerFactoryAddress: Address
@@ -205,9 +209,9 @@ export const buildCommitmentsForOracles = async ({
   onSuccess,
 }: {
   chainId: SupportedChainId
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   publicClient: PublicClient
-  backupPythClient?: EvmPriceServiceConnection | null
+  backupPythClient?: HermesClient | null
   marketOracles: {
     providerAddress: Address
     providerFactoryAddress: Address

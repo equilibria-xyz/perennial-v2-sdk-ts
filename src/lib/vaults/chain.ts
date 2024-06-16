@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import {
   Address,
   PublicClient,
@@ -50,7 +50,7 @@ export async function fetchVaultSnapshots({
   address: Address
   marketOracles?: MarketOracles
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   onError?: () => void
   onSuccess?: () => void
 }) {
@@ -123,7 +123,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   onPythError?: () => void
   resetPythError?: () => void
 }) => {
