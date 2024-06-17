@@ -29,7 +29,7 @@ export enum SupportedAsset {
 }
 
 export enum QuoteCurrency {
-  usd = 'USDC.e',
+  usd = 'USDC',
 }
 
 export enum PositionSide {
