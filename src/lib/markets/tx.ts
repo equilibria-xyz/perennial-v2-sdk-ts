@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
 import { MarketAbi, MultiInvokerAbi, PythFactoryAbi } from '../..'
@@ -28,7 +28,7 @@ export type BuildUpdateMarketTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -143,7 +143,7 @@ export async function buildUpdateMarketTx({
 
 export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   marketAddress: Address
   marketOracles: MarketOracles
 }

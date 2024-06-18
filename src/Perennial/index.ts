@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
@@ -40,7 +40,7 @@ export default class PerennialSDK {
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
-  private _pythClient: EvmPriceServiceConnection
+  private _pythClient: HermesClient
   private _graphClient: GraphQLClient | undefined
   public contracts: ContractsModule
   public markets: MarketsModule
@@ -56,9 +56,8 @@ export default class PerennialSDK {
         multicall: true,
       },
     })
-    this._pythClient = new EvmPriceServiceConnection(config.pythUrl, {
+    this._pythClient = new HermesClient(config.pythUrl, {
       timeout: 30000,
-      priceFeedRequestConfig: { binary: true },
     })
     this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({

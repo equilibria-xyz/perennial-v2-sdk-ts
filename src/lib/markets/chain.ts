@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
@@ -139,7 +139,7 @@ export async function fetchMarketSnapshots({
   onSuccess,
 }: {
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
@@ -301,7 +301,7 @@ async function fetchMarketSnapshotsAfterSettle({
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   onPythError?: () => void
   resetPythError?: () => void
 }) {

@@ -29,7 +29,6 @@
   "devDependencies": {
     "@equilibria/perennial-v2": "1.2.0-rc3",
     "@equilibria/perennial-v2-vault": "1.2.0-rc0",
-    "abitype": "^1.0.2",
     "@equilibria/root": "2.2.0",
     "@graphql-codegen/cli": "^3.3.1",
     "@graphql-codegen/client-preset": "^3.0.1",
@@ -39,6 +38,7 @@
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
+    "abitype": "^1.0.2",
     "dotenv": "^16.3.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
@@ -56,7 +56,7 @@
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.14.2",
-    "@perennial/pyth-evm-js": "^1.32.0-fork4",
+    "@pythnetwork/hermes-client": "^1.0.2",
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",

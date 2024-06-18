@@ -264,4 +264,4 @@ export {
   formatDateRelative,
 } from './utils/timeUtils'
 
-export { PriceFeed, EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+export { PriceUpdate, HermesClient } from '@pythnetwork/hermes-client'

@@ -1,4 +1,4 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Chain, PublicClient } from 'viem'
 import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
 
@@ -11,11 +11,10 @@ export const chainIdToChainMap = {
 }
 
 export type SupportedChainId = (typeof SupportedChainIds)[number]
-export const BackupPythClient = new EvmPriceServiceConnection(
+export const BackupPythClient = new HermesClient(
   `${typeof window !== 'undefined' ? window.location.origin : 'https://app.perennial.finance'}/api/pyth`,
   {
     timeout: 30000,
-    priceFeedRequestConfig: { binary: true },
   },
 )
 
