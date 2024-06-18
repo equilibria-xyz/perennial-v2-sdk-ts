@@ -1,6 +1,6 @@
 {
   "name": "@perennial/sdk",
-  "version": "0.0.1-beta25",
+  "version": "0.0.1-beta26",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -57,6 +57,7 @@
   "dependencies": {
     "@microsoft/tsdoc": "^0.14.2",
     "@pythnetwork/hermes-client": "^1.0.2",
+    "axios": "^1.7.2",
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
