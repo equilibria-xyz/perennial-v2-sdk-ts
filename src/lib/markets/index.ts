@@ -758,7 +758,7 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param maxFee Maximum fee override - defaults to {@link OrderExecutionDeposit}
-       * @param stopLoss BigInt - Stop loss price
+       * @param stopLossPrice BigInt - Stop loss price
        * @returns Transaction hash.
        */
       stopLoss: async (...args: Parameters<typeof this.build.stopLoss>) => {
@@ -777,7 +777,7 @@ export class MarketsModule {
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
        * @param maxFee Maximum fee override - defaults to {@link OrderExecutionDeposit}
-       * @param takeProfit BigInt - Stop loss price
+       * @param takeProfitPrice BigInt - Stop loss price
        * @returns Transaction hash.
        */
       takeProfit: async (...args: Parameters<typeof this.build.takeProfit>) => {
@@ -794,8 +794,8 @@ export class MarketsModule {
        * @param marketSnapshots {@link MarketSnapshots}
        * @param orderType {@link OrderTypes}
        * @param limitPrice BigInt - Limit price
-       * @param stopLoss BigInt - Stop price
-       * @param takeProfit BigInt - Take profit price
+       * @param stopLossPrice BigInt - Stop price
+       * @param takeProfitPrice BigInt - Take profit price
        * @param side Order side
        * @param collateralDelta BigInt - Collateral delta
        * @param delta BigInt - Position size delta
