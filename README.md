@@ -147,7 +147,6 @@ const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
 const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
 
 const userPositionPnlData = await sdk.markets.read.activePositionPnl({
-    market: ethMarketSnapshot.market,
     marketSnapshot: ethMarketSnapshot,
     userMarketSnapshot: ethUserMarketSnapshot,
     address: getAddress(<userAddress>),
@@ -189,6 +188,17 @@ const positionHistory = await sdk.markets.read.historicalPositions({
 })
 ```
 
+#### Active position history
+
+Fetch the change history for an active position
+
+```typescript
+const activePositionHistory = await sdk.markets.read.activePositionHistory({
+  market: userMarketSnapshot.market,
+  address,
+})
+```
+
 #### Market 24hr and 7d data
 
 ```typescript
@@ -196,6 +206,18 @@ const ethMarketAddress = ChainMarkets[arbitrum.id][SupportedAsset.eth]
 
 const ethMarket24hrData = await sdk.markets.read.market24hrData({ market: ethMarketAddress })
 const ethMarket7dData = await sdk.markets.read.market7dData({ market: ethMarketAddress })
+```
+
+#### Trade History
+
+Fetch the trade history across all markets for a given address. Limited to a 7 day window
+
+```typescript
+const tradeHistory = await sdk.markets.read.tradeHistory({
+  address,
+  fromTs, // from timestamp in seconds
+  toTs, // to timestamp in seconds
+})
 ```
 
 ### Write Methods
@@ -264,6 +286,97 @@ sdk.markets.write.placeOrder({
   limitOrderFees,
   stopLossFees,
   takeProfitFees
+})
+```
+
+#### Update market
+
+Send an update market transaction. Can be used to increase/decrease an existing position, open/close a position and deposit or withdraw collateral.
+
+```typescript
+const marketOracles = await sdk.markets.read.marketOracles()
+const marketSnapshots = await sdk.markets.read.marketSnapshots({...})
+const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
+const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
+
+sdk.markets.write.update({
+  address,
+  marketAddress: ethMarketSnapshot.market,
+  collateralDelta, // A negative collateral delta value withdraws collateral
+  positionAbs, // Absolute size of desired position
+  side,
+  marketOracles,
+  marketSnapshots,
+  onCommitmentError, // on error
+})
+```
+
+#### Limit order
+
+Send a limit order transaction.
+
+```typescript
+sdk.markets.write.limitOrder({
+  address,
+  marketAddress
+  side,
+  limitPrice,
+  delta, // Size of order to place
+  selectedLimitComparison, // Trigger comparison for order execution (see TriggerComparison enum)
+  interfaceFee, // Optional interface fee to charge
+  referralFee, // Optional referral fee to charge
+})
+```
+
+#### Stop loss
+
+Send a stop loss order transaction.
+
+```typescript
+sdk.markets.write.stopLoss({
+  address,
+  marketAddress
+  side,
+  stopLossPrice,
+  delta, // Size of order to place
+  selectedLimitComparison, // Trigger comparison for order execution (see TriggerComparison enum)
+  interfaceFee, // Optional interface fee to charge
+  referralFee, // Optional referral fee to charge
+})
+```
+
+#### Take profit
+
+Send a take profit order transaction.
+
+```typescript
+sdk.markets.write.takeProfit({
+  address,
+  marketAddress
+  side,
+  takeProfitPrice,
+  delta, // Size of order to place
+  selectedLimitComparison, // Trigger comparison for order execution (see TriggerComparison enum)
+  interfaceFee, // Optional interface fee to charge
+  referralFee, // Optional referral fee to charge
+})
+```
+
+#### Cancel order
+
+Cancel a selection of open orders. Use the `sdk.markets.read.openOrders` method to fetch all currently standing orders.
+
+```typescript
+import { getAddress } from 'viem'
+
+const ordersToCancel = [
+  { market: getAddress(ethMarketAddress), nonce: BigInt(orderA.nonce) },
+  { market: getAddress(ethMarketAddress), nonce: BigInt(orderB.nonce) },
+]
+
+sdk.markets.write.cancelOrder({
+  address, // Wallet address
+  orderDetails: ordersToCancel,
 })
 ```
 

@@ -162,7 +162,6 @@ export class MarketsModule {
       /**
        * Fetches position PnL for a given market and Address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param market Market Address
        * @param userMarketSnapshot {@link UserMarketSnapshot}
        * @param marketSnapshot {@link MarketSnapshot}
        * @param includeClosedWithCollateral Include closed positions with collateral
@@ -446,7 +445,6 @@ export class MarketsModule {
        * @param referralFeeRate {@link ReferrerInterfaceFeeInfo}
        * @param interfaceFeeRate {@link InterfaceFeeBps}
        * @param limitPrice BigInt - Limit price
-       * @param collateralDelta BigInt - Collateral delta
        * @returns Limit order transaction data.
        */
       limitOrder: (args: OmitBound<BuildLimitOrderTxArgs> & OptionalAddress) => {
@@ -739,7 +737,6 @@ export class MarketsModule {
        * @param pythClient Pyth Client
        * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
-       * @param collateralDelta BigInt - Collateral delta
        * @returns Transaction hash.
        */
       limitOrder: async (...args: Parameters<typeof this.build.limitOrder>) => {
@@ -814,7 +811,7 @@ export class MarketsModule {
       },
       /**
        * Send a cancel order transaction
-       * @param orderDetails List of order details (as a tuple of Address and order nonce) to cancel
+       * @param orderDetails List of {@link CancelOrderDetails} to cancel
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Transaction Hash.
        */
