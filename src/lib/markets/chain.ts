@@ -172,41 +172,46 @@ export async function fetchMarketSnapshots({
   }
   const marketSnapshots = snapshotData.market.reduce(
     (acc, snapshot) => {
-      const major = Big6Math.max(snapshot.position.long, snapshot.position.short)
-      const nextMajor = Big6Math.max(snapshot.nextPosition.long, snapshot.nextPosition.short)
-      const minor = Big6Math.min(snapshot.position.long, snapshot.position.short)
-      const nextMinor = Big6Math.min(snapshot.nextPosition.long, snapshot.nextPosition.short)
-      const fundingRates = calculateFundingForSides(snapshot)
-      const socializationFactor = !Big6Math.isZero(major)
-        ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
-        : Big6Math.ONE
-      const makerTotal = snapshot.pendingOrder.makerPos + snapshot.pendingOrder.makerNeg
-      const takerPos = snapshot.pendingOrder.longPos + snapshot.pendingOrder.shortNeg
-      const takerNeg = snapshot.pendingOrder.shortPos + snapshot.pendingOrder.longNeg
-      const takerTotal = takerPos + takerNeg
-      acc[snapshot.asset] = {
-        ...snapshot,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
-        major,
-        majorSide: major === snapshot.position.long ? PositionSide.long : PositionSide.short,
-        nextMajor,
-        nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
-        minor,
-        minorSide: minor === snapshot.position.long ? PositionSide.long : PositionSide.short,
-        nextMinor,
-        nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
-        fundingRate: {
-          long: fundingRates.long,
-          short: fundingRates.short,
-          maker: fundingRates.maker,
-        },
-        socializationFactor,
-        isSocialized: socializationFactor < Big6Math.ONE,
-        makerTotal,
-        takerTotal,
+      try {
+        const major = Big6Math.max(snapshot.position.long, snapshot.position.short)
+        const nextMajor = Big6Math.max(snapshot.nextPosition.long, snapshot.nextPosition.short)
+        const minor = Big6Math.min(snapshot.position.long, snapshot.position.short)
+        const nextMinor = Big6Math.min(snapshot.nextPosition.long, snapshot.nextPosition.short)
+        const fundingRates = calculateFundingForSides(snapshot)
+        const socializationFactor = !Big6Math.isZero(major)
+          ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
+          : Big6Math.ONE
+        const makerTotal = snapshot.pendingOrder.makerPos + snapshot.pendingOrder.makerNeg
+        const takerPos = snapshot.pendingOrder.longPos + snapshot.pendingOrder.shortNeg
+        const takerNeg = snapshot.pendingOrder.shortPos + snapshot.pendingOrder.longNeg
+        const takerTotal = takerPos + takerNeg
+        acc[snapshot.asset] = {
+          ...snapshot,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
+          major,
+          majorSide: major === snapshot.position.long ? PositionSide.long : PositionSide.short,
+          nextMajor,
+          nextMajorSide: nextMajor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
+          minor,
+          minorSide: minor === snapshot.position.long ? PositionSide.long : PositionSide.short,
+          nextMinor,
+          nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
+          fundingRate: {
+            long: fundingRates.long,
+            short: fundingRates.short,
+            maker: fundingRates.maker,
+          },
+          socializationFactor,
+          isSocialized: socializationFactor < Big6Math.ONE,
+          makerTotal,
+          takerTotal,
+        }
+        return acc
+      } catch (e) {
+        console.error('Error in snapshot', snapshot.asset, address, e)
+        return acc
       }
-      return acc
     },
     {} as { [key in SupportedAsset]?: MarketSnapshot },
   )
