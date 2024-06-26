@@ -1,19 +1,19 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, encodeFunctionData, zeroAddress } from 'viem'
 
+import { fetchVaultCommitments } from '.'
 import { getMultiInvokerContract } from '..'
 import { MaxUint256, SupportedChainId, chainVaultsWithAddress } from '../../constants'
 import { MultiInvokerAction } from '../../types/perennial'
-import { Big6Math, notEmpty, sum } from '../../utils'
-import { buildCommitPrice, buildUpdateVault } from '../../utils/multiinvoker'
-import { buildCommitmentsForOracles } from '../../utils/pythUtils'
+import { Big6Math, sum } from '../../utils'
+import { buildUpdateVault } from '../../utils/multiinvoker'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { VaultSnapshot, VaultSnapshots, fetchVaultSnapshots } from './chain'
 
 type BaseVaultUpdateTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   vaultAddress: Address
   address?: Address
   marketOracles?: MarketOracles
@@ -89,6 +89,7 @@ const buildPerformVaultUpdateTx = async ({
   vaultAddress,
   marketOracles,
   vaultSnapshots,
+  address,
 }: BaseVaultUpdateTxArgs & { baseAction: MultiInvokerAction }) => {
   const vaultType = chainVaultsWithAddress(chainId).find(({ vaultAddress: v }) => v === vaultAddress)
   if (!vaultType) throw new Error('Invalid Vault')
@@ -111,9 +112,9 @@ const buildPerformVaultUpdateTx = async ({
   const vaultMarketSnapshot = vaultSnapshots.vault[vaultType.vault]?.pre.marketSnapshots
   if (!vaultMarketSnapshot) throw new Error('Unable to fetch Vault Market Snapshots')
 
-  const commitments = await commitmentsForVaultAction({
+  const commitments = await fetchVaultCommitments({
     chainId,
-    pyth: pythClient,
+    pythClient,
     marketOracles,
     publicClient,
     preMarketSnapshots: vaultMarketSnapshot,
@@ -123,7 +124,7 @@ const buildPerformVaultUpdateTx = async ({
   const data = encodeFunctionData({
     abi: multiInvoker.abi,
     functionName: 'invoke',
-    args: [actions],
+    args: address ? [address, actions] : [actions],
   })
 
   return {
@@ -131,40 +132,6 @@ const buildPerformVaultUpdateTx = async ({
     value: sum(commitments.map((c) => c.value)),
     data,
   }
-}
-
-const commitmentsForVaultAction = async ({
-  chainId,
-  pyth,
-  preMarketSnapshots,
-  marketOracles,
-  publicClient,
-}: {
-  chainId: SupportedChainId
-  pyth: EvmPriceServiceConnection
-  preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
-  marketOracles: MarketOracles
-  publicClient: PublicClient
-}) => {
-  const oracles = preMarketSnapshots
-    .map((marketSnapshot) => {
-      const oracle = Object.values(marketOracles).find((o) => o.address === marketSnapshot.oracle)
-      if (!oracle) return
-      return oracle
-    })
-    .filter(notEmpty)
-  const commitments = await buildCommitmentsForOracles({ chainId, pyth, publicClient, marketOracles: oracles })
-  return commitments.map((c) => ({
-    value: c.value,
-    commitAction: buildCommitPrice({
-      keeperFactory: c.keeperFactory,
-      version: c.version,
-      ids: c.ids,
-      vaa: c.updateData,
-      revertOnFailure: false,
-      value: c.value,
-    }),
-  }))
 }
 
 const convertAssetsToShares = ({ vaultSnapshot, assets }: { vaultSnapshot: VaultSnapshot; assets: bigint }) => {

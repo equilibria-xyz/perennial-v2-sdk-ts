@@ -19,7 +19,7 @@ export {
   type SubPositionChange,
   type OpenOrder,
   type Markets,
-  fetchActivePositionPnls,
+  fetchActivePositionPnl,
   fetchActivePositionHistory,
   fetchHistoricalPositions,
   fetchSubPositions,
@@ -27,17 +27,23 @@ export {
   fetchMarket24hrData,
   fetchMarket7dData,
   getPriceAtVersion,
+  fetchTradeHistory,
 } from './lib/markets/graph'
 
 // Market - Transactions
 export {
   buildCancelOrderTx,
-  buildModifyPositionTx,
-  buildPlaceOrderTx,
+  buildUpdateMarketTx,
+  buildLimitOrderTx,
+  buildTakeProfitTx,
+  buildStopLossTx,
   buildSubmitVaaTx,
-  type BuildModifyPositionTxArgs,
-  type BuildPlaceOrderTxArgs,
   type BuildSubmitVaaTxArgs,
+  type CancelOrderDetails,
+  type BuildLimitOrderTxArgs,
+  type BuildTakeProfitTxArgs,
+  type BuildStopLossTxArgs,
+  type BuildUpdateMarketTxArgs,
 } from './lib/markets/tx'
 
 // Vault - Chain
@@ -81,11 +87,13 @@ export {
   OracleFactoryAddresses,
   DSUAddresses,
   USDCAddresses,
+  EmptysetReserveAddresses,
 } from './constants/contracts'
 
 export {
   getUSDCContract,
   getDSUContract,
+  getEmptysetReserveContarct,
   getMultiInvokerContract,
   getMarketFactoryContract,
   getVaultFactoryContract,
@@ -137,8 +145,9 @@ export {
   OrderTypes,
   orderTypes,
   triggerOrderTypes,
-  interfaceFeeBps,
-  type ReferrerInterfaceFeeInfo,
+  type InterfaceFee,
+  OrderExecutionDeposit,
+  TriggerOrderFullCloseMagicValue,
 } from './constants/markets'
 
 /* #################### ABIs #################### */
@@ -154,6 +163,7 @@ export { VaultFactoryAbi } from './abi/VaultFactory.abi'
 export { VaultLensAbi } from './abi/VaultLens.abi'
 export { KeeperOracleAbi } from './abi/KeeperOracle.abi'
 export { PythFactoryAbi } from './abi/PythFactory.abi'
+export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
 
 /* #################### Types #################### */
 
@@ -202,6 +212,7 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
+  mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
 // Payoff Utils
@@ -253,4 +264,4 @@ export {
   formatDateRelative,
 } from './utils/timeUtils'
 
-export { PriceFeed, EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+export { PriceUpdate, HermesClient } from '@pythnetwork/hermes-client'

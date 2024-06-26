@@ -24,11 +24,16 @@ function linearInterpolation(startX: bigint, startY: bigint, endX: bigint, endY:
   return Big6Math.mul(yRange, xRatio) + startY
 }
 
+/**
+ * Calculates the funding for each side of the market
+ * @param snapshot
+ * @returns The long, short and maker funding rates
+ */
 export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const {
     global: { pAccumulator },
     parameter: { fundingFee, interestFee },
-    riskParameter: { pController, utilizationCurve },
+    riskParameter: { pController, utilizationCurve, efficiencyLimit },
     nextPosition: { maker, long, short, timestamp },
   } = snapshot
 
@@ -39,7 +44,10 @@ export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const major = Big6Math.max(long, short)
   const minor = Big6Math.min(long, short)
   // Interest
-  const utilization = maker + minor > 0n ? Big6Math.div(major, maker + minor) : 0n
+  const netUtilization = maker + minor > 0n ? Big6Math.div(major, maker + minor) : 0n
+  const efficiencyUtilization =
+    maker > 0n ? Big6Math.mul(major, Big6Math.div(efficiencyLimit, maker)) : 100n * Big6Math.ONE
+  const utilization = Big6Math.min(100n * Big6Math.ONE, Big6Math.max(netUtilization, efficiencyUtilization))
   const interestRate = computeInterestRate(utilizationCurve, utilization)
   const applicableNotional = Big6Math.min(maker, long + short)
   const interest = long + short > 0n ? Big6Math.div(Big6Math.mul(interestRate, applicableNotional), long + short) : 0n

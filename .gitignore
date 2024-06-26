@@ -138,3 +138,8 @@ src/types/gql
 .env.local
 artifacts
 cache
+
+docs-site
+docs/*
+.vercel
+.vscode

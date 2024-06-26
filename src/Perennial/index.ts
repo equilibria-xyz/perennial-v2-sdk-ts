@@ -1,8 +1,8 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
+import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
-import { SupportedChainId } from '..'
+import { SupportedAsset, SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
@@ -11,18 +11,37 @@ import { VaultsModule } from '../lib/vaults'
 
 export type SDKConfig = {
   rpcUrl: string
-  walletClient?: WalletClient
   chainId: SupportedChainId
-  graphUrl: string
+  graphUrl?: string
   pythUrl: string
+  walletClient?: WalletClient
+  operatingFor?: Address
+  supportedMarkets?: SupportedAsset[]
 }
+
+/**
+ * Perennial SDK class
+ *
+ * @param config SDK configuration
+ * @param config.rpcUrl Rpc URL
+ * @param config.walletClient Wallet Client
+ * @param config.chainId {@link SupportedChainId}
+ * @param config.graphUrl SubGraph URL
+ * @param config.pythUrl Pyth URL
+ * @param config.operatingFor If set, the SDK will read data and send multi-invoker transactions on behalf of this address.
+ * @param config.supportedMarkets Subset of availalbe markets to support.
+ *
+ * @returns Perennial SDK instance
+ *
+ * @beta
+ */
 export default class PerennialSDK {
   private config: SDKConfig
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
-  private _pythClient: EvmPriceServiceConnection
-  private _graphClient: GraphQLClient
+  private _pythClient: HermesClient
+  private _graphClient: GraphQLClient | undefined
   public contracts: ContractsModule
   public markets: MarketsModule
   public vaults: VaultsModule
@@ -37,11 +56,10 @@ export default class PerennialSDK {
         multicall: true,
       },
     })
-    this._pythClient = new EvmPriceServiceConnection(config.pythUrl, {
+    this._pythClient = new HermesClient(config.pythUrl, {
       timeout: 30000,
-      priceFeedRequestConfig: { binary: true },
     })
-    this._graphClient = new GraphQLClient(config.graphUrl)
+    this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({
       chainId: config.chainId,
       publicClient: this._publicClient,
@@ -53,6 +71,8 @@ export default class PerennialSDK {
       walletClient: config.walletClient,
       graphClient: this._graphClient,
       pythClient: this._pythClient,
+      operatingFor: this.config.operatingFor,
+      supportedMarkets: config.supportedMarkets,
     })
     this.vaults = new VaultsModule({
       chainId: config.chainId,
@@ -60,11 +80,13 @@ export default class PerennialSDK {
       walletClient: config.walletClient,
       graphClient: this._graphClient,
       pythClient: this._pythClient,
+      operatingFor: this.config.operatingFor,
     })
     this.operator = new OperatorModule({
       chainId: config.chainId,
       publicClient: this._publicClient,
       walletClient: config.walletClient,
+      operatingFor: this.config.operatingFor,
     })
 
     this._walletClient = config.walletClient
@@ -88,6 +110,11 @@ export default class PerennialSDK {
   }
 
   get graphClient() {
+    if (!this._graphClient) throw new Error('Graph client not initialized')
     return this._graphClient
+  }
+
+  get pythClient() {
+    return this._pythClient
   }
 }

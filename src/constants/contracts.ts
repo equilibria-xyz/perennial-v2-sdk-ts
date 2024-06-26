@@ -35,14 +35,20 @@ export const DSUAddresses: AddressMapping = {
   [base.id]: getAddress('0x7b4Adf64B0d60fF97D672E473420203D52562A84'),
 }
 
+export const EmptysetReserveAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0x0d49c416103Cbd276d9c3cd96710dB264e3A0c27'),
+  [arbitrumSepolia.id]: getAddress('0x841d7C994aC0Bb17CcD65a021E686e3cFafE2118'),
+  [base.id]: getAddress('0x5FA881826AD000D010977645450292701bc2f56D'),
+}
+
 export const USDCAddresses: AddressMapping = {
-  [arbitrum.id]: getAddress('0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'),
+  [arbitrum.id]: getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'),
   [arbitrumSepolia.id]: getAddress('0x16b38364bA6f55B6E150cC7f52D22E89643f3535'),
   [base.id]: getAddress('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'),
 }
 
 export const PythFactoryAddresses: AddressMapping = {
-  [arbitrum.id]: getAddress('0x6b60e7c96B4d11A63891F249eA826f8a73Ef4E6E'),
-  [arbitrumSepolia.id]: getAddress('0x92F8d5B8d0ca2fc699c7c540471Ad49724a68007'),
+  [arbitrum.id]: getAddress('0x663B38A93FdC2164D45F35051B0F905211d1C9E4'),
+  [arbitrumSepolia.id]: getAddress('0xC3bE5FcBfDD38f5c6eb5d8cDdE712eb1d54A1Aa1'),
   [base.id]: getAddress('0x9c82732CE868aFA5e9b2649506E7Ab8268A62c3C'),
 }

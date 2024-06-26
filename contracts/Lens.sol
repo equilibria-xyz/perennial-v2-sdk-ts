@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import '@equilibria/perennial-v2/contracts/interfaces/IMarket.sol';
-import '@equilibria/perennial-v2-vault/contracts/interfaces/IVault.sol';
+import * as Vault from '@equilibria/perennial-v2-vault/contracts/interfaces/IVault.sol';
 import '@equilibria/perennial-v2-vault/contracts/interfaces/IVaultFactory.sol';
 
 interface IKeeperFactory {
@@ -26,6 +26,7 @@ contract Lens {
     RiskParameter riskParameter;
     Global global;
     address oracle;
+    Order pendingOrder;
     Position position;
     Position nextPosition;
     Position[] pendingPositions;
@@ -38,8 +39,10 @@ contract Lens {
     IMarket market;
     address account;
     Local local;
+    Order pendingOrder;
     Position position;
     Position nextPosition;
+    Checkpoint checkpoint;
     Position[] pendingPositions;
     Version[] versions;
     Fixed6[] prices;
@@ -81,7 +84,7 @@ contract Lens {
     // Update markets
     result.updateStatus = new bytes[](markets.length);
     for (uint i = 0; i < markets.length; i++) {
-      result.updateStatus[i] = updateNoop(markets[i], account);
+      result.updateStatus[i] = settle(markets[i], account);
     }
 
     // Snapshot post
@@ -102,11 +105,13 @@ contract Lens {
     marketSnapshot.riskParameter = market.riskParameter();
     marketSnapshot.global = market.global();
     marketSnapshot.position = market.position();
+    marketSnapshot.pendingOrder = market.pending();
     marketSnapshot.pendingPositions = new Position[](marketSnapshot.global.currentId - marketSnapshot.global.latestId + 1);
     marketSnapshot.versions = new Version[](marketSnapshot.pendingPositions.length);
     marketSnapshot.oracle = address(market.oracle());
     for (uint j = 0; j < marketSnapshot.pendingPositions.length; j++) {
-      marketSnapshot.pendingPositions[j] = market.pendingPosition(marketSnapshot.global.latestId + j);
+      marketSnapshot.pendingPositions[j] = (j == 0 ? marketSnapshot.position : marketSnapshot.pendingPositions[j - 1]).clone();
+      if (j > 0) marketSnapshot.pendingPositions[j].update(market.pendingOrder(marketSnapshot.global.latestId + j));
       marketSnapshot.versions[j] = market.versions(marketSnapshot.pendingPositions[j].timestamp);
     }
     marketSnapshot.nextPosition = marketSnapshot.pendingPositions[marketSnapshot.pendingPositions.length - 1];
@@ -118,21 +123,19 @@ contract Lens {
     marketAccountSnapshot.market = market;
     marketAccountSnapshot.account = account;
     marketAccountSnapshot.local = market.locals(account);
+    marketAccountSnapshot.pendingOrder = market.pendings(account);
     marketAccountSnapshot.position = market.positions(account);
     marketAccountSnapshot.pendingPositions = new Position[](marketAccountSnapshot.local.currentId - marketAccountSnapshot.local.latestId + 1);
+    marketAccountSnapshot.checkpoint = market.checkpoints(account, marketAccountSnapshot.position.timestamp);
     marketAccountSnapshot.versions = new Version[](marketAccountSnapshot.pendingPositions.length);
     marketAccountSnapshot.prices = new Fixed6[](marketAccountSnapshot.pendingPositions.length);
     IOracleProvider oracle = market.oracle();
-    IPayoffProvider payoff = market.payoff();
     for (uint j = 0; j < marketAccountSnapshot.pendingPositions.length; j++) {
-      marketAccountSnapshot.pendingPositions[j] = market.pendingPositions(account, marketAccountSnapshot.local.latestId + j);
+      marketAccountSnapshot.pendingPositions[j] = (j == 0 ? marketAccountSnapshot.position : marketAccountSnapshot.pendingPositions[j - 1]).clone();
+      if (j > 0) marketAccountSnapshot.pendingPositions[j].update(market.pendingOrders(account, marketAccountSnapshot.local.latestId + j));
       marketAccountSnapshot.versions[j] = market.versions(marketAccountSnapshot.pendingPositions[j].timestamp);
       Fixed6 price = oracle.at(marketAccountSnapshot.pendingPositions[j].timestamp).price;
-      if (address(payoff) == address(0)) {
-        marketAccountSnapshot.prices[j] = price;
-      } else {
-        marketAccountSnapshot.prices[j] = payoff.payoff(price);
-      }
+      marketAccountSnapshot.prices[j] = price;
     }
     marketAccountSnapshot.nextPosition = marketAccountSnapshot.pendingPositions[marketAccountSnapshot.pendingPositions.length - 1];
   }
@@ -149,8 +152,8 @@ contract Lens {
     }
   }
 
-  function updateNoop(IMarket market, address account) public returns (bytes memory) {
-    try market.update(account, noOp, noOp, noOp, Fixed6Lib.ZERO, false) {
+  function settle(IMarket market, address account) public returns (bytes memory) {
+    try market.settle(account) {
       return bytes('');
     }
     catch (bytes memory err) {
@@ -163,16 +166,14 @@ contract VaultLens {
   struct VaultSnapshot {
     IVault vault;
     string name;
-    VaultParameter parameter;
+    Vault.VaultParameter parameter;
     Fixed6 totalAssets;
     UFixed6 totalShares;
     uint256 totalMarkets;
-    Registration[] registrations;
-    Account vaultAccount;
-    Checkpoint latestCheckpoint;
-    Checkpoint currentCheckpoint;
-    Mapping latestMapping;
-    Mapping currentMapping;
+    Vault.Registration[] registrations;
+    Vault.Account vaultAccount;
+    Vault.Checkpoint latestCheckpoint;
+    Vault.Checkpoint currentCheckpoint;
     UFixed6 totalSettlementFee;
     UFixed6 vaultMinimum;
     Fixed6 totalMarketCollateral;
@@ -183,7 +184,7 @@ contract VaultLens {
   struct VaultAccountSnapshot {
     IVault vault;
     address account;
-    Account accountData;
+    Vault.Account accountData;
     UFixed6 assets;
     UFixed6 redemptionAssets;
     bool multiInvokerApproved;
@@ -251,14 +252,12 @@ contract VaultLens {
     vaultSnapshot.totalAssets = vault.totalAssets();
     vaultSnapshot.totalShares = vault.totalShares();
     vaultSnapshot.totalMarkets = vault.totalMarkets();
-    vaultSnapshot.registrations = new Registration[](vaultSnapshot.totalMarkets);
+    vaultSnapshot.registrations = new Vault.Registration[](vaultSnapshot.totalMarkets);
     vaultSnapshot.marketSnapshots = new Lens.MarketSnapshot[](vaultSnapshot.totalMarkets);
     vaultSnapshot.marketVaultSnapshots = new Lens.MarketAccountSnapshot[](vaultSnapshot.totalMarkets);
     vaultSnapshot.vaultAccount = vault.accounts(address(0));
     vaultSnapshot.latestCheckpoint = vault.checkpoints(vaultSnapshot.vaultAccount.latest);
     vaultSnapshot.currentCheckpoint = vault.checkpoints(vaultSnapshot.vaultAccount.current);
-    vaultSnapshot.latestMapping = vault.mappings(vaultSnapshot.vaultAccount.latest);
-    vaultSnapshot.currentMapping = vault.mappings(vaultSnapshot.vaultAccount.current);
     for (uint i = 0; i < vaultSnapshot.totalMarkets; i++) {
       vaultSnapshot.registrations[i] = vault.registrations(i);
       vaultSnapshot.marketSnapshots[i] = marketLens.snapshotMarket(vaultSnapshot.registrations[i].market);
@@ -267,7 +266,7 @@ contract VaultLens {
       vaultSnapshot.totalMarketCollateral = vaultSnapshot.totalMarketCollateral.add(vaultSnapshot.marketVaultSnapshots[i].local.collateral);
 
       // Add settlement fee if the market weight is non-zero or the market collateral is non-zero
-      if (vaultSnapshot.registrations[i].weight != 0 || !vaultSnapshot.marketVaultSnapshots[i].local.collateral.isZero()) {
+      if (!vaultSnapshot.registrations[i].weight.isZero() || !vaultSnapshot.marketVaultSnapshots[i].local.collateral.isZero()) {
         vaultSnapshot.totalSettlementFee = vaultSnapshot.totalSettlementFee.add(vaultSnapshot.marketSnapshots[i].parameter.settlementFee);
       }
     }

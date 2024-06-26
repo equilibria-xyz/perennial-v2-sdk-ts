@@ -1,15 +1,13 @@
-import { EvmPriceServiceConnection } from '@perennial/pyth-evm-js'
+import { HermesClient } from '@pythnetwork/hermes-client'
 import {
   Address,
-  Hex,
   PublicClient,
-  decodeFunctionResult,
-  encodeFunctionData,
   encodePacked,
   getAbiItem,
   getAddress,
   getContractAddress,
   keccak256,
+  maxUint256,
   pad,
   toHex,
   zeroAddress,
@@ -21,7 +19,7 @@ import { VaultAbi } from '../../abi/Vault.abi'
 import { VaultLensAbi, VaultLensDeployedBytecode } from '../../abi/VaultLens.abi'
 import { DSUAddresses, MultiInvokerAddresses } from '../../constants/contracts'
 import { SupportedAsset, addressToAsset } from '../../constants/markets'
-import { SupportedChainId, getRpcURLFromPublicClient } from '../../constants/network'
+import { SupportedChainId } from '../../constants/network'
 import { MaxUint256 } from '../../constants/units'
 import { PerennialVaultType, chainVaultsWithAddress } from '../../constants/vaults'
 import { notEmpty, sum } from '../../utils/arrayUtils'
@@ -52,14 +50,12 @@ export async function fetchVaultSnapshots({
   address: Address
   marketOracles?: MarketOracles
   publicClient: PublicClient
-  pythClient: EvmPriceServiceConnection
+  pythClient: HermesClient
   onError?: () => void
   onSuccess?: () => void
 }) {
   const vaults = chainVaultsWithAddress(chainId)
-  const providerUrl = getRpcURLFromPublicClient(publicClient)
-
-  if (!vaults || !providerUrl) {
+  if (!vaults) {
     return
   }
 
@@ -72,7 +68,6 @@ export async function fetchVaultSnapshots({
     address,
     marketOracles,
     publicClient,
-    providerUrl,
     pyth: pythClient,
     onPythError: onError,
     resetPythError: onSuccess,
@@ -120,7 +115,6 @@ const fetchVaultSnapshotsAfterSettle = async ({
   address,
   marketOracles,
   publicClient,
-  providerUrl,
   pyth,
   onPythError,
   resetPythError,
@@ -129,8 +123,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  providerUrl: string
-  pyth: EvmPriceServiceConnection
+  pyth: HermesClient
   onPythError?: () => void
   resetPythError?: () => void
 }) => {
@@ -148,50 +141,36 @@ const fetchVaultSnapshotsAfterSettle = async ({
   })
 
   const vaultAddresses = vaults.map(({ vaultAddress }) => vaultAddress)
-  const ethCallPayload = {
-    to: vaultLensAddress,
-    from: address,
-    data: encodeFunctionData({
-      abi: VaultLensAbi,
-      functionName: 'snapshot',
-      args: [priceCommitments, lensAddress, vaultAddresses, address, MultiInvokerAddresses[chainId]],
-    }),
-  }
 
-  const alchemyRes = await fetch(providerUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      id: 1,
-      jsonrpc: '2.0',
-      method: 'eth_call', // use a manual eth_call here to use state overrides
-      params: [
-        ethCallPayload,
-        'latest',
-        {
-          // state diff overrides
-          [lensAddress]: {
-            code: LensDeployedBytecode,
-            balance: toHex(Big18Math.fromFloatString('1000')),
+  const { result: lensRes } = await publicClient.simulateContract({
+    address: vaultLensAddress,
+    abi: VaultLensAbi,
+    functionName: 'snapshot',
+    args: [priceCommitments, lensAddress, vaultAddresses, address, MultiInvokerAddresses[chainId]],
+    account: address,
+    stateOverride: [
+      {
+        address: lensAddress,
+        code: LensDeployedBytecode,
+        balance: maxUint256,
+      },
+      {
+        address: vaultLensAddress,
+        code: VaultLensDeployedBytecode,
+        balance: maxUint256,
+      },
+      {
+        // Give the vaultLensAddress some DSU to pay for settlement
+        address: DSUAddresses[chainId],
+        stateDiff: [
+          {
+            slot: keccak256(encodePacked(['bytes32', 'bytes32'], [pad(vaultLensAddress), pad(toHex(1n))])),
+            value: pad(toHex(Big18Math.fromFloatString('100000'))),
           },
-          [vaultLensAddress]: {
-            code: VaultLensDeployedBytecode,
-            balance: toHex(Big18Math.fromFloatString('1000')),
-          },
-          // Grant DSU to vault lens to allow for settlement
-          [DSUAddresses[chainId]]: {
-            stateDiff: {
-              [keccak256(encodePacked(['bytes32', 'bytes32'], [pad(vaultLensAddress), pad(toHex(1n))]))]: pad(
-                toHex(Big18Math.fromFloatString('100000')),
-              ),
-            },
-          },
-        },
-      ],
-    }),
+        ],
+      },
+    ],
   })
-  const batchRes = (await alchemyRes.json()) as { result: Hex }
-  const lensRes = decodeFunctionResult({ abi: VaultLensAbi, functionName: 'snapshot', data: batchRes.result })
 
   return {
     commitments: lensRes.commitmentStatus,

@@ -4,7 +4,12 @@ import { formatUnits, parseUnits } from 'viem'
 export const BigOrZero = (value: number | bigint | string | undefined | null): bigint => {
   return BigInt(value ?? 0)
 }
-
+/**
+ * Formats 6 decimal bigint values to string
+ * @param value
+ * @param options - { numSigFigs?: number; useGrouping?: boolean | undefined; minDecimals?: number }
+ * @returns
+ */
 export const formatBig6 = (
   value: bigint = 0n,
   {
@@ -25,7 +30,12 @@ export const formatBig6 = (
   }).format(Big6Math.toUnsafeFloat(value))
 }
 
-// Formats an 18 decimal bigint as a USD price
+/**
+ * Formats 6 decimal bigint values to USD
+ * @param value - bigint
+ * @param options - { compact?: boolean; fromUsdc?: boolean; fullPrecision?: boolean }
+ * @returns Value formatted in USD.
+ */
 export const formatBig6USDPrice = (
   value: bigint = 0n,
   {
@@ -53,7 +63,12 @@ export const formatBig6USDPrice = (
   }).format(valueToFormat)
 }
 
-// Formats an 18 decimal bigint as a USD price
+/**
+ * Formats 6 decimal bigint values to percentage
+ * @param value
+ * @param options - { numDecimals?: number }
+ * @returns value formatted as percentage.
+ */
 export const formatBig6Percent = (value: bigint = 0n, { numDecimals = 2 }: { numDecimals?: number } = {}) => {
   return Intl.NumberFormat('en-US', {
     style: 'percent',
@@ -61,6 +76,10 @@ export const formatBig6Percent = (value: bigint = 0n, { numDecimals = 2 }: { num
     maximumFractionDigits: numDecimals,
   }).format(Big6Math.toUnsafeFloat(value))
 }
+
+/**
+ * Utility class for 6 decimal bigint arithmetic
+ */
 export class Big6Math {
   public static FIXED_DECIMALS = 6
   public static BASE = BigInt('1000000')

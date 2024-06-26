@@ -1,4 +1,3 @@
-export * from './markets/constants'
 export * from './markets/chain'
 export * from './markets/graph'
 export * from './markets/tx'

@@ -117,11 +117,6 @@ export const PythFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'KeeperFactoryAlreadyAssociatedError',
-    type: 'error',
-  },
-  {
-    inputs: [],
     name: 'KeeperFactoryAlreadyCreatedError',
     type: 'error',
   },
@@ -137,17 +132,27 @@ export const PythFactoryAbi = [
   },
   {
     inputs: [],
+    name: 'KeeperFactoryInvalidPayoffError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'KeeperFactoryInvalidSettleError',
     type: 'error',
   },
   {
     inputs: [],
-    name: 'KeeperFactoryNotAssociatedError',
+    name: 'KeeperFactoryNotCreatedError',
     type: 'error',
   },
   {
     inputs: [],
     name: 'KeeperFactoryNotInstanceError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'KeeperFactoryVersionOutsideRangeError',
     type: 'error',
   },
   {
@@ -380,6 +385,19 @@ export const PythFactoryAbi = [
     inputs: [
       {
         indexed: true,
+        internalType: 'contract IPayoffProvider',
+        name: 'payoff',
+        type: 'address',
+      },
+    ],
+    name: 'PayoffRegistered',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
         internalType: 'address',
         name: 'newPendingOwner',
         type: 'address',
@@ -434,47 +452,34 @@ export const PythFactoryAbi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    name: '_toUnderlyingPayoff',
+    outputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: 'provider',
+        type: 'address',
+      },
+      {
+        internalType: 'int16',
+        name: 'decimals',
+        type: 'int16',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'acceptOwner',
     outputs: [],
     stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'bytes32',
-        name: 'id',
-        type: 'bytes32',
-      },
-      {
-        internalType: 'bytes32',
-        name: 'underlyingId',
-        type: 'bytes32',
-      },
-    ],
-    name: 'associate',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'bytes32',
-        name: 'id',
-        type: 'bytes32',
-      },
-    ],
-    name: 'associated',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -599,6 +604,28 @@ export const PythFactoryAbi = [
         name: 'id',
         type: 'bytes32',
       },
+      {
+        internalType: 'bytes32',
+        name: 'underlyingId',
+        type: 'bytes32',
+      },
+      {
+        components: [
+          {
+            internalType: 'contract IPayoffProvider',
+            name: 'provider',
+            type: 'address',
+          },
+          {
+            internalType: 'int16',
+            name: 'decimals',
+            type: 'int16',
+          },
+        ],
+        internalType: 'struct IKeeperFactory.PayoffDefinition',
+        name: 'payoff',
+        type: 'tuple',
+      },
     ],
     name: 'create',
     outputs: [
@@ -644,8 +671,13 @@ export const PythFactoryAbi = [
         name: '',
         type: 'bytes32',
       },
+      {
+        internalType: 'contract IPayoffProvider',
+        name: '',
+        type: 'address',
+      },
     ],
-    name: 'fromUnderlyingId',
+    name: 'fromUnderlying',
     outputs: [
       {
         internalType: 'bytes32',
@@ -833,6 +865,25 @@ export const PythFactoryAbi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'payoffs',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'pendingOwner',
     outputs: [
@@ -856,6 +907,19 @@ export const PythFactoryAbi = [
       },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: 'payoff',
+        type: 'address',
+      },
+    ],
+    name: 'register',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -935,6 +999,37 @@ export const PythFactoryAbi = [
         internalType: 'bytes32',
         name: '',
         type: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: 'id',
+        type: 'bytes32',
+      },
+    ],
+    name: 'toUnderlyingPayoff',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'contract IPayoffProvider',
+            name: 'provider',
+            type: 'address',
+          },
+          {
+            internalType: 'int16',
+            name: 'decimals',
+            type: 'int16',
+          },
+        ],
+        internalType: 'struct IKeeperFactory.PayoffDefinition',
+        name: '',
+        type: 'tuple',
       },
     ],
     stateMutability: 'view',

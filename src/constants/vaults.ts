@@ -41,7 +41,7 @@ export const ChainVaults: {
     bravo: getAddress('0x699e37DfCEe5c6E4c5D0bC1C2FFbC2afEC55f6FB'),
   },
   [arbitrumSepolia.id]: {
-    alpha: getAddress('0xB3820Ef7fF9cbd3f9FF9176C19464b3178fB2bC3'),
+    alpha: getAddress('0x1602A47BbFB5a3a59cA1788d35ee5e8e79AB84aF'),
   },
 
   [base.id]: {},

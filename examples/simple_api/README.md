@@ -6,6 +6,8 @@ This example allows you to create a simple API wrapper for the SDK.
 
 ```bash
 cp .env.example .env.local
+// Run for each environment variable
+vercel env add
 vercel dev
 ```
 
