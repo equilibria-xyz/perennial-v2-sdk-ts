@@ -57,4 +57,7 @@ app.post('/api/generic', (c) => handleRoute(c))
 
 app.on('GET', '*', (c) => c.json({ error: `try POST to \'/api/generic\'` }, 404))
 
-export default app
+export default {
+  port: process.env.PORT || 3000,
+  fetch: app.fetch,
+}
