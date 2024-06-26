@@ -1,5 +1,5 @@
 {
-  "name": "bun_api",
+  "name": "simple_api",
   "scripts": {
     "dev": "bun run --hot ./src/main.ts",
     "build": "bun-vercel ./src/main.ts",
