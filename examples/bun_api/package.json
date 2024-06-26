@@ -1,0 +1,23 @@
+{
+  "name": "bun_api",
+  "scripts": {
+    "dev": "bun run --hot ./src/main.ts",
+    "build": "bun-vercel ./src/main.ts",
+    "postinstall": "cd ../../ && bun install && bun run build"
+  },
+  "dependencies": {
+    "hono": "^4.4.8",
+    "@perennial/sdk": "../../dist",
+    "fuzzysort": "^2.0.4",
+    "viem": "2.9.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-vercel": "^1.0.0-alpha.4"
+  },
+  "module": "src/main.ts",
+  "type": "module",
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
