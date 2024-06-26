@@ -12,8 +12,8 @@ importers:
         specifier: ^0.14.2
         version: 0.14.2
       '@pythnetwork/hermes-client':
-        specifier: ^1.0.2
-        version: 1.0.2(axios@1.7.2)
+        specifier: ^1.0.3
+        version: 1.0.3(axios@1.7.2)
       axios:
         specifier: ^1.7.2
         version: 1.7.2
@@ -1018,8 +1018,8 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
-  '@pythnetwork/hermes-client@1.0.2':
-    resolution: {integrity: sha512-6t0jAMTFWDxpYYSqga8CXrovCNi9E4hJ1WVZFW8BD655TCLnyY8xlwa7PK30/SNF+nk1OrMYZ1ENdJwm2+JWRQ==}
+  '@pythnetwork/hermes-client@1.0.3':
+    resolution: {integrity: sha512-3UOm8Zn+Gpb5fLp7vTPYJOowzhLJBC3Z3kf4DaIHySlksvQYDbfai0HwyOjJlTO5tN8ywJYhH5698qhW0A0fzA==}
 
   '@repeaterjs/repeater@3.0.4':
     resolution: {integrity: sha512-AW8PKd6iX3vAZ0vA43nOUOnbq/X5ihgU+mSXXqunMkeQADGiqw/PY0JNeYtD5sr0PAy51YPgAPbDoeapv9r8WA==}
@@ -4621,7 +4621,7 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@pythnetwork/hermes-client@1.0.2(axios@1.7.2)':
+  '@pythnetwork/hermes-client@1.0.3(axios@1.7.2)':
     dependencies:
       '@zodios/core': 10.9.6(axios@1.7.2)(zod@3.23.8)
       eventsource: 2.0.2
