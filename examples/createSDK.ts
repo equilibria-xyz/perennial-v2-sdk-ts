@@ -2,7 +2,7 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial, { Day } from '../'
+import Perennial, { Day, SupportedAsset } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 
