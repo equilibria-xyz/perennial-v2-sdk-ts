@@ -11,12 +11,9 @@ export const chainIdToChainMap = {
 }
 
 export type SupportedChainId = (typeof SupportedChainIds)[number]
-export const BackupPythClient = new HermesClient(
-  `${typeof window !== 'undefined' ? window.location.origin : 'https://app.perennial.finance'}/api/pyth`,
-  {
-    timeout: 30000,
-  },
-)
+export const BackupPythClient = new HermesClient('https://hermes.pyth.network', {
+  timeout: 30000,
+})
 
 export const chains: { [chainId in SupportedChainId]: Chain } = {
   [arbitrum.id]: arbitrum,
