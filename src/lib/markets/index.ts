@@ -238,7 +238,7 @@ export class MarketsModule {
         })
       },
       /**
-       * Fetches the trade history across all markets for a given address. Limited to a 7 day window.
+       * Fetches the trade history across all markets for a given address. Limited to a 30 day window.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param fromTs start timestamp in seconds
        * @param toTs end timestamp in seconds

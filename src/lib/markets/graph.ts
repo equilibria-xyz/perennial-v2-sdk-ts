@@ -679,7 +679,7 @@ export async function fetchSubPositions({
 }
 
 /**
- * Fetches the trade history for a given address. Limited to a 7 day window.
+ * Fetches the trade history for a given address. Limited to a 30 day window.
  * @param address Wallet Address
  * @param fromTs start timestamp in seconds (defaults to 7 days before toTs)
  * @param toTs end timestamp in seconds (defaults to now)
@@ -697,10 +697,11 @@ export async function fetchTradeHistory({
   fromTs?: bigint
   toTs?: bigint
 }) {
-  const maxTimeRange = Day * 7n
+  const defaultTimeRange = Day * 7n
+  const maxTimeRange = Day * 30n
   const now = BigInt(nowSeconds())
   if (!toTs) toTs = now
-  if (!fromTs) fromTs = toTs - maxTimeRange
+  if (!fromTs) fromTs = toTs - defaultTimeRange
 
   if (toTs - fromTs > maxTimeRange) {
     throw new Error('The time range exceeds the maximum allowed range of 7 days.')
