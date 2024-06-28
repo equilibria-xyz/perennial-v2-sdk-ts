@@ -39,6 +39,7 @@ contract Lens {
     IMarket market;
     address account;
     Local local;
+    Order latestOrder;
     Order pendingOrder;
     Position position;
     Position nextPosition;
@@ -123,6 +124,7 @@ contract Lens {
     marketAccountSnapshot.market = market;
     marketAccountSnapshot.account = account;
     marketAccountSnapshot.local = market.locals(account);
+    marketAccountSnapshot.latestOrder = market.pendingOrders(account, marketAccountSnapshot.local.latestId);
     marketAccountSnapshot.pendingOrder = market.pendings(account);
     marketAccountSnapshot.position = market.positions(account);
     marketAccountSnapshot.pendingPositions = new Position[](marketAccountSnapshot.local.currentId - marketAccountSnapshot.local.latestId + 1);
