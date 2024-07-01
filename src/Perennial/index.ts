@@ -2,7 +2,7 @@ import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
-import { SupportedAsset, SupportedChainId } from '..'
+import { ChainMarkets, SupportedAsset, SupportedChainId } from '..'
 import { DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
@@ -36,7 +36,7 @@ export type SDKConfig = {
  * @beta
  */
 export default class PerennialSDK {
-  private config: SDKConfig
+  private config: SDKConfig & { supportedMarkets: SupportedAsset[] }
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
@@ -48,7 +48,13 @@ export default class PerennialSDK {
   public operator: OperatorModule
 
   constructor(config: SDKConfig) {
-    this.config = config
+    this.config = {
+      ...config,
+      supportedMarkets:
+        config.supportedMarkets && config.supportedMarkets.length
+          ? config.supportedMarkets
+          : (Object.keys(ChainMarkets[config.chainId]) as SupportedAsset[]),
+    }
     this._publicClient = createPublicClient({
       chain: chainIdToChainMap[config.chainId] as Chain,
       transport: http(config.rpcUrl),
@@ -72,7 +78,7 @@ export default class PerennialSDK {
       graphClient: this._graphClient,
       pythClient: this._pythClient,
       operatingFor: this.config.operatingFor,
-      supportedMarkets: config.supportedMarkets,
+      supportedMarkets: this.config.supportedMarkets,
     })
     this.vaults = new VaultsModule({
       chainId: config.chainId,

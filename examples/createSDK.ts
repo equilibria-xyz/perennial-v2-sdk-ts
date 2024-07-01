@@ -2,38 +2,31 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial, { Day, SupportedAsset } from '../'
+import Perennial, { ChainMarkets, Day, SupportedAsset } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
+;(BigInt.prototype as any).toJSON = function () {
+  return this.toString()
+}
 
 async function run() {
+  const markets = [SupportedAsset.eth, SupportedAsset.btc, SupportedAsset.sol]
+  const address = getAddress('0x1deFb9E9aE40d46C358dc0a185408dc178483851')
   const sdk = new Perennial({
     chainId: 42161,
     rpcUrl: process.env.RPC_URL_ARBITRUM!,
-    graphUrl: process.env.GRAPH_URL_ARBITRUM!,
+    graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
     pythUrl: process.env.PYTH_URL!,
+    operatingFor: address,
+    supportedMarkets: markets,
   })
-  // const marketOracles = await sdk.markets.read.marketOracles()
-  // console.log(marketOracles)
+  const marketSnapshots = await sdk.markets.read.marketSnapshots()
 
-  // const volumeData = await sdk.markets.read.market24hrData({
-  //   market: getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
-  // })
-  // console.log(volumeData)
-
-  // const volumeData2 = await sdk.markets.read.markets24hrData({
-  //   markets: [
-  //     getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
-  //     getAddress('0xcC83e3cDA48547e3c250a88C8D5E97089Fd28F60'),
-  //   ],
-  // })
-  // console.log(volumeData2)
-
-  const tradeHistory = await sdk.markets.read.tradeHistory({
-    address: getAddress('0x325cd6b3cd80edb102ac78848f5b127eb6db13f3'),
+  const activePositionPnlData = await sdk.markets.read.activePositionsPnl({
+    marketSnapshots,
   })
 
-  console.log(tradeHistory)
+  console.log(activePositionPnlData)
 }
 
 run()

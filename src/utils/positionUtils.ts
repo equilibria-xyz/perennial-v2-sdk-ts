@@ -22,6 +22,10 @@ export function side(maker: bigint | string, long: bigint | string, short: bigin
   return PositionSide.none
 }
 
+export function orderSize(maker: bigint | string, long: bigint | string, short: bigint | string) {
+  return BigInt(maker) + BigInt(long) + BigInt(short)
+}
+
 export function efficiency(maker: bigint, major: bigint) {
   return major > 0n ? Big6Math.min(Big6Math.div(maker, major), Big6Math.ONE) : Big6Math.ONE
 }
@@ -310,12 +314,14 @@ export const calcTradeFee = ({
   isMaker,
   direction,
   referralFee = 0n,
+  usePreGlobalPosition = false,
 }: {
   positionDelta: bigint
   marketSnapshot?: MarketSnapshot
   isMaker: boolean
   direction: PositionSide
   referralFee?: bigint
+  usePreGlobalPosition?: boolean
 }): TradeFeeInfo => {
   let tradeFeeInfo = {
     tradeFee: 0n,
@@ -330,6 +336,9 @@ export const calcTradeFee = ({
   const {
     riskParameter: { takerFee, makerFee },
     nextPosition: { long, short },
+    pre: {
+      position: { long: preLong, short: preShort },
+    },
     parameter: { positionFee },
     global: { latestPrice },
     makerTotal,
@@ -362,9 +371,11 @@ export const calcTradeFee = ({
     return tradeFeeInfo
   }
 
-  const adjustedLong = direction === PositionSide.long ? long + positionDelta : long
-  const adjustedShort = direction === PositionSide.short ? short + positionDelta : short
-  const currentSkew = long - short
+  const globalLong = usePreGlobalPosition ? preLong : long
+  const globalShort = usePreGlobalPosition ? preShort : short
+  const adjustedLong = direction === PositionSide.long ? globalLong + positionDelta : globalLong
+  const adjustedShort = direction === PositionSide.short ? globalShort + positionDelta : globalShort
+  const currentSkew = globalLong - globalShort
   const newSkew = adjustedLong - adjustedShort
   const takerAdiabaticFeeNumerator = Big6Math.mul(takerFee.adiabaticFee, newSkew + currentSkew)
   const signedNotional = Big6Math.mul(positionDelta * (direction === PositionSide.short ? -1n : 1n), latestPrice)
@@ -556,4 +567,21 @@ export const calcMaxLeverage = ({
   const maxLeverage = Big6Math.min(marginMaxLeverage, collateralMaxLeverage)
 
   return Big6Math.max(maxLeverage, Big6Math.ONE)
+}
+
+export const calcExecutionPriceWithImpact = ({
+  notional,
+  offset,
+  side,
+  size,
+}: {
+  notional: bigint
+  offset: bigint
+  side: PositionSide
+  size: bigint
+}) => {
+  let numerator = notional
+  if (side === 'long') numerator = numerator - (size < 0n ? -offset : offset)
+  if (side === 'short') numerator = numerator + (size < 0n ? -offset : offset)
+  return size !== 0n ? Big6Math.abs(Big6Math.div(numerator, size)) : 0n
 }

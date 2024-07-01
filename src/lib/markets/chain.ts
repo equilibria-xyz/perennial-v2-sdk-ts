@@ -30,9 +30,9 @@ export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOra
 export async function fetchMarketOracles(
   chainId: SupportedChainId = DefaultChain.id,
   publicClient: PublicClient,
-  supportedMarkets?: SupportedAsset[],
+  markets?: SupportedAsset[],
 ) {
-  const markets = chainAssetsWithAddress(chainId, supportedMarkets)
+  const marketsWithAddress = chainAssetsWithAddress(chainId, markets)
   const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
     const metadata = AssetMetadata[asset]
     const market = getMarketContract(marketAddress, publicClient)
@@ -63,7 +63,7 @@ export async function fetchMarketOracles(
   }
 
   const marketData = await Promise.all(
-    markets.map(({ asset, marketAddress }) => {
+    marketsWithAddress.map(({ asset, marketAddress }) => {
       return fetchMarketOracles(asset, marketAddress)
     }),
   )
@@ -147,9 +147,6 @@ export async function fetchMarketSnapshots({
   onError?: () => void
   onSuccess?: () => void
 }) {
-  if (!publicClient) {
-    return
-  }
   if (!marketOracles) {
     marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
   }

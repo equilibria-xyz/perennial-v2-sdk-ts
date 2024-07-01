@@ -2,7 +2,7 @@ module.exports = {
   extends: ['prettier', 'plugin:@typescript-eslint/recommended'],
   rules: {
     'no-unused-vars': 'off',
-    'no-console': ['error', { allow: ['warn', 'error'] }],
+    'no-console': ['error', { allow: ['warn', 'error', 'trace'] }],
     '@typescript-eslint/no-inferrable-types': 'off',
     '@typescript-eslint/no-unused-vars': [
       'error',

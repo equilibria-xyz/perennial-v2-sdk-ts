@@ -19,14 +19,13 @@ export {
   type SubPositionChange,
   type OpenOrder,
   type Markets,
-  fetchActivePositionPnl,
+  fetchActivePositionsPnl,
   fetchActivePositionHistory,
   fetchHistoricalPositions,
   fetchSubPositions,
   fetchOpenOrders,
-  fetchMarket24hrData,
-  fetchMarket7dData,
-  getPriceAtVersion,
+  fetchMarkets24hrData,
+  fetchMarketsHistoricalData,
   fetchTradeHistory,
 } from './lib/markets/graph'
 
@@ -57,9 +56,6 @@ export {
   fetchVaultSnapshots,
   fetchVaultPositionHistory,
 } from './lib/vaults/chain'
-
-// Vault - Graph
-export { fetchVault7dAccumulations } from './lib/vaults/graph'
 
 // Vault - Transactions
 export {
