@@ -4,11 +4,24 @@ This example allows you to create a simple API wrapper for the SDK.
 
 ## Usage
 
+To use with any environment you can follow the steps below:
+
 ```bash
 cp .env.example .env.local
-// Run for each environment variable
-vercel env add
+# Add the environment variables to .env.local
+bun run src/main.ts
+```
+
+For use with Vercel you can follow the steps below:
+
+```bash
+# Add the environment variables from .env.example
+vercel env add # KEYS "XXX,YYY"
 vercel dev
+
+# to deploy use
+vercel --prod
+
 ```
 
 ## Endpoints
