@@ -91,6 +91,10 @@ export class Big6Math {
   }
 
   public static div(a: bigint, b: bigint): bigint {
+    if (b === 0n) {
+      console.warn('[Big6Math] Division by zero')
+      return 0n
+    }
     return (a * this.BASE) / b
   }
 

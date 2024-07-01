@@ -1,3 +1,5 @@
+import { Hex, toHex } from 'viem'
+
 export const GraphDefaultPageSize = 1000
 export async function queryAll<T extends { [key: string]: any }>(query: (page: number) => Promise<T>): Promise<T> {
   const hasMore = (data: T) =>
@@ -20,4 +22,9 @@ export async function queryAll<T extends { [key: string]: any }>(query: (page: n
   }
 
   return data
+}
+
+export function bigIntToLittleEndian(value: bigint, size: number): Hex {
+  const hex = toHex(value, { size })
+  return `0x${hex.slice(2).match(/.{2}/g)!.reverse().join('')}`
 }

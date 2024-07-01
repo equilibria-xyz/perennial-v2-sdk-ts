@@ -2,15 +2,18 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial, { Day, SupportedAsset } from '../'
+import Perennial, { ChainMarkets, Day, SupportedAsset } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
+;(BigInt.prototype as any).toJSON = function () {
+  return this.toString()
+}
 
 async function run() {
   const sdk = new Perennial({
-    chainId: 42161,
-    rpcUrl: process.env.RPC_URL_ARBITRUM!,
-    graphUrl: process.env.GRAPH_URL_ARBITRUM!,
+    chainId: 421614,
+    rpcUrl: process.env.RPC_URL_ARBITRUM_SEPOLIA!,
+    graphUrl: process.env.GRAPH_URL_ARBITRUM_SEPOLIA_NEW!,
     pythUrl: process.env.PYTH_URL!,
   })
   // const marketOracles = await sdk.markets.read.marketOracles()
@@ -29,11 +32,19 @@ async function run() {
   // })
   // console.log(volumeData2)
 
-  const tradeHistory = await sdk.markets.read.tradeHistory({
-    address: getAddress('0x325cd6b3cd80edb102ac78848f5b127eb6db13f3'),
+  const address = getAddress('0x1deFb9E9aE40d46C358dc0a185408dc178483851')
+  const snapshots = await sdk.markets.read.marketSnapshots({
+    address,
+    markets: [SupportedAsset.eth],
   })
 
-  console.log(tradeHistory)
+  const activePositionPnlData = await sdk.markets.read.activePositionsPnl({
+    address,
+    marketSnapshots: snapshots,
+    markets: [SupportedAsset.eth],
+  })
+
+  console.log(activePositionPnlData)
 }
 
 run()

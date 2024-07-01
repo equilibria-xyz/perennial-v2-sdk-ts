@@ -3,28 +3,33 @@ import { sum } from './arrayUtils'
 export type AccumulatorType = (typeof AccumulatorTypes)[number]['type']
 export const AccumulatorTypes = [
   {
-    type: 'value',
-    realizedKey: 'accumulatedValue',
-    unrealizedKey: { maker: 'makerValue', long: 'longValue', short: 'shortValue' } as const,
+    type: 'offset',
+    realizedKey: `collateral_subAccumulation_offset`,
+    unrealizedKey: { maker: ``, long: ``, short: `` } as const,
   },
   {
     type: 'pnl',
-    realizedKey: `accumulatedPnl`,
+    realizedKey: `collateral_subAccumulation_pnl`,
     unrealizedKey: { maker: `pnlMaker`, long: `pnlLong`, short: `pnlShort` } as const,
   },
   {
     type: 'funding',
-    realizedKey: `accumulatedFunding`,
+    realizedKey: `collateral_subAccumulation_funding`,
     unrealizedKey: { maker: `fundingMaker`, long: `fundingLong`, short: `fundingShort` } as const,
   },
   {
     type: 'interest',
-    realizedKey: `accumulatedInterest`,
+    realizedKey: `collateral_subAccumulation_interest`,
     unrealizedKey: { maker: `interestMaker`, long: `interestLong`, short: `interestShort` } as const,
   },
   {
     type: 'makerPositionFee',
-    realizedKey: `accumulatedMakerPositionFee`,
+    realizedKey: `collateral_subAccumulation_makerPositionFee`,
+    unrealizedKey: { maker: `positionFeeMaker`, long: `positionFeeMaker`, short: `positionFeeMaker` } as const,
+  },
+  {
+    type: 'makerExposure',
+    realizedKey: `collateral_subAccumulation_makerExposure`,
     unrealizedKey: { maker: `positionFeeMaker`, long: `positionFeeMaker`, short: `positionFeeMaker` } as const,
   },
 ] as const
@@ -37,4 +42,38 @@ export function accumulateRealized(
     const total = sum(payload.map((p) => BigInt(p[realizedKey])))
     return { ...acc, [type]: total }
   }, {} as RealizedAccumulations)
+}
+
+export type FeeAccumulatorType = (typeof FeeAccumulatorTypes)[number]['type']
+export type RealizedFeeAccumulations = Record<(typeof FeeAccumulatorTypes)[number]['type'], bigint>
+export const FeeAccumulatorTypes = [
+  {
+    type: 'trade',
+    realizedKey: `collateral_subAccumulation_offset`,
+  },
+  {
+    type: 'settlement',
+    realizedKey: `collateral_subAccumulation_pnl`,
+  },
+  {
+    type: 'additive',
+    realizedKey: `collateral_subAccumulation_funding`,
+  },
+  {
+    type: 'triggerOrder',
+    realizedKey: `collateral_subAccumulation_interest`,
+  },
+  {
+    type: 'liquidation',
+    realizedKey: `collateral_subAccumulation_makerPositionFee`,
+  },
+] as const
+
+export function accumulateRealizedFees(
+  payload: Record<(typeof FeeAccumulatorTypes)[number]['realizedKey'], bigint | string>[],
+) {
+  return FeeAccumulatorTypes.reduce((acc, { realizedKey, type }) => {
+    const total = sum(payload.map((p) => BigInt(p[realizedKey])))
+    return { ...acc, [type]: total }
+  }, {} as RealizedFeeAccumulations)
 }
