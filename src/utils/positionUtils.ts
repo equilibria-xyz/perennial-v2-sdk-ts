@@ -581,7 +581,7 @@ export const calcExecutionPriceWithImpact = ({
   size: bigint
 }) => {
   let numerator = notional
-  if (side === 'long') numerator = numerator - (size < 0n ? -offset : offset)
-  if (side === 'short') numerator = numerator + (size < 0n ? -offset : offset)
+  if (side === PositionSide.long) numerator = numerator - (size < 0n ? -offset : offset)
+  if (side === PositionSide.short) numerator = numerator + (size < 0n ? -offset : offset)
   return size !== 0n ? Big6Math.abs(Big6Math.div(numerator, size)) : 0n
 }

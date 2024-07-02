@@ -158,7 +158,10 @@ export async function fetchActivePositionsPnl({
         const currentAccumulator = graphMarketAccount?.accumulators.current.at(0)
         if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
           const makerOnlyAccumulations = ['makerPositionFee', 'makerExposure']
-          if ((side === 'maker' && makerOnlyAccumulations.includes(type)) || !makerOnlyAccumulations.includes(type)) {
+          if (
+            (side === PositionSide.maker && makerOnlyAccumulations.includes(type)) ||
+            !makerOnlyAccumulations.includes(type)
+          ) {
             unrealized = Big6Math.mul(
               BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
               magnitude_,
@@ -359,7 +362,7 @@ function processGraphPosition(
   const pnlAccumulations = accumulateRealized([graphPosition.accumulation])
   const feeAccumulations = accumulateRealizedFees([graphPosition.accumulation])
   // If this is a maker position, move offset to trade fee
-  if (side === 'maker') {
+  if (side === PositionSide.maker) {
     const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
     feeAccumulations.trade += offsetAsFee // Convert offset to a fee
     totalFees += offsetAsFee
@@ -401,7 +404,7 @@ function processGraphPosition(
     returnValue.feeAccumulations.additive += pendingPositionData.additiveFee
     let totalFee = pendingPositionData.settlementFee + pendingPositionData.tradeFee + pendingPositionData.additiveFee
     returnValue.totalFees += totalFee
-    if (side === 'maker') {
+    if (side === PositionSide.maker) {
       returnValue.feeAccumulations.trade += pendingPositionData.offset
       totalFee += pendingPositionData.offset
     } else {
