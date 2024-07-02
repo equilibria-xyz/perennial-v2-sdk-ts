@@ -7,8 +7,8 @@ import {
   OrderExecutionDeposit,
   OrderTypes,
   PositionSide,
-  SupportedAsset,
   SupportedChainId,
+  SupportedMarket,
   TriggerComparison,
   TriggerOrderFullCloseMagicValue,
   chainIdToChainMap,
@@ -49,7 +49,7 @@ import {
 } from './tx'
 
 type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address' | 'markets'>
-type OptionalMarkets = { markets?: SupportedAsset[] }
+type OptionalMarkets = { markets?: SupportedMarket[] }
 
 export type BuildModifyPositionTxArgs = {
   marketAddress: Address
@@ -108,7 +108,7 @@ type MarketsModuleConfig = {
   pythClient: HermesClient
   walletClient?: WalletClient
   operatingFor?: Address
-  supportedMarkets: SupportedAsset[]
+  supportedMarkets: SupportedMarket[]
 }
 
 /**
@@ -264,6 +264,7 @@ export class MarketsModule {
         }
 
         return fetchTradeHistory({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
           ...args,

@@ -1,7 +1,7 @@
 import { Address, encodeErrorResult } from 'viem'
 
 import { MarketAbi } from '..'
-import { PositionSide, PositionStatus, SupportedAsset, SupportedChainId } from '../constants'
+import { PositionSide, PositionStatus, SupportedChainId, SupportedMarket } from '../constants'
 import { MaxUint256 } from '../constants/units'
 import { MarketSnapshot, MarketSnapshots, UserMarketSnapshot } from '../lib'
 import { Big6Math, formatBig6Percent } from './big6Utils'
@@ -143,8 +143,8 @@ export const getPositionFromSelectedMarket = ({
 }: {
   isMaker?: boolean
   userMarketSnapshots?: MarketSnapshots['user']
-  selectedMarket: SupportedAsset
-  selectedMakerMarket: SupportedAsset
+  selectedMarket: SupportedMarket
+  selectedMakerMarket: SupportedMarket
 }) => {
   if (!userMarketSnapshots) return undefined
   if (isMaker) {

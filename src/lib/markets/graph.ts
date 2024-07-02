@@ -1,14 +1,14 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, concat, getAddress, toHex, zeroAddress } from 'viem'
+import { Address, PublicClient, concat, getAddress, toHex } from 'viem'
 
 import {
   ChainMarkets,
   PositionSide,
-  SupportedAsset,
   SupportedChainId,
-  addressToAsset,
-  chainAssetsWithAddress,
+  SupportedMarket,
+  addressToMarket,
+  chainMarketsWithAddress,
 } from '../../constants'
 import {
   QueryAccountOrders,
@@ -34,11 +34,6 @@ import {
 } from '../../utils/positionUtils'
 import { MarketSnapshots, fetchMarketSnapshots } from './chain'
 
-export type Markets = {
-  asset: SupportedAsset
-  marketAddress: Address
-}[]
-
 /**
  * Fetches position PnL for a given market and Address
  * @param address Wallet Address
@@ -57,14 +52,14 @@ export async function fetchActivePositionsPnl({
   publicClient,
   graphClient,
 }: {
-  markets: SupportedAsset[]
+  markets: SupportedMarket[]
   address: Address
   marketSnapshots?: MarketSnapshots
   chainId: SupportedChainId
   pythClient: HermesClient
   publicClient: PublicClient
   graphClient: GraphQLClient
-}): Promise<Record<SupportedAsset, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>> {
+}): Promise<Record<SupportedMarket, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>> {
   const missingMarketSnapshots = markets.some((m) => !marketSnapshots?.market[m] || !marketSnapshots?.user?.[m])
   if (missingMarketSnapshots) {
     marketSnapshots = await fetchMarketSnapshots({
@@ -76,12 +71,12 @@ export async function fetchActivePositionsPnl({
     })
   }
 
-  const marketsWithAddresses = chainAssetsWithAddress(chainId, markets)
-  const marketAccumulatorIDs = markets.map((m) =>
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
+  const marketAccumulatorIDs = marketsWithAddresses.map(({ market, marketAddress }) =>
     concat([
-      marketSnapshots?.market[m]?.market ?? zeroAddress,
+      marketAddress,
       toHex(':'),
-      bigIntToLittleEndian(marketSnapshots?.user?.[m]?.latestOrder.timestamp ?? 0n, 8),
+      bigIntToLittleEndian(marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n, 8),
     ]),
   )
   const { marketAccounts, startAccumulators } = await graphClient.request(QueryLatestMarketAccountPosition, {
@@ -90,7 +85,7 @@ export async function fetchActivePositionsPnl({
     accumulatorIDs: marketAccumulatorIDs,
   })
 
-  const positionPnls = marketsWithAddresses.map(({ asset: market, marketAddress }) => {
+  const positionPnls = marketsWithAddresses.map(({ market, marketAddress }) => {
     const marketSnapshot = marketSnapshots?.market[market]
     const userMarketSnapshot = marketSnapshots?.user?.[market]
     if (!marketSnapshot || !userMarketSnapshot) return null
@@ -127,7 +122,7 @@ export async function fetchActivePositionsPnl({
       const startAccumulator = startAccumulators.find((sa) => getAddress(sa.market.id) === marketAddress)
 
       // Process the graph position
-      const processedGraphPosition = processGraphPosition(graphPosition, {
+      const processedGraphPosition = processGraphPosition(market, graphPosition, {
         latestPrice: userMarketSnapshot.prices[0],
         collateral: pendingOrderCollateral,
         size: pendingDelta,
@@ -198,7 +193,8 @@ export async function fetchActivePositionsPnl({
     const realtimePercent = percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n
 
     return {
-      asset: market,
+      market,
+      marketAddress,
       side,
       version: marketSnapshot.latestOracleVersion.timestamp,
       startSize: magnitude_,
@@ -236,10 +232,10 @@ export async function fetchActivePositionsPnl({
 
   return positionPnls.reduce(
     (acc, v) => {
-      if (v) acc[v.asset] = v
+      if (v) acc[v.market] = v
       return acc
     },
-    {} as Record<SupportedAsset, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>,
+    {} as Record<SupportedMarket, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>,
   )
 }
 /**
@@ -260,7 +256,7 @@ export async function fetchActivePositionHistory({
   chainId,
   graphClient,
 }: {
-  market: SupportedAsset
+  market: SupportedMarket
   address: Address
   positionId: bigint
   first: number
@@ -298,7 +294,7 @@ export async function fetchHistoricalPositions({
   skip = 0,
   maker,
 }: {
-  markets: SupportedAsset[]
+  markets: SupportedMarket[]
   address: Address
   chainId: SupportedChainId
   graphClient: GraphQLClient
@@ -308,7 +304,7 @@ export async function fetchHistoricalPositions({
   skip: number
   maker?: boolean
 }) {
-  const marketsWithAddresses = chainAssetsWithAddress(chainId, markets)
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const query = maker ? QueryMarketAccountMakerPositions : QueryMarketAccountTakerPositions
   const { positions } = await graphClient.request(query, {
     account: address,
@@ -319,11 +315,14 @@ export async function fetchHistoricalPositions({
     skip,
   })
 
-  return positions.map((graphPosition) => processGraphPosition(graphPosition))
+  return positions.map((graphPosition) =>
+    processGraphPosition(addressToMarket(chainId, graphPosition.marketAccount.market.id), graphPosition),
+  )
 }
 
 type ProcessedGraphPosition = ReturnType<typeof processGraphPosition>
 function processGraphPosition(
+  market: SupportedMarket,
   graphPosition: PositionDataFragment,
   pendingPositionData?: {
     latestPrice: bigint
@@ -335,8 +334,6 @@ function processGraphPosition(
     additiveFee: bigint
   },
 ) {
-  const asset = addressToAsset(getAddress(graphPosition.marketAccount.market.id))
-  if (!asset) throw new Error('Invalid market')
   const netPnl =
     BigInt(graphPosition.accumulation.collateral_accumulation) - BigInt(graphPosition.accumulation.fee_accumulation)
   const startCollateral = BigInt(graphPosition.startCollateral)
@@ -373,7 +370,8 @@ function processGraphPosition(
 
   const returnValue = {
     // Position Metadata
-    asset,
+    market,
+    marketAddress: getAddress(graphPosition.marketAccount.market.id),
     side,
     positionId: BigInt(graphPosition.positionId),
     version: BigInt(graphPosition.startVersion),
@@ -453,7 +451,7 @@ export async function fetchSubPositions({
   chainId: SupportedChainId
   graphClient: GraphQLClient
   address: Address
-  market: SupportedAsset
+  market: SupportedMarket
   positionId: bigint
   first: number
   skip: number
@@ -469,7 +467,7 @@ export async function fetchSubPositions({
     skip,
   })
 
-  const processedOrders = orders.map((order) => processOrder(order))
+  const processedOrders = orders.map((order) => processOrder(market, order))
 
   return processedOrders
 }
@@ -483,25 +481,22 @@ export async function fetchSubPositions({
  * @returns User's trade history.
  */
 export async function fetchTradeHistory({
+  chainId,
   graphClient,
   address,
   fromTs,
   toTs,
 }: {
+  chainId: SupportedChainId
   graphClient: GraphQLClient
   address: Address
   fromTs?: bigint
   toTs?: bigint
 }) {
   const defaultTimeRange = Day * 7n
-  const maxTimeRange = Day * 30n
   const now = BigInt(nowSeconds())
   if (!toTs) toTs = now
   if (!fromTs) fromTs = toTs - defaultTimeRange
-
-  if (toTs - fromTs > maxTimeRange) {
-    throw new Error('The time range exceeds the maximum allowed range of 30 days.')
-  }
 
   const { orders } = await queryAll(async (pageNumber) =>
     graphClient.request(QueryAccountOrders, {
@@ -513,15 +508,12 @@ export async function fetchTradeHistory({
     }),
   )
 
-  const processedOrders = orders.map((order) => processOrder(order))
+  const processedOrders = orders.map((order) => processOrder(addressToMarket(chainId, order.market.id), order))
 
   return processedOrders
 }
 
-function processOrder(order: OrderDataFragment) {
-  const asset = addressToAsset(getAddress(order.market.id))
-  if (!asset) throw new Error('Invalid market')
-
+function processOrder(market: SupportedMarket, order: OrderDataFragment) {
   const side = positionSide(order.position.startMaker, order.position.startLong, order.position.startShort)
   const delta = orderSize(order.maker, order.long, order.short)
   const collateral = BigInt(order.collateral)
@@ -540,7 +532,7 @@ function processOrder(order: OrderDataFragment) {
 
   const returnValue = {
     // Position Metadata
-    asset,
+    market,
     side,
     orderId: BigInt(order.orderId),
     version: BigInt(order.oracleVersion.timestamp),
@@ -588,13 +580,13 @@ export async function fetchOpenOrders({
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
-  markets: SupportedAsset[]
+  markets: SupportedMarket[]
   address: Address
   first: number
   skip: number
   isMaker?: boolean
 }) {
-  const marketsWithAddresses = chainAssetsWithAddress(chainId, markets)
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const { multiInvokerTriggerOrders } = await graphClient.request(QueryMultiInvokerOpenOrders, {
     account: address,
     markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
@@ -603,7 +595,11 @@ export async function fetchOpenOrders({
     side: isMaker ? [0, 3] : [1, 2, 3], // 3 = collateral withdrawal
   })
 
-  return multiInvokerTriggerOrders
+  return multiInvokerTriggerOrders.map((triggerOrder) => ({
+    ...triggerOrder,
+    market: addressToMarket(chainId, triggerOrder.market),
+    marketAddress: getAddress(triggerOrder.market),
+  }))
 }
 
 /**
@@ -619,7 +615,7 @@ export async function fetchMarkets24hrData({
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
-  markets: SupportedAsset[]
+  markets: SupportedMarket[]
 }) {
   const { from, to } = last24hrBounds()
 
@@ -648,12 +644,12 @@ export async function fetchMarketsHistoricalData({
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
-  markets: SupportedAsset[]
+  markets: SupportedMarket[]
   fromTs: bigint
   toTs: bigint
   bucket?: Bucket
 }) {
-  const marketAddresses = chainAssetsWithAddress(chainId, markets)
+  const marketAddresses = chainMarketsWithAddress(chainId, markets)
   const { marketData } = await graphClient.request(QueryMarketAccumulationData, {
     markets: marketAddresses.map((m) => m.marketAddress),
     fromTs: fromTs.toString(),
@@ -661,7 +657,7 @@ export async function fetchMarketsHistoricalData({
     bucket,
   })
 
-  const parsedData = marketAddresses.map(({ asset: market, marketAddress }) => {
+  const parsedData = marketAddresses.map(({ market, marketAddress }) => {
     const data = marketData.find((m) => getAddress(m.id) === marketAddress)
     const fromAccumulator = data?.fromAccumulator.at(0)
     const toAccumulator = data?.toAccumulator.at(0)
@@ -718,6 +714,6 @@ export async function fetchMarketsHistoricalData({
       acc[market.market] = market
       return acc
     },
-    {} as Record<SupportedAsset, (typeof parsedData)[0]>,
+    {} as Record<SupportedMarket, (typeof parsedData)[0]>,
   )
 }

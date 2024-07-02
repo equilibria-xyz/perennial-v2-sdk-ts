@@ -18,7 +18,7 @@ import { LensDeployedBytecode } from '../../abi/Lens.abi'
 import { VaultAbi } from '../../abi/Vault.abi'
 import { VaultLensAbi, VaultLensDeployedBytecode } from '../../abi/VaultLens.abi'
 import { DSUAddresses, MultiInvokerAddresses } from '../../constants/contracts'
-import { SupportedAsset, addressToAsset } from '../../constants/markets'
+import { SupportedMarket, addressToMarket } from '../../constants/markets'
 import { SupportedChainId } from '../../constants/network'
 import { MaxUint256 } from '../../constants/units'
 import { PerennialVaultType, chainVaultsWithAddress } from '../../constants/vaults'
@@ -31,7 +31,7 @@ import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
 export type VaultSnapshot = ChainVaultSnapshot & {
   pre: ChainVaultSnapshot
-  assets: { asset: SupportedAsset; weight: bigint }[]
+  markets: { market: SupportedMarket; weight: bigint }[]
 }
 export type VaultAccountSnapshot = ChainVaultAccountSnapshot & {
   pre: ChainVaultAccountSnapshot
@@ -80,7 +80,7 @@ export async function fetchVaultSnapshots({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         pre: snapshotData.vaultPre.find((pre) => pre.vaultType === vaultData.vaultType)!,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        assets: vaultData.registrations.map((r) => ({ weight: r.weight, asset: addressToAsset(r.market)! })),
+        markets: vaultData.registrations.map((r) => ({ weight: r.weight, market: addressToMarket(chainId, r.market) })),
       }
       return acc
     },

@@ -2,18 +2,17 @@ import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
-  AssetMetadata,
   Big6Math,
   DefaultChain,
+  MarketMetadata,
   MaxUint256,
   PositionSide,
   PositionStatus,
-  SupportedAsset,
   SupportedChainId,
-  addressToAsset,
+  SupportedMarket,
+  addressToMarket,
   calculateFundingForSides,
-  chainAssetsWithAddress,
-  notEmpty,
+  chainMarketsWithAddress,
 } from '../..'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
@@ -30,14 +29,14 @@ export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOra
 export async function fetchMarketOracles(
   chainId: SupportedChainId = DefaultChain.id,
   publicClient: PublicClient,
-  markets?: SupportedAsset[],
+  markets?: SupportedMarket[],
 ) {
-  const marketsWithAddress = chainAssetsWithAddress(chainId, markets)
-  const fetchMarketOracles = async (asset: SupportedAsset, marketAddress: Address) => {
-    const metadata = AssetMetadata[asset]
-    const market = getMarketContract(marketAddress, publicClient)
+  const marketsWithAddress = chainMarketsWithAddress(chainId, markets)
+  const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
+    const metadata = MarketMetadata[market]
+    const marketContract = getMarketContract(marketAddress, publicClient)
     const pythFactory = getPythFactoryContract(chainId, publicClient)
-    const oracleAddress = await market.read.oracle()
+    const oracleAddress = await marketContract.read.oracle()
     // Fetch oracle data
     const oracle = getOracleContract(oracleAddress, publicClient)
     const global = await oracle.read.global()
@@ -51,7 +50,7 @@ export async function fetchMarketOracles(
     ])
 
     return {
-      asset,
+      market,
       marketAddress,
       address: oracleAddress,
       providerFactoryAddress: pythFactory.address,
@@ -63,17 +62,17 @@ export async function fetchMarketOracles(
   }
 
   const marketData = await Promise.all(
-    marketsWithAddress.map(({ asset, marketAddress }) => {
-      return fetchMarketOracles(asset, marketAddress)
+    marketsWithAddress.map(({ market, marketAddress }) => {
+      return fetchMarketOracles(market, marketAddress)
     }),
   )
 
   return marketData.reduce(
     (acc, market) => {
-      acc[market.asset] = market
+      acc[market.market] = market
       return acc
     },
-    {} as Record<SupportedAsset, Awaited<ReturnType<typeof fetchMarketOracles>>>,
+    {} as Record<SupportedMarket, Awaited<ReturnType<typeof fetchMarketOracles>>>,
   )
 }
 
@@ -143,7 +142,7 @@ export async function fetchMarketSnapshots({
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
-  markets?: SupportedAsset[]
+  markets?: SupportedMarket[]
   onError?: () => void
   onSuccess?: () => void
 }) {
@@ -182,10 +181,10 @@ export async function fetchMarketSnapshots({
         const takerPos = snapshot.pendingOrder.longPos + snapshot.pendingOrder.shortNeg
         const takerNeg = snapshot.pendingOrder.shortPos + snapshot.pendingOrder.longNeg
         const takerTotal = takerPos + takerNeg
-        acc[snapshot.asset] = {
+        acc[snapshot.market] = {
           ...snapshot,
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          pre: snapshotData.marketPre.find((pre) => pre.asset === snapshot.asset)!,
+          pre: snapshotData.marketPre.find((pre) => pre.market === snapshot.market)!,
           major,
           majorSide: major === snapshot.position.long ? PositionSide.long : PositionSide.short,
           nextMajor,
@@ -206,18 +205,18 @@ export async function fetchMarketSnapshots({
         }
         return acc
       } catch (e) {
-        console.error('Error in snapshot', snapshot.asset, address, e)
+        console.error('Error in snapshot', snapshot.market, address, e)
         return acc
       }
     },
-    {} as { [key in SupportedAsset]?: MarketSnapshot },
+    {} as { [key in SupportedMarket]?: MarketSnapshot },
   )
   const userSnapshots = snapshotData.user.reduce(
     (acc, snapshot) => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const pre = snapshotData.userPre.find((pre) => pre.asset === snapshot.asset)!
+      const pre = snapshotData.userPre.find((pre) => pre.market === snapshot.market)!
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const marketSnapshot = marketSnapshots[snapshot.asset]!
+      const marketSnapshot = marketSnapshots[snapshot.market]!
       const marketPrice = marketSnapshot.global.latestPrice ?? 0n
       const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
       const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
@@ -227,7 +226,7 @@ export async function fetchMarketSnapshots({
       const nextMagnitude = nextSide === PositionSide.none ? 0n : nextPosition?.[nextSide] ?? 0n
       const priceUpdate = snapshot?.priceUpdate
       if (priceUpdate !== '0x') {
-        console.error('Sync error', snapshot.asset, priceUpdate, address)
+        console.error('Sync error', snapshot.market, priceUpdate, address)
       }
       const hasVersionError =
         !snapshot.versions[0].valid &&
@@ -235,9 +234,9 @@ export async function fetchMarketSnapshots({
           pre.nextPosition.timestamp + 60n < BigInt(Math.floor(Date.now() / 1000)))
 
       if (hasVersionError && (magnitude !== 0n || nextMagnitude !== 0n) && magnitude !== nextMagnitude) {
-        console.error('Version error', snapshot.asset, address)
+        console.error('Version error', snapshot.market, address)
       }
-      acc[snapshot.asset] = {
+      acc[snapshot.market] = {
         ...snapshot,
         pre,
         side,
@@ -276,7 +275,7 @@ export async function fetchMarketSnapshots({
       }
       return acc
     },
-    {} as Record<SupportedAsset, UserMarketSnapshot>,
+    {} as Record<SupportedMarket, UserMarketSnapshot>,
   )
 
   return {
@@ -336,46 +335,34 @@ async function fetchMarketSnapshotsAfterSettle({
   return {
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
-    market: lensRes.postUpdate.marketSnapshots
-      .map((s) => {
-        const asset = addressToAsset(getAddress(s.market))
-        if (!asset) return
-        return {
-          ...s,
-          asset,
-        }
-      })
-      .filter(notEmpty),
-    marketPre: lensRes.preUpdate.marketSnapshots
-      .map((s) => {
-        const asset = addressToAsset(getAddress(s.market))
-        if (!asset) return
-        return {
-          ...s,
-          asset,
-        }
-      })
-      .filter(notEmpty),
-    user: lensRes.postUpdate.marketAccountSnapshots
-      .map((s, i) => {
-        const asset = addressToAsset(getAddress(s.market))
-        if (!asset) return
-        return {
-          ...s,
-          asset,
-          priceUpdate: lensRes.updateStatus[i],
-        }
-      })
-      .filter(notEmpty),
-    userPre: lensRes.preUpdate.marketAccountSnapshots
-      .map((s) => {
-        const asset = addressToAsset(getAddress(s.market))
-        if (!asset) return
-        return {
-          ...s,
-          asset,
-        }
-      })
-      .filter(notEmpty),
+    market: lensRes.postUpdate.marketSnapshots.map((s) => {
+      const market = addressToMarket(chainId, getAddress(s.marketAddress))
+      return {
+        ...s,
+        market,
+      }
+    }),
+    marketPre: lensRes.preUpdate.marketSnapshots.map((s) => {
+      const market = addressToMarket(chainId, getAddress(s.marketAddress))
+      return {
+        ...s,
+        market,
+      }
+    }),
+    user: lensRes.postUpdate.marketAccountSnapshots.map((s, i) => {
+      const market = addressToMarket(chainId, getAddress(s.marketAddress))
+      return {
+        ...s,
+        market,
+        priceUpdate: lensRes.updateStatus[i],
+      }
+    }),
+    userPre: lensRes.preUpdate.marketAccountSnapshots.map((s) => {
+      const market = addressToMarket(chainId, getAddress(s.marketAddress))
+      return {
+        ...s,
+        market,
+      }
+    }),
   }
 }
