@@ -2,7 +2,7 @@ import { gql } from '../types/gql'
 
 export const PositionDataFragment = gql(`
   fragment PositionData on Position {
-    marketAccount { market { id } }, startCollateral, startMaker, startLong, startShort, openSize, openNotional, openOffset, netDeposits, positionId: nonce, startVersion, closeSize, closeNotional, closeOffset
+    marketAccount { currentOrderId, market { id } }, startCollateral, startMaker, startLong, startShort, openSize, openNotional, openOffset, netDeposits, positionId: nonce, startVersion, closeSize, closeNotional, closeOffset
     accumulation {
       collateral_accumulation, fee_accumulation, collateral_subAccumulation_offset, collateral_subAccumulation_pnl,
       collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, fee_subAccumulation_settlement

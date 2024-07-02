@@ -123,6 +123,7 @@ export async function fetchActivePositionsPnl({
 
       // Process the graph position
       const processedGraphPosition = processGraphPosition(market, graphPosition, {
+        currentId: userMarketSnapshot.local.currentId,
         latestPrice: userMarketSnapshot.prices[0],
         collateral: pendingOrderCollateral,
         size: pendingDelta,
@@ -325,6 +326,7 @@ function processGraphPosition(
   market: SupportedMarket,
   graphPosition: PositionDataFragment,
   pendingPositionData?: {
+    currentId: bigint
     latestPrice: bigint
     collateral: bigint
     size: bigint
@@ -395,7 +397,8 @@ function processGraphPosition(
     liquidationFee: BigOrZero(feeAccumulations.liquidation),
   }
 
-  if (pendingPositionData) {
+  // If pending position data is available and newer than graph data, apply it
+  if (pendingPositionData && pendingPositionData.currentId > BigInt(graphPosition.marketAccount.currentOrderId)) {
     returnValue.netDeposits += pendingPositionData.collateral
     returnValue.feeAccumulations.settlement += pendingPositionData.settlementFee
     returnValue.feeAccumulations.trade += pendingPositionData.tradeFee
