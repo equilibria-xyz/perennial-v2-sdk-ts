@@ -164,9 +164,8 @@ export class MarketsModule {
       /**
        * Fetches position PnL for a given market and Address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param userMarketSnapshot {@link UserMarketSnapshot}
-       * @param marketSnapshot {@link MarketSnapshot}
-       * @param includeClosedWithCollateral Include closed positions with collateral
+       * @param markets List of {@link SupportedMarket}
+       * @param marketSnapshots {@link MarketSnapshots}
        * @returns User's PnL for an active position.
        */
       activePositionsPnl: (
@@ -189,9 +188,11 @@ export class MarketsModule {
       /**
        * Fetches active position history for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param market Market Address
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param market {@link SupportedMarket}
+       * @param positionId BigInt
+       * @param first number
+       * @param skip number
+       * @param chainId {@link SupportedChainId}
        * @returns User's position history for an active position.
        */
       activePositionHistory: (args: OmitBound<Parameters<typeof fetchActivePositionHistory>[0]> & OptionalAddress) => {
@@ -209,9 +210,13 @@ export class MarketsModule {
       /**
        * Fetches the position history for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param markets List of {@link Markets} to fetch position history for
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param markets List of {@link SupportedMarket} to fetch position history for
+       * @param chainId {@link SupportedChainId}
+       * @param fromTs bigint - Start timestamp in seconds
+       * @param toTs bigint - Start timestamp in seconds
+       * @param first number
+       * @param skip number
+       * @param maker boolean - Filter for maker positions
        * @returns User's position history.
        */
       historicalPositions: (
@@ -232,11 +237,11 @@ export class MarketsModule {
       /**
        * Fetches the sub positions activity for a given position
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param market Market Address
-       * @param startVersion BigInt - Start oracle version number
-       * @param endVersion BigInt - End oracle version number
+       * @param market {@link SupportedMarket}
+       * @param positionId BigInt
        * @param first Number of entries to fetch
        * @param skip Number of entries to skip
+       * @param graphClient GraphQLClient
        * @returns User's sub positions.
        */
       subPositions: (args: OmitBound<Parameters<typeof fetchSubPositions>[0]> & OptionalAddress) => {
@@ -273,9 +278,11 @@ export class MarketsModule {
       /**
        * Fetches the open orders for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param markets List of {@link Markets} to fetch open orders for
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param markets List of {@link SupportedMarket} to fetch open orders for
+       * @param chainId {@link SupportedChainId}
+       * @param first number
+       * @param skip number
+       * @param isMaker boolean - Filter for maker orders
        * @returns User's open orders.
        */
       openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress & OptionalMarkets) => {
@@ -293,7 +300,8 @@ export class MarketsModule {
       },
       /**
        * Fetches the 24hr volume data for a list of market
-       * @param markets List of market Addresses
+       * @param markets List of {@link SupportedMarket}
+       * @param chainId {@link SupportedChainId}
        * @returns Markets 24hr volume data.
        */
       markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrData>[0]> & OptionalMarkets = {}) => {
@@ -309,8 +317,12 @@ export class MarketsModule {
         })
       },
       /**
-       * Fetches the 7d data for a given market
-       * @param market Market Address
+       * Fetches Historical data for markets
+       * @param markets List of {@link SupportedMarket}
+       * @param chainId {@link SupportedChainId}
+       * @param fromTs bigint - Start timestamp in seconds
+       * @param toTs bigint - Start timestamp in seconds
+       * @param bucket {@link Bucket}
        * @returns Market 7d data.
        */
       marketsHistoricalData: (args: OmitBound<Parameters<typeof fetchMarketsHistoricalData>[0]> & OptionalMarkets) => {
