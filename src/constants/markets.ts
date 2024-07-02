@@ -1,4 +1,4 @@
-import { Address, Hex, getAddress } from 'viem'
+import { Address, Hex, getAddress, zeroHash } from 'viem'
 import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
 
 import { Big6Math } from '../utils'
@@ -12,7 +12,7 @@ import {
 } from '../utils/payoffUtils'
 import { SupportedChainId } from './network'
 
-export enum SupportedAsset {
+export enum SupportedMarket {
   btc = 'btc',
   eth = 'eth',
   arb = 'arb',
@@ -26,6 +26,8 @@ export enum SupportedAsset {
   msqBTC = 'btc²',
   cmsqETH = 'eth²',
   jup = 'jup',
+
+  unknown = 'unknown',
 }
 
 export enum QuoteCurrency {
@@ -51,13 +53,13 @@ export enum PositionStatus {
   notMargined = 'notMargined',
 }
 
-export type AssetMetadataType = {
-  [asset in SupportedAsset]: {
+export type MarketMetadataType = {
+  [market in SupportedMarket]: {
     name: string
     symbol: string
     displayDecimals: number
     tvTicker: string
-    baseCurrency: SupportedAsset
+    baseCurrency: SupportedMarket
     quoteCurrency: QuoteCurrency
     providerId: Hex
     pythFeedId: string // TODO(arjun): remove PythFeedId if possible
@@ -66,37 +68,37 @@ export type AssetMetadataType = {
   }
 }
 
-export const AssetMetadata: AssetMetadataType = {
-  [SupportedAsset.btc]: {
+export const MarketMetadata: MarketMetadataType = {
+  [SupportedMarket.btc]: {
     symbol: 'BTC-USD',
     name: 'Bitcoin',
     displayDecimals: 2,
     tvTicker: 'Crypto.BTC/USD',
-    baseCurrency: SupportedAsset.btc,
+    baseCurrency: SupportedMarket.btc,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     pythFeedId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.eth]: {
+  [SupportedMarket.eth]: {
     symbol: 'ETH-USD',
     name: 'Ethereum',
     displayDecimals: 6,
     tvTicker: 'Crypto.ETH/USD',
-    baseCurrency: SupportedAsset.eth,
+    baseCurrency: SupportedMarket.eth,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     pythFeedId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.arb]: {
+  [SupportedMarket.arb]: {
     symbol: 'ARB-USD',
     name: 'Arbitrum',
     displayDecimals: 4,
     tvTicker: 'Crypto.ARB/USD',
-    baseCurrency: SupportedAsset.arb,
+    baseCurrency: SupportedMarket.arb,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5',
     pythFeedId: '0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5',
@@ -104,48 +106,48 @@ export const AssetMetadata: AssetMetadataType = {
     untransform: linearTransform,
   },
 
-  [SupportedAsset.sol]: {
+  [SupportedMarket.sol]: {
     symbol: 'SOL-USD',
     name: 'Solana',
     displayDecimals: 4,
     tvTicker: 'Crypto.SOL/USD',
-    baseCurrency: SupportedAsset.sol,
+    baseCurrency: SupportedMarket.sol,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
     pythFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.matic]: {
+  [SupportedMarket.matic]: {
     symbol: 'MATIC-USD',
     name: 'Polygon',
     displayDecimals: 6,
     tvTicker: 'Crypto.MATIC/USD',
-    baseCurrency: SupportedAsset.matic,
+    baseCurrency: SupportedMarket.matic,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52',
     pythFeedId: '0x5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.tia]: {
+  [SupportedMarket.tia]: {
     symbol: 'TIA-USD',
     name: 'Celestia',
     displayDecimals: 6,
     tvTicker: 'Crypto.TIA/USD',
-    baseCurrency: SupportedAsset.tia,
+    baseCurrency: SupportedMarket.tia,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x09f7c1d7dfbb7df2b8fe3d3d87ee94a2259d212da4f30c1f0540d066dfa44723',
     pythFeedId: '0x09f7c1d7dfbb7df2b8fe3d3d87ee94a2259d212da4f30c1f0540d066dfa44723',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.rlb]: {
+  [SupportedMarket.rlb]: {
     symbol: 'RLB-USD',
     name: 'Rollbit',
     displayDecimals: 6,
     tvTicker: 'Crypto.RLB/USD',
-    baseCurrency: SupportedAsset.rlb,
+    baseCurrency: SupportedMarket.rlb,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x2f2d17abbc1e781bd87b4a5d52c8b2856886f5c482fa3593cebf6795040ab0b6',
     pythFeedId: '0x2f2d17abbc1e781bd87b4a5d52c8b2856886f5c482fa3593cebf6795040ab0b6',
@@ -153,133 +155,147 @@ export const AssetMetadata: AssetMetadataType = {
     untransform: linearTransform,
   },
 
-  [SupportedAsset.link]: {
+  [SupportedMarket.link]: {
     symbol: 'LINK-USD',
     name: 'Chainlink',
     displayDecimals: 6,
     tvTicker: 'Crypto.LINK/USD',
-    baseCurrency: SupportedAsset.link,
+    baseCurrency: SupportedMarket.link,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
     pythFeedId: '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.bnb]: {
+  [SupportedMarket.bnb]: {
     symbol: 'BNB-USD',
     name: 'BNB',
     displayDecimals: 6,
     tvTicker: 'Crypto.BNB/USD',
-    baseCurrency: SupportedAsset.bnb,
+    baseCurrency: SupportedMarket.bnb,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
     pythFeedId: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.xrp]: {
+  [SupportedMarket.xrp]: {
     symbol: 'XRP-USD',
     name: 'XRP',
     displayDecimals: 6,
     tvTicker: 'Crypto.XRP/USD',
-    baseCurrency: SupportedAsset.xrp,
+    baseCurrency: SupportedMarket.xrp,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
     pythFeedId: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
     transform: linearTransform,
     untransform: linearTransform,
   },
-  [SupportedAsset.msqBTC]: {
+  [SupportedMarket.msqBTC]: {
     symbol: 'BTC²-USD',
     name: 'Bitcoin²',
     displayDecimals: 6,
     tvTicker: 'Crypto.BTC/USD',
-    baseCurrency: SupportedAsset.msqBTC,
+    baseCurrency: SupportedMarket.msqBTC,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x403d2f23c2015aee67e9311896907cc05c139b2c771a92ae48a2c0e50e6883a4',
     pythFeedId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     transform: microPowerTwoTransform,
     untransform: microPowerTwoUntransform,
   },
-  [SupportedAsset.cmsqETH]: {
+  [SupportedMarket.cmsqETH]: {
     symbol: 'ETH²-USD',
     name: 'Ethereum²',
     displayDecimals: 6,
     tvTicker: 'Crypto.ETH/USD',
-    baseCurrency: SupportedAsset.cmsqETH,
+    baseCurrency: SupportedMarket.cmsqETH,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x002aa13b58df1c483e925045e9a580506812ed5bc85c188d3d8b501501294ad4',
     pythFeedId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     transform: centimilliPowerTwoTransform,
     untransform: centimilliPowerTwoUntransform,
   },
-  [SupportedAsset.jup]: {
+  [SupportedMarket.jup]: {
     symbol: 'JUP-USD',
     name: 'Jupiter',
     displayDecimals: 6,
     tvTicker: 'Crypto.JUP/USD',
-    baseCurrency: SupportedAsset.jup,
+    baseCurrency: SupportedMarket.jup,
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996',
     pythFeedId: '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996',
     transform: linearTransform,
     untransform: linearTransform,
   },
+  [SupportedMarket.unknown]: {
+    symbol: 'UNKNOWN',
+    name: 'UNKNOWN',
+    displayDecimals: 6,
+    tvTicker: 'Crypto.UNKNOWN/USD',
+    baseCurrency: SupportedMarket.unknown,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: zeroHash,
+    pythFeedId: zeroHash,
+    transform: linearTransform,
+    untransform: linearTransform,
+  },
 }
 
 /**
- * @description Map of market addresses organized by chain ID and asset
+ * @description Map of market addresses organized by chain ID and market
  */
 export const ChainMarkets: {
   [chainId in SupportedChainId]: {
-    [asset in SupportedAsset]?: Address
+    [market in SupportedMarket]?: Address
   }
 } = {
   [arbitrum.id]: {
-    [SupportedAsset.eth]: getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
-    [SupportedAsset.btc]: getAddress('0xcC83e3cDA48547e3c250a88C8D5E97089Fd28F60'),
-    [SupportedAsset.sol]: getAddress('0x02258bE4ac91982dc1AF7a3D2C4F05bE6079C253'),
-    [SupportedAsset.matic]: getAddress('0x7e34B5cBc6427Bd53ECFAeFc9AC2Cad04e982f78'),
-    [SupportedAsset.tia]: getAddress('0x2CD8651b0dB6bE605267fdd737C840442A96fAFE'),
-    [SupportedAsset.rlb]: getAddress('0x708B750f9f5bD23E074a5a0A64EF542585906e85'),
-    [SupportedAsset.link]: getAddress('0xD9c296A7Bee1c201B9f3531c7AC9c9310ef3b738'),
-    [SupportedAsset.bnb]: getAddress('0x362c6bC2A4EA2033063bf20409A4c5E8C5754056'),
-    [SupportedAsset.xrp]: getAddress('0x2402E92f8C58886F716F5554039fA6398d7A1EfB'),
-    [SupportedAsset.arb]: getAddress('0x3D1D603073b3CEAB5974Db5C54568058a9551cCC'),
-    [SupportedAsset.msqBTC]: getAddress('0x768a5909f0B6997efa56761A89344eA2BD5560fd'),
-    [SupportedAsset.cmsqETH]: getAddress('0x004E1Abf70e4FF99BC572843B63a63a58FAa08FF'),
-    [SupportedAsset.jup]: getAddress('0xbfa99F19a376F25968865983c41535fa368B28da'),
+    [SupportedMarket.eth]: getAddress('0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0'),
+    [SupportedMarket.btc]: getAddress('0xcC83e3cDA48547e3c250a88C8D5E97089Fd28F60'),
+    [SupportedMarket.sol]: getAddress('0x02258bE4ac91982dc1AF7a3D2C4F05bE6079C253'),
+    [SupportedMarket.matic]: getAddress('0x7e34B5cBc6427Bd53ECFAeFc9AC2Cad04e982f78'),
+    [SupportedMarket.tia]: getAddress('0x2CD8651b0dB6bE605267fdd737C840442A96fAFE'),
+    [SupportedMarket.rlb]: getAddress('0x708B750f9f5bD23E074a5a0A64EF542585906e85'),
+    [SupportedMarket.link]: getAddress('0xD9c296A7Bee1c201B9f3531c7AC9c9310ef3b738'),
+    [SupportedMarket.bnb]: getAddress('0x362c6bC2A4EA2033063bf20409A4c5E8C5754056'),
+    [SupportedMarket.xrp]: getAddress('0x2402E92f8C58886F716F5554039fA6398d7A1EfB'),
+    [SupportedMarket.arb]: getAddress('0x3D1D603073b3CEAB5974Db5C54568058a9551cCC'),
+    [SupportedMarket.msqBTC]: getAddress('0x768a5909f0B6997efa56761A89344eA2BD5560fd'),
+    [SupportedMarket.cmsqETH]: getAddress('0x004E1Abf70e4FF99BC572843B63a63a58FAa08FF'),
+    [SupportedMarket.jup]: getAddress('0xbfa99F19a376F25968865983c41535fa368B28da'),
   },
   [arbitrumSepolia.id]: {
-    [SupportedAsset.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
+    [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
   },
   [base.id]: {
-    [SupportedAsset.eth]: getAddress('0xfed3725b449c79791e9771e069fc0c75749fe385'),
-    [SupportedAsset.btc]: getAddress('0x9bb798317f002682a33a686598ee87bfb91be675'),
+    [SupportedMarket.eth]: getAddress('0xfed3725b449c79791e9771e069fc0c75749fe385'),
+    [SupportedMarket.btc]: getAddress('0x9bb798317f002682a33a686598ee87bfb91be675'),
   },
 }
 
-export const chainAssetsWithAddress = (chainId: SupportedChainId, supportedMarkets?: SupportedAsset[]) => {
+export const chainMarketsWithAddress = (chainId: SupportedChainId, supportedMarkets?: SupportedMarket[]) => {
   return Object.entries(ChainMarkets[chainId])
-    .map(([asset, marketAddress]) => (isSupportedAsset(asset) && !!marketAddress ? { asset, marketAddress } : null))
-    .filter((entry): entry is { asset: SupportedAsset; marketAddress: `0x${string}` } => {
-      return notEmpty(entry) && (!supportedMarkets || supportedMarkets.includes(entry.asset))
+    .map(([market, marketAddress]) => (isSupportedMarket(market) && !!marketAddress ? { market, marketAddress } : null))
+    .filter((entry): entry is { market: SupportedMarket; marketAddress: `0x${string}` } => {
+      return notEmpty(entry) && (!supportedMarkets || supportedMarkets.includes(entry.market))
     })
 }
 
 /**
  * Helper to retrieve a market name from a market address
- * @param address
- * @returns SupportedAsset {@link SupportedAsset}
+ * @param chainId Chain ID
+ * @param address Market Address
+ * @returns SupportedMarket {@link SupportedMarket}
  */
-export const addressToAsset = (address: Address) => {
-  for (const chainId of Object.keys(ChainMarkets)) {
-    for (const asset of Object.keys(ChainMarkets[Number(chainId) as SupportedChainId])) {
-      if (ChainMarkets[Number(chainId) as SupportedChainId][asset as SupportedAsset] === address) {
-        return asset as SupportedAsset
-      }
+export const addressToMarket = (chainId: SupportedChainId, address: Address | string) => {
+  for (const market of Object.keys(ChainMarkets[Number(chainId) as SupportedChainId])) {
+    if (ChainMarkets[Number(chainId) as SupportedChainId][market as SupportedMarket] === getAddress(address)) {
+      return market as SupportedMarket
     }
   }
+
+  console.warn(`Market not found for address: ${address}`)
+  return SupportedMarket.unknown
 }
 
 export enum TriggerComparison {
@@ -297,8 +313,8 @@ export enum OrderTypes {
 export const orderTypes = [OrderTypes.market, OrderTypes.limit, OrderTypes.stopLoss, OrderTypes.takeProfit]
 export const triggerOrderTypes = [OrderTypes.stopLoss, OrderTypes.takeProfit]
 
-function isSupportedAsset(asset: any): asset is SupportedAsset {
-  return Object.values(SupportedAsset).includes(asset)
+function isSupportedMarket(market: any): market is SupportedMarket {
+  return Object.values(SupportedMarket).includes(market)
 }
 
 export type ReferrerInterfaceFeeInfo =

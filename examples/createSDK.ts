@@ -2,7 +2,7 @@ import { config as dotenvConfig } from 'dotenv'
 import path from 'path'
 import { getAddress } from 'viem'
 
-import Perennial, { ChainMarkets, Day, SupportedAsset } from '../'
+import Perennial, { ChainMarkets, Day, SupportedMarket } from '../'
 
 dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 ;(BigInt.prototype as any).toJSON = function () {
@@ -10,7 +10,7 @@ dotenvConfig({ path: path.resolve(__dirname, '../.env.local') })
 }
 
 async function run() {
-  const markets = [SupportedAsset.eth, SupportedAsset.btc, SupportedAsset.sol]
+  const markets = [SupportedMarket.eth, SupportedMarket.btc, SupportedMarket.sol]
   const address = getAddress('0x1deFb9E9aE40d46C358dc0a185408dc178483851')
   const sdk = new Perennial({
     chainId: 42161,

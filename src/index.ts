@@ -18,7 +18,6 @@ export {
 export {
   type SubPositionChange,
   type OpenOrder,
-  type Markets,
   fetchActivePositionsPnl,
   fetchActivePositionHistory,
   fetchHistoricalPositions,
@@ -128,15 +127,20 @@ export {
 
 // Markets
 export {
-  SupportedAsset,
+  SupportedMarket,
+  SupportedMarket as SupportedAsset, // Deprecated - use SupportedMarket
   QuoteCurrency,
   PositionSide,
   PositionStatus,
-  AssetMetadata,
-  type AssetMetadataType,
+  MarketMetadata,
+  MarketMetadata as AssetMetadata, // Deprecated - Use MarketMetadata
+  MarketMetadataType,
+  type MarketMetadataType as AssetMetadataType, // Deprecated - Use MarketMetadataType
   ChainMarkets,
-  chainAssetsWithAddress,
-  addressToAsset,
+  chainMarketsWithAddress,
+  chainMarketsWithAddress as chainAssetsWithAddress, // Deprecated - Use chainMarketsWithAddress
+  addressToMarket,
+  addressToMarket as addressToAsset, // Deprecated - Use addressToMarket
   TriggerComparison,
   OrderTypes,
   orderTypes,
