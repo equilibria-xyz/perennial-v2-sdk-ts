@@ -18,15 +18,13 @@ export {
 export {
   type SubPositionChange,
   type OpenOrder,
-  type Markets,
-  fetchActivePositionPnl,
+  fetchActivePositionsPnl,
   fetchActivePositionHistory,
   fetchHistoricalPositions,
   fetchSubPositions,
   fetchOpenOrders,
-  fetchMarket24hrData,
-  fetchMarket7dData,
-  getPriceAtVersion,
+  fetchMarkets24hrData,
+  fetchMarketsHistoricalData,
   fetchTradeHistory,
 } from './lib/markets/graph'
 
@@ -57,9 +55,6 @@ export {
   fetchVaultSnapshots,
   fetchVaultPositionHistory,
 } from './lib/vaults/chain'
-
-// Vault - Graph
-export { fetchVault7dAccumulations } from './lib/vaults/graph'
 
 // Vault - Transactions
 export {
@@ -132,15 +127,20 @@ export {
 
 // Markets
 export {
-  SupportedAsset,
+  SupportedMarket,
+  SupportedMarket as SupportedAsset, // Deprecated - use SupportedMarket
   QuoteCurrency,
   PositionSide,
   PositionStatus,
-  AssetMetadata,
-  type AssetMetadataType,
+  MarketMetadata,
+  MarketMetadata as AssetMetadata, // Deprecated - Use MarketMetadata
+  MarketMetadataType,
+  type MarketMetadataType as AssetMetadataType, // Deprecated - Use MarketMetadataType
   ChainMarkets,
-  chainAssetsWithAddress,
-  addressToAsset,
+  chainMarketsWithAddress,
+  chainMarketsWithAddress as chainAssetsWithAddress, // Deprecated - Use chainMarketsWithAddress
+  addressToMarket,
+  addressToMarket as addressToAsset, // Deprecated - Use addressToMarket
   TriggerComparison,
   OrderTypes,
   orderTypes,

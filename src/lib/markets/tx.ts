@@ -7,7 +7,7 @@ import {
   PositionSide,
   SupportedChainId,
   TriggerComparison,
-  addressToAsset,
+  addressToMarket,
 } from '../../constants'
 import { InterfaceFee } from '../../constants'
 import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
@@ -54,14 +54,10 @@ export async function buildUpdateMarketTx({
   onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
-  const asset = addressToAsset(marketAddress)
-
-  if (!asset) {
-    throw new Error('Could not determine asset for market')
-  }
+  const market = addressToMarket(chainId, marketAddress)
 
   if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient, [asset])
+    marketOracles = await fetchMarketOracles(chainId, publicClient, [market])
   }
 
   if (!marketSnapshots) {
@@ -71,7 +67,7 @@ export async function buildUpdateMarketTx({
       address,
       marketOracles,
       pythClient,
-      markets: [asset],
+      markets: [market],
     })
   }
 
@@ -93,7 +89,7 @@ export async function buildUpdateMarketTx({
 
   // Default to price being stale if we don't have any market snapshots
   let isPriceStale = true
-  const marketSnapshot = asset && marketSnapshots?.market[asset]
+  const marketSnapshot = market && marketSnapshots?.market[market]
   if (marketSnapshot && marketSnapshots) {
     const {
       parameter: { maxPendingGlobal, maxPendingLocal },
@@ -105,7 +101,8 @@ export async function buildUpdateMarketTx({
     // If there is a backlog of pending positions, we need to commit the price
     isPriceStale = isPriceStale || BigInt(pendingPositions.length) >= maxPendingGlobal
     // If there is a backlog of pending positions for this user, we need to commit the price
-    isPriceStale = isPriceStale || BigOrZero(marketSnapshots.user?.[asset]?.pendingPositions?.length) >= maxPendingLocal
+    isPriceStale =
+      isPriceStale || BigOrZero(marketSnapshots.user?.[market]?.pendingPositions?.length) >= maxPendingLocal
   }
 
   // Only add the price commit if the price is stale

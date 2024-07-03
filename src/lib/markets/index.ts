@@ -7,8 +7,8 @@ import {
   OrderExecutionDeposit,
   OrderTypes,
   PositionSide,
-  SupportedAsset,
   SupportedChainId,
+  SupportedMarket,
   TriggerComparison,
   TriggerOrderFullCloseMagicValue,
   chainIdToChainMap,
@@ -20,11 +20,10 @@ import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
-  fetchActivePositionPnl,
+  fetchActivePositionsPnl,
   fetchHistoricalPositions,
-  fetchMarket7dData,
-  fetchMarket24hrData,
-  fetchMarkets24hrVolume,
+  fetchMarkets24hrData,
+  fetchMarketsHistoricalData,
   fetchOpenOrders,
   fetchSubPositions,
   fetchTradeHistory,
@@ -49,7 +48,8 @@ import {
   buildUpdateMarketTx,
 } from './tx'
 
-type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address'>
+type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address' | 'markets'>
+type OptionalMarkets = { markets?: SupportedMarket[] }
 
 export type BuildModifyPositionTxArgs = {
   marketAddress: Address
@@ -108,7 +108,7 @@ type MarketsModuleConfig = {
   pythClient: HermesClient
   walletClient?: WalletClient
   operatingFor?: Address
-  supportedMarkets?: SupportedAsset[]
+  supportedMarkets: SupportedMarket[]
 }
 
 /**
@@ -149,7 +149,9 @@ export class MarketsModule {
        * @param onSuccess Success callback
        * @returns The {@link MarketSnapshots}.
        */
-      marketSnapshots: (args: OmitBound<Parameters<typeof fetchMarketSnapshots>[0]> & OptionalAddress = {}) => {
+      marketSnapshots: (
+        args: OmitBound<Parameters<typeof fetchMarketSnapshots>[0]> & OptionalAddress & OptionalMarkets = {},
+      ) => {
         return fetchMarketSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
@@ -162,28 +164,35 @@ export class MarketsModule {
       /**
        * Fetches position PnL for a given market and Address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param userMarketSnapshot {@link UserMarketSnapshot}
-       * @param marketSnapshot {@link MarketSnapshot}
-       * @param includeClosedWithCollateral Include closed positions with collateral
+       * @param markets List of {@link SupportedMarket}
+       * @param marketSnapshots {@link MarketSnapshots}
        * @returns User's PnL for an active position.
        */
-      activePositionPnl: (args: OmitBound<Parameters<typeof fetchActivePositionPnl>[0]> & OptionalAddress) => {
+      activePositionsPnl: (
+        args: OmitBound<Parameters<typeof fetchActivePositionsPnl>[0]> & OptionalAddress & OptionalMarkets,
+      ) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch active position PnL.')
         }
 
-        return fetchActivePositionPnl({
+        return fetchActivePositionsPnl({
+          chainId: this.config.chainId,
+          publicClient: this.config.publicClient,
+          pythClient: this.config.pythClient,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
       /**
        * Fetches active position history for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param market Market Address
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param market {@link SupportedMarket}
+       * @param positionId BigInt
+       * @param first number
+       * @param skip number
+       * @param chainId {@link SupportedChainId}
        * @returns User's position history for an active position.
        */
       activePositionHistory: (args: OmitBound<Parameters<typeof fetchActivePositionHistory>[0]> & OptionalAddress) => {
@@ -192,6 +201,7 @@ export class MarketsModule {
         }
 
         return fetchActivePositionHistory({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
           ...args,
@@ -200,30 +210,38 @@ export class MarketsModule {
       /**
        * Fetches the position history for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param markets List of {@link Markets} to fetch position history for
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param markets List of {@link SupportedMarket} to fetch position history for
+       * @param chainId {@link SupportedChainId}
+       * @param fromTs bigint - Start timestamp in seconds
+       * @param toTs bigint - Start timestamp in seconds
+       * @param first number
+       * @param skip number
+       * @param maker boolean - Filter for maker positions
        * @returns User's position history.
        */
-      historicalPositions: (args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]> & OptionalAddress) => {
+      historicalPositions: (
+        args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]> & OptionalAddress & OptionalMarkets,
+      ) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch historical positions.')
         }
 
         return fetchHistoricalPositions({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
       /**
        * Fetches the sub positions activity for a given position
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param market Market Address
-       * @param startVersion BigInt - Start oracle version number
-       * @param endVersion BigInt - End oracle version number
+       * @param market {@link SupportedMarket}
+       * @param positionId BigInt
        * @param first Number of entries to fetch
        * @param skip Number of entries to skip
+       * @param graphClient GraphQLClient
        * @returns User's sub positions.
        */
       subPositions: (args: OmitBound<Parameters<typeof fetchSubPositions>[0]> & OptionalAddress) => {
@@ -232,6 +250,7 @@ export class MarketsModule {
         }
 
         return fetchSubPositions({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
           ...args,
@@ -250,6 +269,7 @@ export class MarketsModule {
         }
 
         return fetchTradeHistory({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
           ...args,
@@ -258,64 +278,62 @@ export class MarketsModule {
       /**
        * Fetches the open orders for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
-       * @param markets List of {@link Markets} to fetch open orders for
-       * @param pageParam Page number
-       * @param pageSize Page size
+       * @param markets List of {@link SupportedMarket} to fetch open orders for
+       * @param chainId {@link SupportedChainId}
+       * @param first number
+       * @param skip number
+       * @param isMaker boolean - Filter for maker orders
        * @returns User's open orders.
        */
-      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress) => {
+      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress & OptionalMarkets) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch open orders.')
         }
 
         return fetchOpenOrders({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
-          ...args,
-        })
-      },
-      /**
-       * Fetches the 24hr volume data for a given market
-       * @param market Market Address
-       * @returns Market 24hr volume data.
-       */
-      market24hrData: (args: OmitBound<Parameters<typeof fetchMarket24hrData>[0]>) => {
-        if (!this.config.graphClient) {
-          throw new Error('Graph client required to fetch market 24hr data.')
-        }
-
-        return fetchMarket24hrData({
-          graphClient: this.config.graphClient,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
       /**
        * Fetches the 24hr volume data for a list of market
-       * @param markets List of market Addresses
+       * @param markets List of {@link SupportedMarket}
+       * @param chainId {@link SupportedChainId}
        * @returns Markets 24hr volume data.
        */
-      markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrVolume>[0]>) => {
+      markets24hrData: (args: OmitBound<Parameters<typeof fetchMarkets24hrData>[0]> & OptionalMarkets = {}) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch markets 24hr data.')
         }
 
-        return fetchMarkets24hrVolume({
+        return fetchMarkets24hrData({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
       /**
-       * Fetches the 7d data for a given market
-       * @param market Market Address
+       * Fetches Historical data for markets
+       * @param markets List of {@link SupportedMarket}
+       * @param chainId {@link SupportedChainId}
+       * @param fromTs bigint - Start timestamp in seconds
+       * @param toTs bigint - Start timestamp in seconds
+       * @param bucket {@link Bucket}
        * @returns Market 7d data.
        */
-      market7dData: (args: OmitBound<Parameters<typeof fetchMarket7dData>[0]>) => {
+      marketsHistoricalData: (args: OmitBound<Parameters<typeof fetchMarketsHistoricalData>[0]> & OptionalMarkets) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch market 7d data.')
         }
 
-        return fetchMarket7dData({
+        return fetchMarketsHistoricalData({
+          chainId: this.config.chainId,
           graphClient: this.config.graphClient,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },

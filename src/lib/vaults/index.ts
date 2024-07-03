@@ -16,7 +16,6 @@ import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
-import { fetchVault7dAccumulations } from './graph'
 
 /**
  * Fetches the vault commitments for a given chain.
@@ -143,23 +142,6 @@ export class VaultsModule {
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           address: this.defaultAddress,
-          ...args,
-        })
-      },
-      /**
-       * Fetches the vault 7d accumulations
-       * @param vaultAddress Vault Address
-       * @param vaultSnapshot {@link VaultSnapshot}
-       * @param latestBlockNumber Latest block number
-       * @returns The vault 7d accumulations.
-       */
-      vault7dAccumulations: (args: OmitBound<Parameters<typeof fetchVault7dAccumulations>[0]>) => {
-        if (!this.config.graphClient) {
-          throw new Error('Graph client required to fetch vault7dAccumulations.')
-        }
-
-        return fetchVault7dAccumulations({
-          graphClient: this.config.graphClient,
           ...args,
         })
       },

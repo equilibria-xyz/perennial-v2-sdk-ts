@@ -104,7 +104,7 @@ importers:
         version: 0.25.13(typescript@5.4.3)
       typedoc-plugin-missing-exports:
         specifier: ^2.2.0
-        version: 2.2.0(typedoc@0.25.13(typescript@5.4.3))
+        version: 2.3.0(typedoc@0.25.13(typescript@5.4.3))
       typescript:
         specifier: 5.4.3
         version: 5.4.3
@@ -2299,8 +2299,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  jsonc-parser@3.2.1:
-    resolution: {integrity: sha512-AilxAyFOAcK5wA1+LeaySVBrHsGQvUFCDWXKpZjzaL0PqW+xfBOttn8GNtWKFWqneyMZj41MWF9Kl6iPWLwgOA==}
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
 
   jsonfile@2.4.0:
     resolution: {integrity: sha512-PKllAqbgLgxHaj8TElYymKCAgrASebJrWpTnEkOaTowt23VKXXN0sUeriJ+eh7y6ufb/CC5ap11pz71/cM0hUw==}
@@ -2484,6 +2484,10 @@ packages:
 
   minimatch@9.0.3:
     resolution: {integrity: sha512-RHiac9mvaRw0x3AYRgDC1CxAP7HTcNrrECeA8YYJeWnpo+2Q5CegtZjaotWTWxDG3UeGA1coE05iH1mPjT/2mg==}
+    engines: {node: '>=16 || 14 >=14.17'}
+
+  minimatch@9.0.5:
+    resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
 
   minipass@7.0.4:
@@ -3125,8 +3129,8 @@ packages:
     resolution: {integrity: sha512-tLq3bSNx+xSpwvAJnzrK0Ep5CLNWjvFTOp71URMaAEWBfRb9nnJiBoUe0tF8bI4ZFO3omgBR6NvnbzVUT3Ly4g==}
     engines: {node: '>=14.16'}
 
-  typedoc-plugin-missing-exports@2.2.0:
-    resolution: {integrity: sha512-2+XR1IcyQ5UwXZVJe9NE6HrLmNufT9i5OwoIuuj79VxuA3eYq+Y6itS9rnNV1D7UeQnUSH8kISYD73gHE5zw+w==}
+  typedoc-plugin-missing-exports@2.3.0:
+    resolution: {integrity: sha512-iI9ITNNLlbsLCBBeYDyu0Qqp3GN/9AGyWNKg8bctRXuZEPT7G1L+0+MNWG9MsHcf/BFmNbXL0nQ8mC/tXRicog==}
     peerDependencies:
       typedoc: 0.24.x || 0.25.x
 
@@ -6153,7 +6157,7 @@ snapshots:
 
   json5@2.2.3: {}
 
-  jsonc-parser@3.2.1: {}
+  jsonc-parser@3.3.1: {}
 
   jsonfile@2.4.0:
     optionalDependencies:
@@ -6344,6 +6348,10 @@ snapshots:
       brace-expansion: 2.0.1
 
   minimatch@9.0.3:
+    dependencies:
+      brace-expansion: 2.0.1
+
+  minimatch@9.0.5:
     dependencies:
       brace-expansion: 2.0.1
 
@@ -6759,7 +6767,7 @@ snapshots:
   shiki@0.14.7:
     dependencies:
       ansi-sequence-parser: 1.1.1
-      jsonc-parser: 3.2.1
+      jsonc-parser: 3.3.1
       vscode-oniguruma: 1.7.0
       vscode-textmate: 8.0.0
 
@@ -6969,7 +6977,7 @@ snapshots:
 
   type-fest@3.13.1: {}
 
-  typedoc-plugin-missing-exports@2.2.0(typedoc@0.25.13(typescript@5.4.3)):
+  typedoc-plugin-missing-exports@2.3.0(typedoc@0.25.13(typescript@5.4.3)):
     dependencies:
       typedoc: 0.25.13(typescript@5.4.3)
 
@@ -6977,7 +6985,7 @@ snapshots:
     dependencies:
       lunr: 2.3.9
       marked: 4.3.0
-      minimatch: 9.0.3
+      minimatch: 9.0.5
       shiki: 0.14.7
       typescript: 5.4.3
 
