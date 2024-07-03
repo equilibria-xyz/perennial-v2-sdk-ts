@@ -677,12 +677,12 @@ export async function fetchMarketsHistoricalData({
     const fromAccumulator = data?.fromAccumulator.at(0)
     const toAccumulator = data?.toAccumulator.at(0)
 
-    const accumulatorScaleFactor = Big6Math.fromFloatString(
-      (
-        Number(toTs - fromTs) /
-        Number(BigInt(toAccumulator?.toVersion ?? toTs) - BigInt(fromAccumulator?.toVersion ?? fromTs))
-      ).toString(),
+    const scaleFactorDenominator = Big6Math.fromDecimals(
+      BigInt(toAccumulator?.toVersion ?? toTs) - BigInt(fromAccumulator?.fromVersion ?? fromTs),
+      0,
     )
+    const accumulatorScaleFactor =
+      scaleFactorDenominator !== 0n ? Big6Math.div(Big6Math.fromDecimals(toTs - fromTs, 0), scaleFactorDenominator) : 0n
 
     const accumulations = data?.accumulations ?? []
     const takerVolumes = accumulations.map((vol) => ({
