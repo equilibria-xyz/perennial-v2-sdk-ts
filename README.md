@@ -121,7 +121,7 @@ https://sdk-docs.perennial.finance/classes/lib_markets.MarketsModule.html#read
 Fetch the current state of Perennial markets and user positions.
 
 ```typescript
-import { SupportedAsset } from '@perennial/sdk'
+import { SupportedMarket } from '@perennial/sdk'
 
 const marketSnapshots = await sdk.markets.read.marketSnapshots({
   address: WalletAddress,
@@ -129,8 +129,8 @@ const marketSnapshots = await sdk.markets.read.marketSnapshots({
   onSuccess: () => console.log('Market snapshots fetched successfully.'),
 })
 
-console.log(marketSnapshots.market[SupportedAsset.eth]) // ETH market state
-console.log(marketSnapshots.user[SupportedAsset.eth]) // User ETH position state
+console.log(marketSnapshots.market[SupportedMarket.eth]) // ETH market state
+console.log(marketSnapshots.user[SupportedMarket.eth]) // User ETH position state
 ```
 
 #### Active Position Pnl
@@ -140,17 +140,14 @@ Fetch PnL data for an open user position.
 ```typescript
 import { getAddress } from "viem"
 import { arbitrum } from "viem/chains"
-import { ChainMarkets, SupportedAsset } from "@perennial/sdk"
+import { ChainMarkets, SupportedMarket } from "@perennial/sdk"
 
 const marketSnapshots = await sdk.markets.read.marketSnapshots({...})
-const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
-const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
 
 const userPositionPnlData = await sdk.markets.read.activePositionPnl({
-    marketSnapshot: ethMarketSnapshot,
-    userMarketSnapshot: ethUserMarketSnapshot,
+    marketSnapshots,
     address: getAddress(<userAddress>),
-    includeClosedWithCollateral: true
+    markets: [SupportedMarket.eth, SupportedMarket.btc]
 })
 ```
 
@@ -159,15 +156,15 @@ const userPositionPnlData = await sdk.markets.read.activePositionPnl({
 Fetch open orders for a set of markets for a given user.
 
 ```typescript
-import { chainAssetsWithAddress } from '@perennial/sdk'
-
-const markets = chainAssetsWithAddress(chainId)
+import { SupportedMarket } from '@perennial/sdk'
 
 const openOrders = await sdk.markets.read.openOrders({
-  address,
-  markets,
-  pageParam: 0,
-  pageSize: 20,
+  address: getAddress(<userAddress>),
+  markets: [SupportedMarket.eth],
+  chainId,
+  first: 100,
+  skip: 0,
+  isMaker: false // Set to true to fetch orders for maker positions
 })
 ```
 
@@ -176,15 +173,17 @@ const openOrders = await sdk.markets.read.openOrders({
 Fetch position history for a given user
 
 ```typescript
-import { chainAssetsWithAddress } from '@perennial/sdk'
-
-const markets = chainAssetsWithAddress(chainId)
+import { SupportedMarket } from '@perennial/sdk'
 
 const positionHistory = await sdk.markets.read.historicalPositions({
   address,
-  markets,
-  pageParam: 0,
-  pageSize: 20,
+  markets: [SupportedMarket.btc, SupportedMarket.eth],
+  chainId,
+  fromTs, // bigint - start timestamp
+  toTs, // bigint - end timestamp in seconds
+  first: 100,
+  skip: 0,
+  maker: false, // Set to true to fetch history for maker positions
 })
 ```
 
@@ -194,18 +193,22 @@ Fetch the change history for an active position
 
 ```typescript
 const activePositionHistory = await sdk.markets.read.activePositionHistory({
-  market: userMarketSnapshot.market,
+  market: SupportedMarket.eth,
   address,
+  positionId,
+  first: 100,
+  skip: 0,
+  chainId,
 })
 ```
 
 #### Market 24hr and 7d data
 
 ```typescript
-const ethMarketAddress = ChainMarkets[arbitrum.id][SupportedAsset.eth]
-
-const ethMarket24hrData = await sdk.markets.read.market24hrData({ market: ethMarketAddress })
-const ethMarket7dData = await sdk.markets.read.market7dData({ market: ethMarketAddress })
+const ethMarket24hrData = await sdk.markets.read.market24hrData({
+  market: [SupportedMarket.eth],
+  chainId,
+})
 ```
 
 #### Trade History
@@ -235,8 +238,8 @@ When values are provided for `stopLossPrice` or `takeProfitPrice`, the resulting
 ```typescript
 const marketOracles = await sdk.markets.read.marketOracles()
 const marketSnapshots = await sdk.markets.read.marketSnapshots({...})
-const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
-const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
+const ethMarketSnapshot = marketSnapshots.market[SupportedMarket.eth]
+const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.modifyPosition({
   marketAddress: ethMarketSnapshot.market,
@@ -265,8 +268,8 @@ The `placeOrder` method can be used to set combined limit, stop loss and take pr
 ```typescript
 const marketOracles = await sdk.markets.read.marketOracles()
 const marketSnapshots = await sdk.markets.read.marketSnapshots({...})
-const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
-const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
+const ethMarketSnapshot = marketSnapshots.market[SupportedMarket.eth]
+const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.placeOrder({
   marketAddress: ethMarketSnapshot.market,
@@ -296,8 +299,8 @@ Send an update market transaction. Can be used to increase/decrease an existing 
 ```typescript
 const marketOracles = await sdk.markets.read.marketOracles()
 const marketSnapshots = await sdk.markets.read.marketSnapshots({...})
-const ethMarketSnapshot = marketSnapshots.market[SupportedAsset.eth]
-const ethUserMarketSnapshot = marketSnapshots.user[SupportedAsset.eth]
+const ethMarketSnapshot = marketSnapshots.market[SupportedMarket.eth]
+const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.update({
   address,

@@ -25,6 +25,7 @@ export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOra
  * Fetches the market oracles for a given chain
  * @param chainId Chain ID {@link SupportedChainId}
  * @param publicClient Public Client
+ * @param markets List of {@link SupportedMarket}
  */
 export async function fetchMarketOracles(
   chainId: SupportedChainId = DefaultChain.id,

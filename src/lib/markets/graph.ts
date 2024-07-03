@@ -36,10 +36,10 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
 
 /**
  * Fetches position PnL for a given market and Address
+ * @param markets List of {@link SupportedMarket}
  * @param address Wallet Address
- * @param userMarketSnapshot {@link UserMarketSnapshot}
- * @param marketSnapshot {@link MarketSnapshot}
- * @param includeClosedWithCollateral Include closed positions with collateral
+ * @param marketSnapshots {@link MarketSnapshots}
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns User's PnL for an active position.
  */
@@ -241,10 +241,12 @@ export async function fetchActivePositionsPnl({
 }
 /**
  * Fetches active position history for a given address
+ * @param market {@link SupportedMarket}
  * @param address Wallet Address
- * @param market Market Address
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param positionId BigInt
+ * @param first number
+ * @param skip number
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns User's position history for an active position.
  */
@@ -278,9 +280,13 @@ export async function fetchActivePositionHistory({
 /**
  * Fetches the position history for a given address
  * @param address Wallet Address
- * @param markets List of {@link Markets} to fetch position history for
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param markets List of {@link SupportedMarket} to fetch position history for
+ * @param chainId {@link SupportedChainId}
+ * @param fromTs bigint - Start timestamp in seconds
+ * @param toTs bigint - Start timestamp in seconds
+ * @param first number
+ * @param skip number
+ * @param maker boolean - Filter for maker positions
  * @param graphClient GraphQLClient
  * @returns User's position history.
  */
@@ -434,9 +440,8 @@ export type SubPositionChange = Awaited<ReturnType<typeof fetchSubPositions>>[nu
 /**
  * Fetches the sub positions activity for a given position
  * @param address Wallet Address
- * @param market Market Address
- * @param startVersion BigInt - Start oracle version number
- * @param endVersion BigInt - End oracle version number
+ * @param market {@link SupportedMarket}
+ * @param positionId BigInt
  * @param first Number of entries to fetch
  * @param skip Number of entries to skip
  * @param graphClient GraphQLClient
@@ -566,9 +571,11 @@ export type OpenOrder = NonNullable<NonNullable<Awaited<ReturnType<typeof fetchO
 /**
  * Fetches the open orders for a given address
  * @param address Wallet Address
- * @param markets List of {@link Markets} to fetch open orders for
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param markets List of {@link SupportedMarket} to fetch open orders for
+ * @param chainId {@link SupportedChainId}
+ * @param first number
+ * @param skip number
+ * @param isMaker boolean - Filter for maker orders
  * @param graphClient GraphQLClient
  * @returns User's open orders.
  */
@@ -607,7 +614,8 @@ export async function fetchOpenOrders({
 
 /**
  * Fetches the 24hr volume data for a list of market
- * @param markets List of market Addresses
+ * @param markets List of {@link SupportedMarket}
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns Markets 24hr volume data.
  */
@@ -632,9 +640,13 @@ export async function fetchMarkets24hrData({
   })
 }
 /**
- * Fetches the 7d data for a given market
- * @param market Market Address
+ * Fetches Historical data for markets
+ * @param markets List of {@link SupportedMarket}
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
+ * @param fromTs bigint - Start timestamp in seconds
+ * @param toTs bigint - Start timestamp in seconds
+ * @param bucket {@link Bucket}
  * @returns Market 7d data.
  */
 export async function fetchMarketsHistoricalData({
