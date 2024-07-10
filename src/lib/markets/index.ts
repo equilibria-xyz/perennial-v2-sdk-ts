@@ -190,8 +190,8 @@ export class MarketsModule {
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param market {@link SupportedMarket}
        * @param positionId BigInt
-       * @param first number
-       * @param skip number
+       * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+       * @param [skip=0] Offset for pagination number
        * @param chainId {@link SupportedChainId}
        * @returns User's position history for an active position.
        */
@@ -214,8 +214,8 @@ export class MarketsModule {
        * @param chainId {@link SupportedChainId}
        * @param fromTs bigint - Start timestamp in seconds
        * @param toTs bigint - Start timestamp in seconds
-       * @param first number
-       * @param skip number
+       * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+       * @param [skip=0] Offset for pagination number
        * @param maker boolean - Filter for maker positions
        * @returns User's position history.
        */
@@ -239,8 +239,8 @@ export class MarketsModule {
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param market {@link SupportedMarket}
        * @param positionId BigInt
-       * @param first Number of entries to fetch
-       * @param skip Number of entries to skip
+       * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+       * @param [skip=0] Offset for pagination Number of entries to skip
        * @param graphClient GraphQLClient
        * @returns User's sub positions.
        */
@@ -280,8 +280,8 @@ export class MarketsModule {
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param markets List of {@link SupportedMarket} to fetch open orders for
        * @param chainId {@link SupportedChainId}
-       * @param first number
-       * @param skip number
+       * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+       * @param [skip=0] Offset for pagination number
        * @param isMaker boolean - Filter for maker orders
        * @returns User's open orders.
        */

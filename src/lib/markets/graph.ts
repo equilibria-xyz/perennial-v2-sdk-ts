@@ -36,10 +36,12 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
 
 /**
  * Fetches position PnL for a given market and Address
- * @param markets List of {@link SupportedMarket}
- * @param address Wallet Address
- * @param marketSnapshots {@link MarketSnapshots}
  * @param chainId {@link SupportedChainId}
+ * @param markets List of {@link SupportedMarket}
+ * @param marketSnapshots [Optional] Snapshots for markets {@link MarketSnapshots}
+ * @param address Wallet Address
+ * @param publicClient Viem Public Client
+ * @param pythClient PythClient
  * @param graphClient GraphQLClient
  * @returns User's PnL for an active position.
  */
@@ -243,9 +245,9 @@ export async function fetchActivePositionsPnl({
  * Fetches active position history for a given address
  * @param market {@link SupportedMarket}
  * @param address Wallet Address
- * @param positionId BigInt
- * @param first number
- * @param skip number
+ * @param positionId position ID
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination
  * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns User's position history for an active position.
@@ -254,7 +256,7 @@ export async function fetchActivePositionHistory({
   market,
   address,
   positionId,
-  first = 100,
+  first = GraphDefaultPageSize,
   skip = 0,
   chainId,
   graphClient,
@@ -262,8 +264,8 @@ export async function fetchActivePositionHistory({
   market: SupportedMarket
   address: Address
   positionId: bigint
-  first: number
-  skip: number
+  first?: number
+  skip?: number
   chainId: SupportedChainId
   graphClient: GraphQLClient
 }) {
@@ -284,9 +286,9 @@ export async function fetchActivePositionHistory({
  * @param chainId {@link SupportedChainId}
  * @param fromTs bigint - Start timestamp in seconds
  * @param toTs bigint - Start timestamp in seconds
- * @param first number
- * @param skip number
- * @param maker boolean - Filter for maker positions
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination number
+ * @param maker boolean - Whether to filter for maker or taker positions
  * @param graphClient GraphQLClient
  * @returns User's position history.
  */
@@ -297,7 +299,7 @@ export async function fetchHistoricalPositions({
   chainId,
   fromTs,
   toTs,
-  first = 100,
+  first = GraphDefaultPageSize,
   skip = 0,
   maker,
 }: {
@@ -307,8 +309,8 @@ export async function fetchHistoricalPositions({
   graphClient: GraphQLClient
   fromTs?: bigint
   toTs?: bigint
-  first: number
-  skip: number
+  first?: number
+  skip?: number
   maker?: boolean
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
@@ -442,8 +444,8 @@ export type SubPositionChange = Awaited<ReturnType<typeof fetchSubPositions>>[nu
  * @param address Wallet Address
  * @param market {@link SupportedMarket}
  * @param positionId BigInt
- * @param first Number of entries to fetch
- * @param skip Number of entries to skip
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination
  * @param graphClient GraphQLClient
  * @returns User's sub positions.
  */
@@ -451,8 +453,8 @@ export async function fetchSubPositions({
   address,
   market,
   positionId,
-  first,
-  skip,
+  first = GraphDefaultPageSize,
+  skip = 0,
   chainId,
   graphClient,
 }: {
@@ -461,8 +463,8 @@ export async function fetchSubPositions({
   address: Address
   market: SupportedMarket
   positionId: bigint
-  first: number
-  skip: number
+  first?: number
+  skip?: number
 }) {
   const marketAddress = ChainMarkets[chainId][market]
   if (!marketAddress) return []
@@ -573,8 +575,8 @@ export type OpenOrder = NonNullable<NonNullable<Awaited<ReturnType<typeof fetchO
  * @param address Wallet Address
  * @param markets List of {@link SupportedMarket} to fetch open orders for
  * @param chainId {@link SupportedChainId}
- * @param first number
- * @param skip number
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination number
  * @param isMaker boolean - Filter for maker orders
  * @param graphClient GraphQLClient
  * @returns User's open orders.
@@ -584,7 +586,7 @@ export async function fetchOpenOrders({
   graphClient,
   markets,
   address,
-  first = 100,
+  first = GraphDefaultPageSize,
   skip = 0,
   isMaker,
 }: {
@@ -592,8 +594,8 @@ export async function fetchOpenOrders({
   graphClient: GraphQLClient
   markets: SupportedMarket[]
   address: Address
-  first: number
-  skip: number
+  first?: number
+  skip?: number
   isMaker?: boolean
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
