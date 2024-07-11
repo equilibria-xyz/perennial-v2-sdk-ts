@@ -9,7 +9,7 @@ export const PositionDataFragment = gql(`
       fee_subAccumulation_trade, fee_subAccumulation_additive, fee_subAccumulation_triggerOrder, fee_subAccumulation_liquidation
     }
     firstOrder: orders(first: 1, orderBy: orderId, orderDirection: asc) { executionPrice }
-    closeOrder: orders(where: { newMaker: 0, newLong: 0, newShort: 0, oracleVersion_: { valid: true } }, first: 1, orderBy: orderId, orderDirection: desc) { oracleVersion { timestamp }, liquidation }
+    closeOrder: orders(where: { newMaker: 0, newLong: 0, newShort: 0, oracleVersion_: { valid: true } }, first: 1, orderBy: orderId, orderDirection: asc) { oracleVersion { timestamp }, liquidation }
   }
 `)
 
