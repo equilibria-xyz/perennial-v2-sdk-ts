@@ -49,23 +49,23 @@ export type RealizedFeeAccumulations = Record<(typeof FeeAccumulatorTypes)[numbe
 export const FeeAccumulatorTypes = [
   {
     type: 'trade',
-    realizedKey: `collateral_subAccumulation_offset`,
+    realizedKey: `fee_subAccumulation_trade`,
   },
   {
     type: 'settlement',
-    realizedKey: `collateral_subAccumulation_pnl`,
+    realizedKey: `fee_subAccumulation_settlement`,
   },
   {
     type: 'additive',
-    realizedKey: `collateral_subAccumulation_funding`,
+    realizedKey: `fee_subAccumulation_additive`,
   },
   {
     type: 'triggerOrder',
-    realizedKey: `collateral_subAccumulation_interest`,
+    realizedKey: `fee_subAccumulation_triggerOrder`,
   },
   {
     type: 'liquidation',
-    realizedKey: `collateral_subAccumulation_makerPositionFee`,
+    realizedKey: `fee_subAccumulation_liquidation`,
   },
 ] as const
 

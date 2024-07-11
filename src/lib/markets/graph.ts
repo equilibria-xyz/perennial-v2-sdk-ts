@@ -372,11 +372,11 @@ function processGraphPosition(
   // If this is a maker position, move offset to trade fee
   if (side === PositionSide.maker) {
     const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
-    feeAccumulations.trade += offsetAsFee // Convert offset to a fee
-    totalFees += offsetAsFee
+    feeAccumulations.trade += offsetAsFee // add offset fee to trade fee
+    totalFees += offsetAsFee // add offset fee to total fee
 
-    pnlAccumulations.offset = 0n
-    totalPnl -= pnlAccumulations.offset
+    pnlAccumulations.offset = 0n // remove offset from pnl offset
+    totalPnl -= pnlAccumulations.offset // remove offset from total pnl
   }
 
   const closeOrder = graphPosition.closeOrder.at(0)
@@ -391,7 +391,7 @@ function processGraphPosition(
     closeVersion: closeOrder ? BigInt(closeOrder.oracleVersion.timestamp) : null,
     // Position Starting Data
     startSize: magnitude(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort),
-    startPrice: BigInt(graphPosition?.firstOrder.at(0)?.executionPrice ?? 0n),
+    startPrice: BigInt(graphPosition?.openOrder.at(0)?.executionPrice ?? 0n),
     startCollateral: BigInt(graphPosition.startCollateral),
     netDeposits,
     // PNL
@@ -542,6 +542,19 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
         })
       : BigInt(order.executionPrice)
   const percentDenominator = BigInt(order.startCollateral) + (collateral > 0n ? collateral : 0n)
+  let totalPnl = BigOrZero(order.accumulation.collateral_accumulation)
+  let totalFees = BigOrZero(order.accumulation.fee_accumulation)
+  const pnlAccumulations = accumulateRealized([order.accumulation])
+  const feeAccumulations = accumulateRealizedFees([order.accumulation])
+  // If this is a maker position, move offset to trade fee
+  if (side === PositionSide.maker) {
+    const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
+    feeAccumulations.trade += offsetAsFee // add offset fee to trade fee
+    totalFees += offsetAsFee // add offset fee to total fee
+
+    pnlAccumulations.offset = 0n // remove offset from pnl offset
+    totalPnl -= pnlAccumulations.offset // remove offset from total pnl
+  }
   const netPnl = BigInt(order.accumulation.collateral_accumulation) - BigInt(order.accumulation.fee_accumulation)
 
   const returnValue = {
@@ -561,10 +574,10 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
     // Accumulation Breakdowns
-    totalPnl: BigInt(order.accumulation.collateral_accumulation),
-    totalFees: BigInt(order.accumulation.fee_accumulation),
-    pnlAccumulations: accumulateRealized([order.accumulation]),
-    feeAccumulations: accumulateRealizedFees([order.accumulation]),
+    totalPnl,
+    totalFees,
+    pnlAccumulations,
+    feeAccumulations,
     liquidation: Boolean(order.liquidation),
     liquidationFee: BigOrZero(order.accumulation.fee_subAccumulation_liquidation),
     transactionHashes: order.transactionHashes,
