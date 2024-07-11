@@ -169,7 +169,7 @@ export class MarketsModule {
        * @returns User's PnL for an active position.
        */
       activePositionsPnl: (
-        args: OmitBound<Parameters<typeof fetchActivePositionsPnl>[0]> & OptionalAddress & OptionalMarkets,
+        args: OmitBound<Parameters<typeof fetchActivePositionsPnl>[0]> & OptionalAddress & OptionalMarkets = {},
       ) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch active position PnL.')
@@ -220,7 +220,7 @@ export class MarketsModule {
        * @returns User's position history.
        */
       historicalPositions: (
-        args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]> & OptionalAddress & OptionalMarkets,
+        args: OmitBound<Parameters<typeof fetchHistoricalPositions>[0]> & OptionalAddress & OptionalMarkets = {},
       ) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch historical positions.')

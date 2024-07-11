@@ -199,7 +199,8 @@ export async function fetchActivePositionsPnl({
       market,
       marketAddress,
       side,
-      version: marketSnapshot.latestOracleVersion.timestamp,
+      openVersion: marketSnapshot.latestOracleVersion.timestamp,
+      closeVersion: null,
       startSize: magnitude_,
       startPrice: userMarketSnapshot.prices[0],
       positionId: userMarketSnapshot.local.currentId,
@@ -378,13 +379,16 @@ function processGraphPosition(
     totalPnl -= pnlAccumulations.offset
   }
 
+  const closeOrder = graphPosition.closeOrder.at(0)
+
   const returnValue = {
     // Position Metadata
     market,
     marketAddress: getAddress(graphPosition.marketAccount.market.id),
     side,
     positionId: BigInt(graphPosition.positionId),
-    version: BigInt(graphPosition.startVersion),
+    openVersion: BigInt(graphPosition.startVersion),
+    closeVersion: closeOrder ? BigInt(closeOrder.oracleVersion.timestamp) : null,
     // Position Starting Data
     startSize: magnitude(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort),
     startPrice: BigInt(graphPosition?.firstOrder.at(0)?.executionPrice ?? 0n),
@@ -401,7 +405,7 @@ function processGraphPosition(
     // Derived Data
     averageEntryPrice,
     averageExitPrice,
-    liquidation: Boolean(graphPosition.liqOrders.length),
+    liquidation: Boolean(closeOrder?.liquidation),
     liquidationFee: BigOrZero(feeAccumulations.liquidation),
   }
 
