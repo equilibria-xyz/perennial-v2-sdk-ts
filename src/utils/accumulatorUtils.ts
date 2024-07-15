@@ -30,7 +30,7 @@ export const AccumulatorTypes = [
   {
     type: 'makerExposure',
     realizedKey: `collateral_subAccumulation_makerExposure`,
-    unrealizedKey: { maker: `positionFeeMaker`, long: `positionFeeMaker`, short: `positionFeeMaker` } as const,
+    unrealizedKey: { maker: `exposureMaker`, long: `exposureMaker`, short: `exposureMaker` } as const,
   },
 ] as const
 
