@@ -196,6 +196,7 @@ export async function fetchActivePositionsPnl({
       side,
       startVersion: marketSnapshot.latestOracleVersion.timestamp,
       endVersion: null,
+      trades: 1n,
       startSize: magnitude_,
       startPrice: userMarketSnapshot.prices[0],
       positionId: userMarketSnapshot.local.currentId,
@@ -388,6 +389,7 @@ function processGraphPosition(
     positionId: BigInt(graphPosition.positionId),
     startVersion: BigInt(graphPosition.startVersion),
     endVersion: closeOrder ? BigInt(closeOrder.oracleVersion.timestamp) : null,
+    trades: BigInt(graphPosition.trades),
     // Position Starting Data
     startSize: magnitude(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort),
     startPrice: BigInt(graphPosition?.openOrder.at(0)?.executionPrice ?? 0n),
@@ -457,6 +459,7 @@ function processGraphPosition(
     }
     // Add pending position data to total notional
     returnValue.totalNotional += calcNotional(pendingPositionData.latestPrice, pendingPositionData.size)
+    if (pendingPositionData.size !== 0n) returnValue.trades += 1n
   }
 
   return returnValue
