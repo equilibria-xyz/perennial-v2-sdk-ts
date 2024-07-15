@@ -1,6 +1,6 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, concat, getAddress, toHex } from 'viem'
+import { Address, PublicClient, getAddress } from 'viem'
 
 import {
   ChainMarkets,
@@ -21,9 +21,14 @@ import {
 } from '../../graphQueries/markets'
 import { Bucket, OrderDataFragment, PositionDataFragment } from '../../types/gql/graphql'
 import { Day, last24hrBounds, nowSeconds } from '../../utils'
-import { AccumulatorTypes, accumulateRealized, accumulateRealizedFees } from '../../utils/accumulatorUtils'
+import {
+  AccumulatorType,
+  AccumulatorTypes,
+  accumulateRealized,
+  accumulateRealizedFees,
+} from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
-import { GraphDefaultPageSize, bigIntToLittleEndian, queryAll } from '../../utils/graphUtils'
+import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
 import {
   calcExecutionPriceWithImpact,
   calcNotional,
@@ -74,17 +79,13 @@ export async function fetchActivePositionsPnl({
   }
 
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
-  const marketAccumulatorIDs = marketsWithAddresses.map(({ market, marketAddress }) =>
-    concat([
-      marketAddress,
-      toHex(':'),
-      bigIntToLittleEndian(marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n, 8),
-    ]),
+  const marketLatestVersions = marketsWithAddresses.map(({ market }) =>
+    (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n).toString(),
   )
-  const { marketAccounts, startAccumulators } = await graphClient.request(QueryLatestMarketAccountPosition, {
+  const { marketAccounts } = await graphClient.request(QueryLatestMarketAccountPosition, {
     account: address,
     markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
-    accumulatorIDs: marketAccumulatorIDs,
+    latestVersions: marketLatestVersions,
   })
 
   const positionPnls = marketsWithAddresses.map(({ market, marketAddress }) => {
@@ -121,10 +122,37 @@ export async function fetchActivePositionsPnl({
 
     // Pull position data from the graph if available
     if (graphMarketAccount && graphPosition) {
-      const startAccumulator = startAccumulators.find((sa) => getAddress(sa.market.id) === marketAddress)
+      const currentAccumulator = graphMarketAccount.accumulators.current.at(0)
+      const startAccumulator = graphMarketAccount.accumulators.start.find(
+        (sa) => BigInt(sa.fromVersion) === (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n),
+      )
+
+      // Accumulate the portion of pnl from the latest account settlement to the latest global settlement
+      const latestToGlobalRealized = AccumulatorTypes.reduce(
+        (acc, { type, unrealizedKey }) => {
+          if (!acc[type]) acc[type] = 0n
+          if (side === 'none') return acc
+          if (side !== 'maker' && type.startsWith('maker')) return acc
+
+          // Some accumulations don't have global counterparts
+          const unrealizedKeyForSide = unrealizedKey[side]
+
+          // Pnl from latest account settlement to latest global settlement
+          if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
+            const latestToGlobalRealized = Big6Math.mul(
+              BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
+              magnitude_,
+            )
+            acc[type] += latestToGlobalRealized
+          }
+
+          return acc
+        },
+        {} as Record<AccumulatorType, bigint>,
+      )
 
       // Process the graph position
-      const processedGraphPosition = processGraphPosition(market, graphPosition, {
+      const processedGraphPosition = processGraphPosition(market, graphPosition, latestToGlobalRealized, {
         currentId: userMarketSnapshot.local.currentId,
         latestPrice: userMarketSnapshot.prices[0],
         collateral: pendingOrderCollateral,
@@ -143,39 +171,6 @@ export async function fetchActivePositionsPnl({
         (pendingOrderSettlementFee + pendingTradeFee + pendingAdditiveFee) // Pending fees from trade
       const realtimePnl = currentCollateral - (processedGraphPosition.startCollateral + netDeposits)
       const percentDenominator = processedGraphPosition.startCollateral + (netDeposits > 0n ? netDeposits : 0n)
-
-      // Accumulate the portion of pnl from the latest account settlement to the latest global settlement
-      const accumulationToGlobal = AccumulatorTypes.map(({ type, unrealizedKey }) => {
-        if (side === 'none') return { type, unrealized: 0n }
-
-        // Some accumulations don't have global counterparts
-        let unrealized = 0n
-        const unrealizedKeyForSide = unrealizedKey[side]
-
-        // Pnl from latest account settlement to latest global settlement
-        const currentAccumulator = graphMarketAccount?.accumulators.current.at(0)
-        if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
-          const makerOnlyAccumulations = ['makerPositionFee', 'makerExposure']
-          if (
-            (side === PositionSide.maker && makerOnlyAccumulations.includes(type)) ||
-            !makerOnlyAccumulations.includes(type)
-          ) {
-            unrealized = Big6Math.mul(
-              BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
-              magnitude_,
-            )
-          }
-        }
-
-        return { type, unrealized }
-      })
-      processedGraphPosition.pnlAccumulations = Object.values(accumulationToGlobal).reduce(
-        (acc, { unrealized, type }) => {
-          acc[type] += unrealized
-          return acc
-        },
-        processedGraphPosition.pnlAccumulations,
-      )
 
       return {
         ...processedGraphPosition,
@@ -334,6 +329,7 @@ type ProcessedGraphPosition = ReturnType<typeof processGraphPosition>
 function processGraphPosition(
   market: SupportedMarket,
   graphPosition: PositionDataFragment,
+  latestToGlobalRealized?: Record<AccumulatorType, bigint>,
   pendingPositionData?: {
     currentId: bigint
     latestPrice: bigint
@@ -407,6 +403,16 @@ function processGraphPosition(
     averageExitPrice,
     liquidation: Boolean(closeOrder?.liquidation),
     liquidationFee: BigOrZero(feeAccumulations.liquidation),
+  }
+
+  // If there is a realized pnl from the latest account settlement to the latest global settlement, apply it
+  if (latestToGlobalRealized) {
+    AccumulatorTypes.forEach(({ type }) => {
+      returnValue.pnlAccumulations[type] += latestToGlobalRealized[type]
+      returnValue.totalPnl += latestToGlobalRealized[type]
+      returnValue.netPnl += latestToGlobalRealized[type]
+    })
+    returnValue.netPnlPercent = percentDenominator !== 0n ? Big6Math.div(returnValue.netPnl, percentDenominator) : 0n
   }
 
   // If pending position data is available and newer than graph data, apply it

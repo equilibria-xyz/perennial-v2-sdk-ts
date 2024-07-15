@@ -26,7 +26,7 @@ export const OrderDataFragbment = gql(`
 `)
 
 export const QueryLatestMarketAccountPosition = gql(`
-  query QueryLatestAccountPosition($account: String!, $markets: [String!]!, $accumulatorIDs: [Bytes!]!) {
+  query QueryLatestAccountPosition($account: String!, $markets: [String!]!, $latestVersions: [BigInt!]!) {
     marketAccounts(where: { account: $account, market_in: $markets }) {
       market { id }, collateral, maker, long, short, latestVersion
       positions(first: 1, orderBy: nonce, orderDirection: desc) {
@@ -37,11 +37,11 @@ export const QueryLatestMarketAccountPosition = gql(`
         current: accumulators(first: 1, orderBy: toVersion, orderDirection: desc) {
           pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker
         }
-      }
-    }
 
-    startAccumulators: marketAccumulators(where: {id_in: $accumulatorIDs}) {
-      market { id }, pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker
+        start: accumulators(where: { fromVersion_in: $latestVersions }, orderBy: fromVersion, orderDirection: asc) {
+          pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker, fromVersion
+        }
+      }
     }
   }
 `)
