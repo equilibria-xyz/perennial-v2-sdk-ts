@@ -202,6 +202,7 @@ export async function fetchActivePositionsPnl({
       startCollateral,
       totalPnl: pendingTradeImpactAsOffset,
       totalFees: pendingTradeFee + pendingOrderSettlementFee,
+      totalNotional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
       pnlAccumulations: {
         offset: pendingTradeImpactAsOffset,
         pnl: 0n,
@@ -348,6 +349,8 @@ function processGraphPosition(
   const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n)
   const side = positionSide(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort)
   const openSize = BigInt(graphPosition.openSize)
+  const closeSize = BigInt(graphPosition.closeSize)
+  const totalNotional = BigInt(graphPosition.openNotional) + BigInt(graphPosition.closeNotional)
   const averageEntryPrice = calcExecutionPriceWithImpact({
     notional: BigInt(graphPosition.openNotional),
     offset: BigInt(graphPosition.openOffset),
@@ -357,7 +360,7 @@ function processGraphPosition(
   const averageExitPrice = calcExecutionPriceWithImpact({
     notional: BigInt(graphPosition.closeNotional),
     offset: BigInt(graphPosition.closeOffset),
-    size: BigInt(graphPosition.closeSize) * -1n,
+    size: closeSize * -1n,
     side,
   })
 
@@ -403,6 +406,7 @@ function processGraphPosition(
     averageExitPrice,
     liquidation: Boolean(closeOrder?.liquidation),
     liquidationFee: BigOrZero(feeAccumulations.liquidation),
+    totalNotional,
   }
 
   // If there is a realized pnl from the latest account settlement to the latest global settlement, apply it
@@ -433,16 +437,26 @@ function processGraphPosition(
     }
     returnValue.netPnl -= totalFee
 
-    // Recalculate the average entry price
+    // Recalculate the average entry and exit price
     if (pendingPositionData.size > 0n) {
       returnValue.averageEntryPrice = calcExecutionPriceWithImpact({
         notional:
           BigInt(graphPosition.openNotional) + calcNotional(pendingPositionData.latestPrice, pendingPositionData.size),
-        offset: pendingPositionData.offset,
+        offset: BigInt(graphPosition.openOffset) + pendingPositionData.offset,
         size: openSize + pendingPositionData.size,
         side,
       })
+    } else if (pendingPositionData.size < 0n) {
+      returnValue.averageExitPrice = calcExecutionPriceWithImpact({
+        notional:
+          BigInt(graphPosition.closeNotional) + calcNotional(pendingPositionData.latestPrice, pendingPositionData.size),
+        offset: BigInt(graphPosition.closeOffset) + pendingPositionData.offset,
+        size: closeSize * -1n + pendingPositionData.size,
+        side,
+      })
     }
+    // Add pending position data to total notional
+    returnValue.totalNotional += calcNotional(pendingPositionData.latestPrice, pendingPositionData.size)
   }
 
   return returnValue
