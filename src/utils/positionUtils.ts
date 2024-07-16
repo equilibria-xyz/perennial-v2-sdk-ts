@@ -312,7 +312,7 @@ export const calcTradeFee = ({
   referralFee = 0n,
 }: {
   positionDelta: bigint
-  marketSnapshot?: MarketSnapshot
+  marketSnapshot: MarketSnapshot
   isMaker: boolean
   direction: PositionSide
   referralFee?: bigint
@@ -413,7 +413,7 @@ export function calcEstExecutionPrice({
   positionDelta: bigint
   oraclePrice: bigint
   orderDirection: PositionSide.long | PositionSide.short
-  marketSnapshot?: MarketSnapshot
+  marketSnapshot: MarketSnapshot
   referralFee?: bigint
 }) {
   const notional = calcNotional(positionDelta, oraclePrice)
@@ -496,7 +496,7 @@ export function calcTotalPositionChangeFee({
 }: {
   chainId: SupportedChainId
   positionDelta: bigint
-  marketSnapshot?: MarketSnapshot
+  marketSnapshot: MarketSnapshot
   direction: PositionSide
   positionStatus?: PositionStatus
   referrerInterfaceFeeDiscount: bigint
