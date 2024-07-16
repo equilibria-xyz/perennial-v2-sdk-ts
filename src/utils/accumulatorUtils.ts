@@ -77,3 +77,8 @@ export function accumulateRealizedFees(
     return { ...acc, [type]: total }
   }, {} as RealizedFeeAccumulations)
 }
+
+export const DefaultRealizedAccumulations = AccumulatorTypes.reduce(
+  (acc, { type }) => ({ ...acc, [type]: 0n }),
+  {} as RealizedAccumulations,
+)

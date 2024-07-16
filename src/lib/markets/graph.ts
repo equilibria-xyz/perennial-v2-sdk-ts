@@ -24,6 +24,7 @@ import { Day, last24hrBounds, nowSeconds } from '../../utils'
 import {
   AccumulatorType,
   AccumulatorTypes,
+  DefaultRealizedAccumulations,
   RealizedAccumulations,
   accumulateRealized,
   accumulateRealizedFees,
@@ -244,7 +245,7 @@ export async function fetchActivePositionsPnl({
       netPnlPercent: realtimePercent,
       realtime: realtimePnl,
       realtimePercent: realtimePercent,
-      pendingMarkToMarketAccumulations: null,
+      pendingMarkToMarketAccumulations: markToMarket ? null : DefaultRealizedAccumulations,
     }
   })
 
