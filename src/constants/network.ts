@@ -1,13 +1,12 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Chain, PublicClient } from 'viem'
-import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
+import { arbitrum, arbitrumSepolia } from 'viem/chains'
 
 export const DefaultChain = arbitrum
-export const SupportedChainIds = [arbitrum.id, base.id, arbitrumSepolia.id] as const
+export const SupportedChainIds = [arbitrum.id, arbitrumSepolia.id] as const
 export const chainIdToChainMap = {
   [arbitrum.id]: arbitrum,
   [arbitrumSepolia.id]: arbitrumSepolia,
-  [base.id]: base,
 }
 
 export type SupportedChainId = (typeof SupportedChainIds)[number]
@@ -17,20 +16,16 @@ export const BackupPythClient = new HermesClient('https://hermes.pyth.network', 
 
 export const chains: { [chainId in SupportedChainId]: Chain } = {
   [arbitrum.id]: arbitrum,
-
   [arbitrumSepolia.id]: arbitrumSepolia,
-  [base.id]: base,
 }
 
 export const ExplorerURLs: { [chainId in SupportedChainId]: string } = {
   [arbitrum.id]: arbitrum.blockExplorers.default.url,
-  [base.id]: base.blockExplorers.default.url,
   [arbitrumSepolia.id]: arbitrumSepolia.blockExplorers.default.url,
 }
 
 export const ExplorerNames: { [chainId in SupportedChainId]: string } = {
   [arbitrum.id]: arbitrum.blockExplorers.default.name,
-  [base.id]: base.blockExplorers.default.name,
   [arbitrumSepolia.id]: arbitrumSepolia.blockExplorers.default.name,
 }
 
