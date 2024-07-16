@@ -24,6 +24,8 @@ import { Day, last24hrBounds, nowSeconds } from '../../utils'
 import {
   AccumulatorType,
   AccumulatorTypes,
+  DefaultRealizedAccumulations,
+  RealizedAccumulations,
   accumulateRealized,
   accumulateRealizedFees,
 } from '../../utils/accumulatorUtils'
@@ -45,6 +47,7 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
  * @param markets List of {@link SupportedMarket}
  * @param marketSnapshots [Optional] Snapshots for markets {@link MarketSnapshots}
  * @param address Wallet Address
+ * @param markToMarket [true] Whether to include latest market accumulations in the PNL calculations
  * @param publicClient Viem Public Client
  * @param pythClient PythClient
  * @param graphClient GraphQLClient
@@ -55,6 +58,7 @@ export async function fetchActivePositionsPnl({
   marketSnapshots,
   chainId,
   address,
+  markToMarket = true,
   pythClient,
   publicClient,
   graphClient,
@@ -62,11 +66,21 @@ export async function fetchActivePositionsPnl({
   markets: SupportedMarket[]
   address: Address
   marketSnapshots?: MarketSnapshots
+  markToMarket?: boolean
   chainId: SupportedChainId
   pythClient: HermesClient
   publicClient: PublicClient
   graphClient: GraphQLClient
-}): Promise<Record<SupportedMarket, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>> {
+}): Promise<
+  Record<
+    SupportedMarket,
+    ProcessedGraphPosition & {
+      realtime: bigint
+      realtimePercent: bigint
+      pendingMarkToMarketAccumulations: RealizedAccumulations | null
+    }
+  >
+> {
   const missingMarketSnapshots = markets.some((m) => !marketSnapshots?.market[m] || !marketSnapshots?.user?.[m])
   if (missingMarketSnapshots) {
     marketSnapshots = await fetchMarketSnapshots({
@@ -128,40 +142,42 @@ export async function fetchActivePositionsPnl({
       )
 
       // Accumulate the portion of pnl from the latest account settlement to the latest global settlement
-      const latestToGlobalRealized = AccumulatorTypes.reduce(
-        (acc, { type, unrealizedKey }) => {
-          if (!acc[type]) acc[type] = 0n
-          if (side === 'none') return acc
-          if (side !== 'maker' && type.startsWith('maker')) return acc
+      const pendingMarkToMarketAccumulations = AccumulatorTypes.reduce((acc, { type, unrealizedKey }) => {
+        if (!acc[type]) acc[type] = 0n
+        if (side === 'none') return acc
+        if (side !== 'maker' && type.startsWith('maker')) return acc
 
-          // Some accumulations don't have global counterparts
-          const unrealizedKeyForSide = unrealizedKey[side]
+        // Some accumulations don't have global counterparts
+        const unrealizedKeyForSide = unrealizedKey[side]
 
-          // Pnl from latest account settlement to latest global settlement
-          if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
-            const latestToGlobalRealized = Big6Math.mul(
-              BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
-              magnitude_,
-            )
-            acc[type] += latestToGlobalRealized
-          }
+        // Pnl from latest account settlement to latest global settlement
+        if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
+          const latestToGlobalRealized = Big6Math.mul(
+            BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
+            magnitude_,
+          )
+          acc[type] += latestToGlobalRealized
+        }
 
-          return acc
-        },
-        {} as Record<AccumulatorType, bigint>,
-      )
+        return acc
+      }, {} as RealizedAccumulations)
 
       // Process the graph position
-      const processedGraphPosition = processGraphPosition(market, graphPosition, latestToGlobalRealized, {
-        currentId: userMarketSnapshot.local.currentId,
-        latestPrice: userMarketSnapshot.prices[0],
-        collateral: pendingOrderCollateral,
-        size: pendingDelta,
-        offset: pendingTradeImpactAsOffset,
-        settlementFee: pendingOrderSettlementFee,
-        tradeFee: pendingTradeFee,
-        additiveFee: pendingAdditiveFee,
-      })
+      const processedGraphPosition = processGraphPosition(
+        market,
+        graphPosition,
+        markToMarket ? pendingMarkToMarketAccumulations : undefined,
+        {
+          currentId: userMarketSnapshot.local.currentId,
+          latestPrice: userMarketSnapshot.prices[0],
+          collateral: pendingOrderCollateral,
+          size: pendingDelta,
+          offset: pendingTradeImpactAsOffset,
+          settlementFee: pendingOrderSettlementFee,
+          tradeFee: pendingTradeFee,
+          additiveFee: pendingAdditiveFee,
+        },
+      )
 
       // Add realtime data
       const netDeposits = processedGraphPosition.netDeposits
@@ -176,6 +192,7 @@ export async function fetchActivePositionsPnl({
         ...processedGraphPosition,
         realtime: realtimePnl,
         realtimePercent: percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n,
+        pendingMarkToMarketAccumulations: markToMarket ? null : pendingMarkToMarketAccumulations,
       }
     }
 
@@ -228,6 +245,7 @@ export async function fetchActivePositionsPnl({
       netPnlPercent: realtimePercent,
       realtime: realtimePnl,
       realtimePercent: realtimePercent,
+      pendingMarkToMarketAccumulations: markToMarket ? null : DefaultRealizedAccumulations,
     }
   })
 
@@ -236,7 +254,14 @@ export async function fetchActivePositionsPnl({
       if (v) acc[v.market] = v
       return acc
     },
-    {} as Record<SupportedMarket, ProcessedGraphPosition & { realtime: bigint; realtimePercent: bigint }>,
+    {} as Record<
+      SupportedMarket,
+      ProcessedGraphPosition & {
+        realtime: bigint
+        realtimePercent: bigint
+        pendingMarkToMarketAccumulations: RealizedAccumulations | null
+      }
+    >,
   )
 }
 /**
@@ -343,8 +368,6 @@ function processGraphPosition(
     additiveFee: bigint
   },
 ) {
-  const netPnl =
-    BigInt(graphPosition.accumulation.collateral_accumulation) - BigInt(graphPosition.accumulation.fee_accumulation)
   const startCollateral = BigInt(graphPosition.startCollateral)
   const netDeposits = BigInt(graphPosition.netDeposits)
   const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n)
@@ -367,8 +390,20 @@ function processGraphPosition(
 
   let totalPnl = BigOrZero(graphPosition.accumulation.collateral_accumulation)
   let totalFees = BigOrZero(graphPosition.accumulation.fee_accumulation)
+  let netPnl = totalPnl - totalFees
+
   const pnlAccumulations = accumulateRealized([graphPosition.accumulation])
   const feeAccumulations = accumulateRealizedFees([graphPosition.accumulation])
+
+  // If there is a realized pnl from the latest account settlement to the latest global settlement, apply it
+  if (latestToGlobalRealized) {
+    AccumulatorTypes.forEach(({ type }) => {
+      pnlAccumulations[type] += latestToGlobalRealized[type]
+      totalPnl += latestToGlobalRealized[type]
+      netPnl += latestToGlobalRealized[type]
+    })
+  }
+
   // If this is a maker position, move offset to trade fee
   if (side === PositionSide.maker) {
     const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
@@ -409,16 +444,6 @@ function processGraphPosition(
     liquidation: Boolean(closeOrder?.liquidation),
     liquidationFee: BigOrZero(feeAccumulations.liquidation),
     totalNotional,
-  }
-
-  // If there is a realized pnl from the latest account settlement to the latest global settlement, apply it
-  if (latestToGlobalRealized) {
-    AccumulatorTypes.forEach(({ type }) => {
-      returnValue.pnlAccumulations[type] += latestToGlobalRealized[type]
-      returnValue.totalPnl += latestToGlobalRealized[type]
-      returnValue.netPnl += latestToGlobalRealized[type]
-    })
-    returnValue.netPnlPercent = percentDenominator !== 0n ? Big6Math.div(returnValue.netPnl, percentDenominator) : 0n
   }
 
   // If pending position data is available and newer than graph data, apply it
