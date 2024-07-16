@@ -1,5 +1,5 @@
 import { Address, Hex, getAddress, zeroHash } from 'viem'
-import { arbitrum, arbitrumSepolia, base } from 'viem/chains'
+import { arbitrum, arbitrumSepolia } from 'viem/chains'
 
 import { Big6Math } from '../utils'
 import { notEmpty } from '../utils/arrayUtils'
@@ -266,10 +266,6 @@ export const ChainMarkets: {
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
-  },
-  [base.id]: {
-    [SupportedMarket.eth]: getAddress('0xfed3725b449c79791e9771e069fc0c75749fe385'),
-    [SupportedMarket.btc]: getAddress('0x9bb798317f002682a33a686598ee87bfb91be675'),
   },
 }
 
