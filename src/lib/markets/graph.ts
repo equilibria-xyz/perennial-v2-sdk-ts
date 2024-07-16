@@ -46,7 +46,7 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
  * @param markets List of {@link SupportedMarket}
  * @param marketSnapshots [Optional] Snapshots for markets {@link MarketSnapshots}
  * @param address Wallet Address
- * @param markToMarket boolean - Whether to include latest market accumulations in the PNL calculations
+ * @param markToMarket [true] Whether to include latest market accumulations in the PNL calculations
  * @param publicClient Viem Public Client
  * @param pythClient PythClient
  * @param graphClient GraphQLClient
