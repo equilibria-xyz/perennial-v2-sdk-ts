@@ -264,4 +264,7 @@ export {
   formatDateRelative,
 } from './utils/timeUtils'
 
+// Graph Types
+export { Bucket as AccumulationBucket } from './types/gql/graphql'
+
 export { PriceUpdate, HermesClient } from '@pythnetwork/hermes-client'

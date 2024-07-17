@@ -759,9 +759,15 @@ export async function fetchMarketsHistoricalData({
     }))
     const fundingRates = accumulations.map((rate) => ({
       timestamp: rate.timestamp,
-      makerAPR: BigInt(rate.fundingRateMaker) + BigInt(rate.interestRateMaker),
-      longAPR: BigInt(rate.fundingRateLong) + BigInt(rate.interestRateLong),
-      shortAPR: BigInt(rate.fundingRateShort) + BigInt(rate.interestRateShort),
+      makerAPR: BigInt(rate.fundingRateMaker),
+      longAPR: BigInt(rate.fundingRateLong),
+      shortAPR: BigInt(rate.fundingRateShort),
+    }))
+    const interestRates = accumulations.map((rate) => ({
+      timestamp: rate.timestamp,
+      makerAPR: BigInt(rate.interestRateMaker),
+      longAPR: BigInt(rate.interestRateLong),
+      shortAPR: BigInt(rate.interestRateShort),
     }))
 
     return {
@@ -769,6 +775,7 @@ export async function fetchMarketsHistoricalData({
       address: marketAddress,
       takerVolumes,
       fundingRates,
+      interestRates,
       // Accumulations are the delta between to and from, scaled to fill the window
       makerAccumulation: {
         funding: Big6Math.mul(
