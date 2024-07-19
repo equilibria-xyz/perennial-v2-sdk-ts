@@ -1,304 +1,317 @@
+import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, getAddress } from 'viem'
+import { Address, PublicClient, getAddress } from 'viem'
 
-import { PositionSide, SupportedAsset, addressToAsset } from '../../constants'
-import { gql } from '../../types/gql'
 import {
-  FetchSubPositions_AccountUpdatesQuery,
-  MarketsAccountCheckpointsQuery,
-  PositionSide as PositionSideGraph,
-} from '../../types/gql/graphql'
-import { Day, Hour, last7dBounds, last24hrBounds, notEmpty, nowSeconds, sum, unique } from '../../utils'
-import { AccumulatorTypes, RealizedAccumulations, accumulateRealized } from '../../utils/accumulatorUtils'
+  ChainMarkets,
+  PositionSide,
+  SupportedChainId,
+  SupportedMarket,
+  addressToMarket,
+  chainMarketsWithAddress,
+} from '../../constants'
+import {
+  QueryAccountOrders,
+  QueryLatestMarketAccountPosition,
+  QueryMarketAccountMakerPositions,
+  QueryMarketAccountPositionOrders,
+  QueryMarketAccountTakerPositions,
+  QueryMarketAccumulationData,
+  QueryMultiInvokerOpenOrders,
+} from '../../graphQueries/markets'
+import { Bucket, OrderDataFragment, PositionDataFragment } from '../../types/gql/graphql'
+import { Day, last24hrBounds, nowSeconds } from '../../utils'
+import {
+  AccumulatorType,
+  AccumulatorTypes,
+  DefaultRealizedAccumulations,
+  RealizedAccumulations,
+  accumulateRealized,
+  accumulateRealizedFees,
+} from '../../utils/accumulatorUtils'
 import { Big6Math, BigOrZero } from '../../utils/big6Utils'
 import { GraphDefaultPageSize, queryAll } from '../../utils/graphUtils'
 import {
+  calcExecutionPriceWithImpact,
   calcNotional,
-  calcPriceImpactFromTradeFee,
   calcTradeFee,
   magnitude,
+  orderSize,
   side as positionSide,
 } from '../../utils/positionUtils'
-import { MarketSnapshot, UserMarketSnapshot } from './chain'
-
-export type Markets = {
-  asset: SupportedAsset
-  marketAddress: Address
-}[]
+import { MarketSnapshots, fetchMarketSnapshots } from './chain'
 
 /**
  * Fetches position PnL for a given market and Address
+ * @param chainId {@link SupportedChainId}
+ * @param markets List of {@link SupportedMarket}
+ * @param marketSnapshots [Optional] Snapshots for markets {@link MarketSnapshots}
  * @param address Wallet Address
- * @param userMarketSnapshot {@link UserMarketSnapshot}
- * @param marketSnapshot {@link MarketSnapshot}
- * @param includeClosedWithCollateral Include closed positions with collateral
+ * @param markToMarket [true] Whether to include latest market accumulations in the PNL calculations
+ * @param publicClient Viem Public Client
+ * @param pythClient PythClient
  * @param graphClient GraphQLClient
  * @returns User's PnL for an active position.
  */
-export async function fetchActivePositionPnl({
-  marketSnapshot,
-  userMarketSnapshot,
+export async function fetchActivePositionsPnl({
+  markets,
+  marketSnapshots,
+  chainId,
   address,
+  markToMarket = true,
+  pythClient,
+  publicClient,
   graphClient,
-  includeClosedWithCollateral = false,
 }: {
-  marketSnapshot: MarketSnapshot
-  userMarketSnapshot: UserMarketSnapshot
+  markets: SupportedMarket[]
   address: Address
+  marketSnapshots?: MarketSnapshots
+  markToMarket?: boolean
+  chainId: SupportedChainId
+  pythClient: HermesClient
+  publicClient: PublicClient
   graphClient: GraphQLClient
-  includeClosedWithCollateral?: boolean
-}) {
-  // Query Checkpoints for each market - note that we don't query for a specific type because if we query for
-  // `open` we might get the position before the latest position
-  const queryAccountCheckpoints = gql(`
-    query AccountCheckpoints($account: Bytes!, $market: Bytes!) {
-      marketAccountCheckpoints(
-        where: { account: $account, market: $market }
-        orderBy: blockNumber, orderDirection: desc, first: 1
-      ) { market, account, type, blockNumber, version }
+}): Promise<
+  Record<
+    SupportedMarket,
+    ProcessedGraphPosition & {
+      realtime: bigint
+      realtimePercent: bigint
+      pendingMarkToMarketAccumulations: RealizedAccumulations | null
     }
-  `)
-
-  // Query for the corresponding open checkpoint if the most recent checkpoint is a close with collateral
-  const queryCorrespondingOpen = gql(`
-    query CorrespondingOpenQuery($account: Bytes!, $market: Bytes!, $closeVersion: BigInt!) {
-      marketAccountCheckpoints(
-        where: { account: $account, market: $market, version_lt: $closeVersion, type: open }
-        orderBy: blockNumber, orderDirection: desc, first: 1
-      ) { market, account, type, blockNumber, version }
-    }
-  `)
-
-  // Query the market accumulators for each market. These are used to get data between the latest account settlement
-  // and the latest global settlement
-  const queryMarketAccumulatorsAndFirstUpdate = gql(`
-    query MarketAccumulators($market: Bytes!, $account: Bytes!, $accountLatestVersion: BigInt!) {
-      start: marketAccumulators(
-        where: { market: $market, version: $accountLatestVersion, latest: false }
-      ) {
-        market, version
-        makerValue, longValue, shortValue,
-        pnlMaker, pnlLong, pnlShort,
-        fundingMaker, fundingLong, fundingShort,
-        interestMaker, interestLong, interestShort,
-        positionFeeMaker
-      }
-      latest: marketAccumulators(
-        where: { market: $market, latest: true }
-      ) {
-        market, version
-        makerValue, longValue, shortValue,
-        pnlMaker, pnlLong, pnlShort,
-        fundingMaker, fundingLong, fundingShort,
-        interestMaker, interestLong, interestShort,
-        positionFeeMaker
-      }
-      firstUpdate: updateds(
-        where: { market: $market, account: $account, version: $accountLatestVersion }
-      ) { interfaceFee, orderFee }
-    }
-  `)
-
-  const { market, asset } = marketSnapshot
-
-  let checkpointData = await graphClient.request(queryAccountCheckpoints, {
-    account: address,
-    market: market,
-  })
-
-  // If the most recent checkpoint is a close and there is still collateral, we need to find the corresponding open checkpoint
-  if (
-    includeClosedWithCollateral &&
-    checkpointData.marketAccountCheckpoints?.at(0)?.type === 'close' &&
-    userMarketSnapshot.local.collateral !== 0n
-  ) {
-    checkpointData = await graphClient.request(queryCorrespondingOpen, {
-      account: address,
-      market: market,
-      closeVersion: BigInt(checkpointData.marketAccountCheckpoints[0].version).toString(),
+  >
+> {
+  const missingMarketSnapshots = markets.some((m) => !marketSnapshots?.market[m] || !marketSnapshots?.user?.[m])
+  if (missingMarketSnapshots) {
+    marketSnapshots = await fetchMarketSnapshots({
+      chainId,
+      address,
+      pythClient,
+      publicClient,
+      markets,
     })
   }
 
-  const isFetchable =
-    checkpointData.marketAccountCheckpoints?.[0] && checkpointData.marketAccountCheckpoints?.[0].type === 'open'
-
-  const graphPosition = isFetchable
-    ? await fetchPositionData({
-        graphClient,
-        address,
-        market: getAddress(checkpointData.marketAccountCheckpoints[0].market),
-        endVersion: null,
-        startVersion: BigInt(checkpointData.marketAccountCheckpoints[0].version),
-      })
-    : null
-
-  const lastSettlementSnapshot = userMarketSnapshot.pendingPositions[0].timestamp
-  const lastSettlement = graphPosition?.endVersion ? BigInt(graphPosition.endVersion) : lastSettlementSnapshot
-
-  const marketAccumulators = await graphClient.request(queryMarketAccumulatorsAndFirstUpdate, {
-    market: market,
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
+  const marketLatestVersions = marketsWithAddresses.map(({ market }) =>
+    (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n).toString(),
+  )
+  const { marketAccounts } = await graphClient.request(QueryLatestMarketAccountPosition, {
     account: address,
-    accountLatestVersion: lastSettlement.toString(),
+    markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
+    latestVersions: marketLatestVersions,
   })
 
-  const snapshot = userMarketSnapshot
-  const [side, magnitude] = [snapshot.nextSide === 'none' ? snapshot.side : snapshot.nextSide, snapshot.nextMagnitude]
-  let interfaceFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.interfaceFee)
-  let orderFees = BigOrZero(marketAccumulators?.firstUpdate.at(0)?.orderFee)
-  let startCollateral = snapshot.pre.local.collateral
-  let netDeposits = 0n
-  let keeperFees = snapshot.checkpoint.settlementFee
-  let positionFees = snapshot.checkpoint.tradeFee
-  const pendingDelta = side !== 'none' ? snapshot.pre.nextPosition[side] - snapshot.pre.position[side] : 0n
-  const tradeFeeData = calcTradeFee({
-    positionDelta: pendingDelta,
-    marketSnapshot,
-    isMaker: side === PositionSide.maker,
-    direction: side,
-  })
-  const pendingPriceImpactFee = calcPriceImpactFromTradeFee({
-    tradeImpact: tradeFeeData.tradeImpact,
-    positionDelta: pendingDelta,
-  })
-  let priceImpactFees = tradeFeeData.tradeImpact
-  const priceImpact = pendingPriceImpactFee
+  const positionPnls = marketsWithAddresses.map(({ market, marketAddress }) => {
+    const marketSnapshot = marketSnapshots?.market[market]
+    const userMarketSnapshot = marketSnapshots?.user?.[market]
+    if (!marketSnapshot || !userMarketSnapshot) return null
 
-  let averageEntryPrice = snapshot.prices[0]
-  if (side === 'long') averageEntryPrice = averageEntryPrice + priceImpact
-  if (side === 'short') averageEntryPrice = averageEntryPrice - priceImpact
-  if (graphPosition) {
-    // Start collateral is netDeposits + accumulatedCollateral immediately before start, plus deposits that occurred
-    // on the start block
-    startCollateral = graphPosition.startCollateral
+    const [side, magnitude_] = [
+      userMarketSnapshot.nextSide === 'none' ? userMarketSnapshot.side : userMarketSnapshot.nextSide,
+      userMarketSnapshot.nextMagnitude,
+    ]
 
-    // Average entry is (openNotionalNow - openNotionalBeforeStart + pendingNotionalDeltaIfPositive) / (openSizeNow - openSizeBeforeStart - pendingSizeDeltaIfPositive)
-    const pendingNotional = Big6Math.mul(pendingDelta, snapshot.prices[0])
-    // Add price impact fee for taker positions
-    let avgEntryNumerator = graphPosition.openNotional + (pendingDelta > 0n ? pendingNotional : 0n)
-    if (side === 'long')
-      avgEntryNumerator = avgEntryNumerator + graphPosition.openPriceImpactFees + pendingPriceImpactFee
-    if (side === 'short')
-      avgEntryNumerator = avgEntryNumerator - graphPosition.openPriceImpactFees - pendingPriceImpactFee
-    averageEntryPrice = Big6Math.div(
-      avgEntryNumerator,
-      graphPosition.openSize + (pendingDelta > 0n ? pendingDelta : 0n),
-    )
+    const pendingDelta =
+      side !== 'none'
+        ? userMarketSnapshot.pendingOrder[`${side}Pos`] - userMarketSnapshot.pendingOrder[`${side}Neg`]
+        : 0n
 
-    // Current values are deltas between now and start
-    netDeposits = graphPosition.netDeposits
-    keeperFees = keeperFees + graphPosition.keeperFees
-    positionFees = positionFees + graphPosition.positionFees
-    priceImpactFees = priceImpactFees + graphPosition.priceImpactFees
-    interfaceFees = graphPosition.interfaceFees
-    orderFees = graphPosition.orderFees
-  }
-  const accumulatedValues = AccumulatorTypes.map(({ type, unrealizedKey }) => {
-    if (side === 'none') return { type, realized: 0n, unrealized: 0n, total: 0n }
+    // Estimate the Trade Impact given market pre position
+    const pendingTradeFeeData = calcTradeFee({
+      positionDelta: pendingDelta,
+      marketSnapshot,
+      isMaker: side === PositionSide.maker,
+      direction: side,
+      usePreGlobalPosition: pendingDelta !== 0n,
+    })
+    const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact
+    const pendingOrderCollateral = userMarketSnapshot.pendingOrder.collateral
+    const pendingOrderSettlementFee = pendingDelta !== 0n ? marketSnapshot.parameter.settlementFee : 0n
+    const pendingTradeFee = pendingTradeFeeData.tradeFee
+    const pendingAdditiveFee = 0n
 
-    // Pnl from start to latest account settlement
-    const realized = graphPosition?.accumulated[type] || 0n
+    const graphMarketAccount = marketAccounts.find((ma) => getAddress(ma.market.id) === marketAddress)
+    const graphPosition = graphMarketAccount?.positions.at(0)
 
-    // Pnl from latest account settlement to latest global settlement
-    let unrealized = 0n
-    if (marketAccumulators?.start[0] && marketAccumulators?.latest[0]) {
-      if ((side === 'maker' && type === 'makerPositionFee') || type !== 'makerPositionFee') {
-        unrealized = Big6Math.mul(
-          BigInt(marketAccumulators.latest[0][unrealizedKey[side]]) -
-            BigInt(marketAccumulators.start[0][unrealizedKey[side]]),
-          magnitude,
-        )
+    // Pull position data from the graph if available
+    if (graphMarketAccount && graphPosition) {
+      const currentAccumulator = graphMarketAccount.accumulators.current.at(0)
+      const startAccumulator = graphMarketAccount.accumulators.start.find(
+        (sa) => BigInt(sa.fromVersion) === (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n),
+      )
+
+      // Accumulate the portion of pnl from the latest account settlement to the latest global settlement
+      const pendingMarkToMarketAccumulations = AccumulatorTypes.reduce((acc, { type, unrealizedKey }) => {
+        if (!acc[type]) acc[type] = 0n
+        if (side === 'none') return acc
+        if (side !== 'maker' && type.startsWith('maker')) return acc
+
+        // Some accumulations don't have global counterparts
+        const unrealizedKeyForSide = unrealizedKey[side]
+
+        // Pnl from latest account settlement to latest global settlement
+        if (unrealizedKeyForSide && currentAccumulator && startAccumulator) {
+          const latestToGlobalRealized = Big6Math.mul(
+            BigInt(currentAccumulator[unrealizedKeyForSide]) - BigInt(startAccumulator[unrealizedKeyForSide]),
+            magnitude_,
+          )
+          acc[type] += latestToGlobalRealized
+        }
+
+        return acc
+      }, {} as RealizedAccumulations)
+
+      // Process the graph position
+      const processedGraphPosition = processGraphPosition(
+        market,
+        graphPosition,
+        markToMarket ? pendingMarkToMarketAccumulations : undefined,
+        {
+          currentId: userMarketSnapshot.local.currentId,
+          latestPrice: userMarketSnapshot.prices[0],
+          collateral: pendingOrderCollateral,
+          size: pendingDelta,
+          offset: pendingTradeImpactAsOffset,
+          settlementFee: pendingOrderSettlementFee,
+          tradeFee: pendingTradeFee,
+          additiveFee: pendingAdditiveFee,
+        },
+      )
+
+      // Add realtime data
+      const netDeposits = processedGraphPosition.netDeposits
+      const currentCollateral =
+        userMarketSnapshot.local.collateral + // Snapshot collateral
+        pendingTradeImpactAsOffset - // Pending offset from trade
+        (pendingOrderSettlementFee + pendingTradeFee + pendingAdditiveFee) // Pending fees from trade
+      const realtimePnl = currentCollateral - (processedGraphPosition.startCollateral + netDeposits)
+      const percentDenominator = processedGraphPosition.startCollateral + (netDeposits > 0n ? netDeposits : 0n)
+
+      return {
+        ...processedGraphPosition,
+        realtime: realtimePnl,
+        realtimePercent: percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n,
+        pendingMarkToMarketAccumulations: markToMarket ? null : pendingMarkToMarketAccumulations,
       }
     }
 
-    return { type, realized, unrealized, total: realized + unrealized }
+    const averageEntryPrice = calcExecutionPriceWithImpact({
+      notional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
+      offset: pendingTradeImpactAsOffset,
+      size: pendingDelta,
+      side,
+    })
+    const startCollateral = userMarketSnapshot.pre.local.collateral
+    const realtimePnl = userMarketSnapshot.local.collateral - (startCollateral + pendingOrderCollateral)
+    const percentDenominator = startCollateral + (pendingOrderCollateral > 0n ? pendingOrderCollateral : 0n)
+    const realtimePercent = percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n
+
+    return {
+      market,
+      marketAddress,
+      side,
+      startVersion: marketSnapshot.latestOracleVersion.timestamp,
+      endVersion: null,
+      trades: 1n,
+      startSize: magnitude_,
+      startPrice: userMarketSnapshot.prices[0],
+      positionId: userMarketSnapshot.local.currentId,
+      startCollateral,
+      totalPnl: pendingTradeImpactAsOffset,
+      totalFees: pendingTradeFee + pendingOrderSettlementFee,
+      totalNotional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
+      pnlAccumulations: {
+        offset: pendingTradeImpactAsOffset,
+        pnl: 0n,
+        funding: 0n,
+        interest: 0n,
+        makerPositionFee: 0n,
+        makerExposure: 0n,
+      },
+      feeAccumulations: {
+        settlement: pendingOrderSettlementFee,
+        trade: pendingTradeFee,
+        additive: 0n,
+        liquidation: 0n,
+        triggerOrder: 0n,
+      },
+      averageEntryPrice,
+      averageExitPrice: 0n,
+      netDeposits: pendingOrderCollateral,
+      liquidation: false,
+      liquidationFee: 0n,
+      netPnl: realtimePnl,
+      netPnlPercent: realtimePercent,
+      realtime: realtimePnl,
+      realtimePercent: realtimePercent,
+      pendingMarkToMarketAccumulations: markToMarket ? null : DefaultRealizedAccumulations,
+    }
   })
 
-  // Add interface + order fee as part of start collateral since it is deducted from deposit and collateral balance
-  const realtimePnl = snapshot.local.collateral - (startCollateral + netDeposits + interfaceFees + orderFees)
-  const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n) + interfaceFees + orderFees
-  const accumulatedPnl = AccumulatorTypes.reduce((acc, { type }) => {
-    let pnl = accumulatedValues.find((v) => v.type === type)?.total ?? 0n
-    // If this is a taker position, we need to subtract the price impact fees from the pnl and total
-    if ((type === 'pnl' || type === 'value') && side !== 'maker') pnl = pnl - priceImpactFees
-    return { ...acc, [type]: pnl }
-  }, {} as RealizedAccumulations)
-
-  return {
-    asset,
-    startCollateral,
-    realtime: realtimePnl,
-    realtimePercent: !Big6Math.isZero(percentDenominator)
-      ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator))
-      : 0n,
-    realtimePercentDenominator: percentDenominator,
-    accumulatedPnl,
-    keeperFees,
-    positionFees,
-    priceImpactFees,
-    interfaceFees,
-    orderFees,
-    averageEntryPrice,
-    liquidation: !!graphPosition?.liquidation,
-    liquidationFee: graphPosition?.liquidationFee ?? 0n,
-  }
+  return positionPnls.reduce(
+    (acc, v) => {
+      if (v) acc[v.market] = v
+      return acc
+    },
+    {} as Record<
+      SupportedMarket,
+      ProcessedGraphPosition & {
+        realtime: bigint
+        realtimePercent: bigint
+        pendingMarkToMarketAccumulations: RealizedAccumulations | null
+      }
+    >,
+  )
 }
 /**
  * Fetches active position history for a given address
+ * @param market {@link SupportedMarket}
  * @param address Wallet Address
- * @param market Market Address
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param positionId position ID
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns User's position history for an active position.
  */
 export async function fetchActivePositionHistory({
   market,
   address,
-  pageParam = 0,
-  pageSize = 100,
+  positionId,
+  first = GraphDefaultPageSize,
+  skip = 0,
+  chainId,
   graphClient,
 }: {
-  market: Address
+  market: SupportedMarket
   address: Address
-  pageParam: number
-  pageSize: number
+  positionId: bigint
+  first?: number
+  skip?: number
+  chainId: SupportedChainId
   graphClient: GraphQLClient
 }) {
-  // Query for both the open and close checkpoint. The starting version is the greater of the two versions
-  const queryAccountCloseCheckpoints = gql(`
-    query CloseAccountCheckpoints($account: Bytes!, $market: Bytes!) {
-      close: marketAccountCheckpoints(
-        where: { account: $account, market: $market, type: close }
-        orderBy: blockNumber, orderDirection: desc, first: 1
-      ) { market, account, type, version }
-      open: marketAccountCheckpoints(
-        where: { account: $account, market: $market, type: open }
-        orderBy: blockNumber, orderDirection: desc, first: 1
-      ) { market, account, type, version }
-    }
-  `)
-  const { close, open } = await graphClient.request(queryAccountCloseCheckpoints, { account: address, market })
-  const startVersion = Big6Math.max(BigOrZero(close[0]?.version) + 1n, BigOrZero(open[0]?.version))
-  const { changes, hasMore } = await fetchSubPositions({
-    graphClient,
-    market,
+  return fetchSubPositions({
+    chainId,
     address,
-    startVersion,
-    first: pageSize,
-    skip: pageParam * pageSize,
+    market,
+    positionId,
+    graphClient,
+    first,
+    skip,
   })
-  return {
-    changes,
-    nextCursor: hasMore ? pageParam + 1 : undefined,
-    checkpoint: { close: close[0], open: open[0] },
-  }
 }
 /**
  * Fetches the position history for a given address
  * @param address Wallet Address
- * @param markets List of {@link Markets} to fetch position history for
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param markets List of {@link SupportedMarket} to fetch position history for
+ * @param chainId {@link SupportedChainId}
+ * @param fromTs bigint - Start timestamp in seconds
+ * @param toTs bigint - Start timestamp in seconds
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination number
+ * @param maker boolean - Whether to filter for maker or taker positions
  * @param graphClient GraphQLClient
  * @returns User's position history.
  */
@@ -306,376 +319,219 @@ export async function fetchHistoricalPositions({
   markets,
   address,
   graphClient,
-  pageSize = 10,
-  pageParam,
+  chainId,
+  fromTs,
+  toTs,
+  first = GraphDefaultPageSize,
+  skip = 0,
   maker,
 }: {
-  markets: Markets
+  markets: SupportedMarket[]
   address: Address
+  chainId: SupportedChainId
   graphClient: GraphQLClient
-  pageSize: number
-  pageParam?: { page: number; checkpoints?: MarketsAccountCheckpointsQuery }
+  fromTs?: bigint
+  toTs?: bigint
+  first?: number
+  skip?: number
   maker?: boolean
 }) {
-  const queryMarketsAccountCheckpoints = gql(`
-  query MarketsAccountCheckpoints(
-    $account: Bytes!, $markets: [Bytes!]!, $sides: [PositionSide!]!, $first: Int!, $skip: Int!
-  ) {
-    marketAccountCheckpoints(
-      where: { account: $account, market_in: $markets, side_in: $sides },
-      orderBy: version, orderDirection: desc, first: $first, skip: $skip
-    ) { market, account, type, version, blockNumber }
-  }
-`)
-
-  const checkpoints =
-    pageParam?.checkpoints ??
-    (await queryAll(async (pageNumber: number) =>
-      graphClient.request(queryMarketsAccountCheckpoints, {
-        account: address,
-        markets: markets.map(({ marketAddress }) => marketAddress),
-        first: GraphDefaultPageSize,
-        skip: pageNumber * GraphDefaultPageSize,
-        sides: maker ? [PositionSideGraph.Maker] : [PositionSideGraph.Long, PositionSideGraph.Short],
-      }),
-    ))
-
-  const pageNumber = pageParam?.page ?? 0
-  const closes = checkpoints.marketAccountCheckpoints
-    .filter((c) => c.type === 'close')
-    .slice(pageNumber * pageSize, (pageNumber + 1) * pageSize)
-
-  const positionsData = await Promise.all(
-    closes.map(async (c) => {
-      // Find the corresponding open
-      const open = checkpoints.marketAccountCheckpoints.find(
-        (cc) => cc.type === 'open' && cc.market === c.market && Number(cc.blockNumber) < Number(c.blockNumber),
-      )
-
-      if (!open) return
-
-      const data = await fetchPositionData({
-        graphClient,
-        address,
-        market: getAddress(c.market),
-        startVersion: BigInt(open.version),
-        endVersion: BigInt(c.version),
-      })
-
-      return data
-    }),
-  )
-
-  const positions = positionsData.filter(notEmpty)
-  return {
-    positions,
-    nextPageParam:
-      closes.length === pageSize
-        ? {
-            page: (pageParam?.page ?? 0) + 1,
-            checkpoints,
-          }
-        : undefined,
-  }
-}
-
-async function fetchPositionData({
-  graphClient,
-  address,
-  market,
-  startVersion,
-  endVersion,
-}: {
-  graphClient: GraphQLClient
-  address: Address
-  market: Address
-  startVersion: bigint
-  endVersion: bigint | null
-}) {
-  const asset = addressToAsset(market)
-  if (!asset) return
-
-  const accountPositionCheckpointDeltas = gql(`
-    query MarketAccountCheckpointDeltas(
-      $account: Bytes!, $market: Bytes!, $startVersion: BigInt!, $endVersion: BigInt!
-    ) {
-      start: marketAccountCheckpoints(
-        where: { market: $market, account: $account, version: $startVersion },
-      ) {
-        market, accumulatedValue, accumulatedCollateral, openSize, openNotional, openPriceImpactFees, accumulatedPositionFees
-        accumulatedKeeperFees, accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee,
-        accumulatedPriceImpactFees, accumulatedInterfaceFees, accumulatedOrderFees, collateral, netDeposits, side,
-        closeSize, closeNotional, closePriceImpactFees, startMagnitude, blockTimestamp, transactionHash
-      }
-      end: marketAccountCheckpoints(
-        where: { market: $market, account: $account, version: $endVersion },
-      ) {
-        market, accumulatedValue, accumulatedCollateral, openSize, openNotional, openPriceImpactFees, accumulatedPositionFees
-        accumulatedKeeperFees, accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee,
-        accumulatedPriceImpactFees, accumulatedInterfaceFees, accumulatedOrderFees, collateral, netDeposits,
-        closeSize, closeNotional, closePriceImpactFees,
-      }
-      currentPosition: marketAccountPositions(
-        where: { market: $market, account: $account },
-      ) {
-        market, accumulatedValue, accumulatedCollateral, openSize, openNotional, openPriceImpactFees, accumulatedPositionFees
-        accumulatedKeeperFees, accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee,
-        accumulatedPriceImpactFees, accumulatedInterfaceFees, accumulatedOrderFees, collateral, netDeposits,
-        closeSize, closeNotional, closePriceImpactFees,
-      }
-      startUpdate: updateds(
-        where: { market: $market, account: $account, version: $startVersion },
-      ) { price, priceImpactFee, interfaceFee, orderFee }
-      endUpdate: updateds(
-        where: { market: $market, account: $account, version_lte: $endVersion },
-        first: 1, orderBy: version, orderDirection: desc
-      ) { protect, collateral, version, liquidationFee }
-      firstAccumulation: accountPositionProcesseds(
-        where: { market: $market, account: $account, toOracleVersion: $startVersion }
-      ) { accumulationResult_positionFee, accumulationResult_keeper, priceImpactFee }
-      finalAccumulation: accountPositionProcesseds(
-        where: { market: $market, account: $account, fromOracleVersion: $endVersion }
-      ) { accumulationResult_positionFee, accumulationResult_keeper, priceImpactFee }
-    }
-  `)
-
-  const positionData = await graphClient.request(accountPositionCheckpointDeltas, {
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
+  const query = maker ? QueryMarketAccountMakerPositions : QueryMarketAccountTakerPositions
+  const { positions } = await graphClient.request(query, {
     account: address,
-    market,
-    startVersion: startVersion.toString(),
-    endVersion: endVersion !== null ? endVersion.toString() : nowSeconds().toString(),
-  })
-
-  const startUpdate = positionData?.startUpdate.at(0)
-  const endUpdate = positionData?.endUpdate.at(0)
-  const firstAccumulation = positionData?.firstAccumulation?.at(0)
-  const finalAccumulation = positionData?.finalAccumulation?.at(0)
-
-  const start = positionData?.start.at(0)
-  const end = positionData?.end.at(0) ?? positionData?.currentPosition.at(0)
-
-  if (!startUpdate || !endUpdate || !start || !end) return
-
-  const startSize = BigInt(start.startMagnitude)
-  const side =
-    start.side === 'maker' ? PositionSide.maker : start.side === 'long' ? PositionSide.long : PositionSide.short
-  const startCollateral =
-    BigInt(start.collateral) +
-    BigOrZero(firstAccumulation?.accumulationResult_positionFee) +
-    BigOrZero(firstAccumulation?.accumulationResult_keeper)
-  const netDeposits = BigOrZero(end.netDeposits) - BigOrZero(start.netDeposits)
-  const openNotional = BigOrZero(end.openNotional) - BigOrZero(start.openNotional)
-  const openPriceImpactFees = BigOrZero(end.openPriceImpactFees) - BigOrZero(start.openPriceImpactFees)
-  const openSize = BigOrZero(end.openSize) - BigOrZero(start.openSize)
-  const closeNotional = BigOrZero(end.closeNotional) - BigOrZero(start.closeNotional)
-  const closePriceImpactFees = BigOrZero(end.closePriceImpactFees) - BigOrZero(start.closePriceImpactFees)
-  const closeSize = BigOrZero(end.closeSize) - BigOrZero(start.closeSize)
-
-  let avgEntryNumerator = openNotional
-  let startPrice = BigOrZero(startUpdate.price)
-  let avgExitNumerator = closeNotional
-  // Factor in price impact fees for takers
-  const priceImpactPerPosition = startSize > 0n ? Big6Math.div(BigOrZero(startUpdate.priceImpactFee), startSize) : 0n
-  if (side === 'long') {
-    startPrice = startPrice + priceImpactPerPosition
-    avgEntryNumerator = avgEntryNumerator + openPriceImpactFees
-    avgExitNumerator = avgExitNumerator - closePriceImpactFees
-  }
-  if (side === 'short') {
-    startPrice = startPrice - priceImpactPerPosition
-    avgEntryNumerator = avgEntryNumerator - openPriceImpactFees
-    avgExitNumerator = avgExitNumerator + closePriceImpactFees
-  }
-
-  const position = {
-    market,
-    asset,
-    side: side === 'maker' ? PositionSide.maker : side === 'long' ? PositionSide.long : PositionSide.short,
-    startTime: new Date(Number(start.blockTimestamp) * 1000),
-    startTransactionHash: start.transactionHash,
-    startSize,
-    startVersion,
-    endVersion: endVersion === null ? BigInt(endUpdate.version) : endVersion,
-    startPrice,
-    startCollateral,
-    startNotional: calcNotional(startSize, startPrice),
-    netDeposits,
-    liquidation: endUpdate.protect,
-    liquidationFee: Big6Math.abs(BigOrZero(endUpdate.liquidationFee)),
-    openNotional,
-    openSize,
-    openPriceImpactFees,
-    averageEntry: openSize > 0n ? Big6Math.div(avgEntryNumerator, openSize) : 0n,
-    averageExit: closeSize > 0n ? Big6Math.div(avgExitNumerator, closeSize) : 0n,
-    accumulated: AccumulatorTypes.map((type) => ({
-      [type.type]: BigOrZero(end[type.realizedKey]) - BigOrZero(start[type.realizedKey]),
-    })).reduce((acc, v) => ({ ...acc, ...v }), {} as RealizedAccumulations) as RealizedAccumulations,
-    keeperFees:
-      BigOrZero(end.accumulatedKeeperFees) -
-      BigOrZero(start.accumulatedKeeperFees) +
-      BigOrZero(firstAccumulation?.accumulationResult_keeper) +
-      BigOrZero(finalAccumulation?.accumulationResult_keeper),
-    positionFees:
-      BigOrZero(end.accumulatedPositionFees) -
-      BigOrZero(start.accumulatedPositionFees) +
-      BigOrZero(firstAccumulation?.accumulationResult_positionFee) +
-      BigOrZero(finalAccumulation?.accumulationResult_positionFee),
-    priceImpactFees:
-      BigOrZero(end.accumulatedPriceImpactFees) -
-      BigOrZero(start.accumulatedPriceImpactFees) +
-      BigOrZero(firstAccumulation?.priceImpactFee) +
-      BigOrZero(finalAccumulation?.priceImpactFee),
-    interfaceFees:
-      BigOrZero(startUpdate.interfaceFee) +
-      BigOrZero(end.accumulatedInterfaceFees) -
-      BigOrZero(start.accumulatedInterfaceFees),
-    orderFees:
-      BigOrZero(startUpdate.orderFee) + BigOrZero(end.accumulatedOrderFees) - BigOrZero(start.accumulatedOrderFees),
-  }
-
-  return position
-}
-
-export type SubPositionChange = Awaited<ReturnType<typeof fetchSubPositions>>['changes'][number]
-/**
- * Fetches the sub positions activity for a given position
- * @param address Wallet Address
- * @param market Market Address
- * @param startVersion BigInt - Start oracle version number
- * @param endVersion BigInt - End oracle version number
- * @param first Number of entries to fetch
- * @param skip Number of entries to skip
- * @param graphClient GraphQLClient
- * @returns User's sub positions.
- */
-export async function fetchSubPositions({
-  graphClient,
-  address,
-  market,
-  startVersion,
-  endVersion,
-  first,
-  skip,
-}: {
-  graphClient: GraphQLClient
-  address: Address
-  market: Address
-  startVersion: bigint
-  endVersion?: bigint
-  first: number
-  skip: number
-}) {
-  const accountUpdatesQuery = gql(`
-    query fetchSubPositions_AccountUpdates(
-      $account: Bytes!, $market: Bytes!, $startVersion: BigInt!, $endVersion: BigInt! $first: Int!, $skip: Int!
-    ) {
-      updateds(
-        where: { market: $market, account: $account, version_gte: $startVersion, version_lte: $endVersion },
-        orderBy: version, orderDirection: desc, first: $first, skip: $skip
-      ) {
-        version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
-        localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee
-        side, delta
-      }
-
-      accountPositionProcesseds(
-        where: {
-          market: $market, account: $account, toOracleVersion_gte: $startVersion, fromOracleVersion_lte: $endVersion
-        },
-        orderBy: toOracleVersion, orderDirection: desc
-      ) {
-        accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
-        accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
-        side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber
-        market
-      }
-
-      nextUpdate: updateds(
-        where: { market: $market, account: $account, version_gt: $endVersion },
-        orderBy: version, orderDirection: asc, first: 1
-      ) {
-        version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
-        localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee
-      }
-    }
-  `)
-
-  const { updateds, accountPositionProcesseds, nextUpdate } = await graphClient.request(accountUpdatesQuery, {
-    account: address,
-    market,
-    startVersion: startVersion.toString(),
-    endVersion: endVersion ? endVersion.toString() : nowSeconds().toString(),
+    markets: marketsWithAddresses.map((m) => m.marketAddress),
+    fromTs: (fromTs ?? 0n).toString(),
+    toTs: (toTs ?? nowSeconds()).toString(),
     first,
     skip,
   })
 
-  // Pull execution price for the most recent update
-  if (updateds[0] && !updateds[0].valid) {
-    const price = await getPriceAtVersion({ graphClient, market, version: BigInt(updateds[0].version) })
-    if (price)
-      updateds[0] = {
-        ...updateds[0],
-        price,
-        valid: BigInt(price) > 0n,
-      }
+  return positions.map((graphPosition) =>
+    processGraphPosition(addressToMarket(chainId, graphPosition.marketAccount.market.id), graphPosition),
+  )
+}
+
+type ProcessedGraphPosition = ReturnType<typeof processGraphPosition>
+function processGraphPosition(
+  market: SupportedMarket,
+  graphPosition: PositionDataFragment,
+  latestToGlobalRealized?: Record<AccumulatorType, bigint>,
+  pendingPositionData?: {
+    currentId: bigint
+    latestPrice: bigint
+    collateral: bigint
+    size: bigint
+    offset: bigint
+    settlementFee: bigint
+    tradeFee: bigint
+    additiveFee: bigint
+  },
+) {
+  const startCollateral = BigInt(graphPosition.startCollateral)
+  const netDeposits = BigInt(graphPosition.netDeposits)
+  const percentDenominator = startCollateral + (netDeposits > 0n ? netDeposits : 0n)
+  const side = positionSide(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort)
+  const openSize = BigInt(graphPosition.openSize)
+  const closeSize = BigInt(graphPosition.closeSize)
+  const totalNotional = BigInt(graphPosition.openNotional) + BigInt(graphPosition.closeNotional)
+  const averageEntryPrice = calcExecutionPriceWithImpact({
+    notional: BigInt(graphPosition.openNotional),
+    offset: BigInt(graphPosition.openOffset),
+    size: openSize,
+    side,
+  })
+  const averageExitPrice = calcExecutionPriceWithImpact({
+    notional: BigInt(graphPosition.closeNotional),
+    offset: BigInt(graphPosition.closeOffset),
+    size: closeSize * -1n,
+    side,
+  })
+
+  let totalPnl = BigOrZero(graphPosition.accumulation.collateral_accumulation)
+  let totalFees = BigOrZero(graphPosition.accumulation.fee_accumulation)
+  let netPnl = totalPnl - totalFees
+
+  const pnlAccumulations = accumulateRealized([graphPosition.accumulation])
+  const feeAccumulations = accumulateRealizedFees([graphPosition.accumulation])
+
+  // If there is a realized pnl from the latest account settlement to the latest global settlement, apply it
+  if (latestToGlobalRealized) {
+    AccumulatorTypes.forEach(({ type }) => {
+      pnlAccumulations[type] += latestToGlobalRealized[type]
+      totalPnl += latestToGlobalRealized[type]
+      netPnl += latestToGlobalRealized[type]
+    })
   }
 
-  const changes = updateds
-    .filter((update, i) =>
-      i === updateds.length - 1
-        ? magnitude(update.newMaker, update.newLong, update.newShort) > 0n // skip update if it has no size
-        : true,
-    )
-    .map((update, i, self) => {
-      const accumulations = accountPositionProcesseds.filter(
-        (p) =>
-          BigInt(p.toOracleVersion) >= BigInt(update.version) &&
-          (i > 0 ? BigInt(p.toOracleVersion) < BigInt(self[i - 1].version) : true),
-      )
-      return processSubPosition(update, i, self, accumulations, startVersion)
-    })
-    .map((change, i, self) => {
-      if (change.settlementOnly) return null // Filter out settlement only changes
-      if (i > 0 && self[i - 1].settlementOnly) {
-        // If previous update is settlement only, merge it into this update
-        const mergedAccumulations = [...self[i - 1].accumulations, ...change.accumulations]
-        const realizedValues = accumulateRealized([...self[i - 1].accumulations, ...change.accumulations])
-        if (change.side !== 'maker') realizedValues.pnl = realizedValues.pnl - BigInt(change.priceImpactFee)
+  // If this is a maker position, move offset to trade fee
+  if (side === PositionSide.maker) {
+    const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
+    feeAccumulations.trade += offsetAsFee // add offset fee to trade fee
+    totalFees += offsetAsFee // add offset fee to total fee
 
-        return {
-          ...change,
-          accumulations: mergedAccumulations,
-          realizedValues,
-        }
-      }
-      return change
-    })
-    .filter(notEmpty)
+    pnlAccumulations.offset = 0n // remove offset from pnl offset
+    totalPnl -= pnlAccumulations.offset // remove offset from total pnl
+  }
 
-  // Check if the next update is a collateral only change, and if so pull it in as a new update that is part of this
-  // position. This is done because the graph does not include collateral only updates as part of the checkpointing
-  // system, but it's a nicer UX if we include them as part of the position history
-  if (
-    nextUpdate[0] &&
-    BigInt(nextUpdate[0].collateral) < 0n &&
-    magnitude(nextUpdate[0].newMaker, nextUpdate[0].newLong, nextUpdate[0].newShort) === 0n
-  ) {
-    if (changes[0].accumulations[0].toOracleVersion <= nextUpdate[0].version) {
-      changes.unshift({
-        ...nextUpdate[0],
-        side: changes[0].side,
-        magnitude: 0n,
-        priceWithImpact: 0n,
-        delta: null,
-        accumulations: [],
-        realizedValues: accumulateRealized([]),
-        collateralOnly: true,
-        settlementOnly: false,
+  const closeOrder = graphPosition.closeOrder.at(0)
+
+  const returnValue = {
+    // Position Metadata
+    market,
+    marketAddress: getAddress(graphPosition.marketAccount.market.id),
+    side,
+    positionId: BigInt(graphPosition.positionId),
+    startVersion: BigInt(graphPosition.startVersion),
+    endVersion: closeOrder ? BigInt(closeOrder.oracleVersion.timestamp) : null,
+    trades: BigInt(graphPosition.trades),
+    // Position Starting Data
+    startSize: magnitude(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort),
+    startPrice: BigInt(graphPosition?.openOrder.at(0)?.executionPrice ?? 0n),
+    startCollateral: BigInt(graphPosition.startCollateral),
+    netDeposits,
+    // PNL
+    netPnl,
+    netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
+    // Accumulation Breakdowns
+    totalPnl,
+    totalFees,
+    pnlAccumulations,
+    feeAccumulations,
+    // Derived Data
+    averageEntryPrice,
+    averageExitPrice,
+    liquidation: Boolean(closeOrder?.liquidation),
+    liquidationFee: BigOrZero(feeAccumulations.liquidation),
+    totalNotional,
+  }
+
+  // If pending position data is available and newer than graph data, apply it
+  if (pendingPositionData && pendingPositionData.currentId > BigInt(graphPosition.marketAccount.currentOrderId)) {
+    returnValue.netDeposits += pendingPositionData.collateral
+    returnValue.feeAccumulations.settlement += pendingPositionData.settlementFee
+    returnValue.feeAccumulations.trade += pendingPositionData.tradeFee
+    returnValue.feeAccumulations.additive += pendingPositionData.additiveFee
+    let totalFee = pendingPositionData.settlementFee + pendingPositionData.tradeFee + pendingPositionData.additiveFee
+    returnValue.totalFees += totalFee
+    if (side === PositionSide.maker) {
+      returnValue.feeAccumulations.trade += pendingPositionData.offset
+      totalFee += pendingPositionData.offset
+    } else {
+      returnValue.pnlAccumulations.offset += pendingPositionData.offset
+      returnValue.totalPnl += pendingPositionData.offset
+      returnValue.netPnl += pendingPositionData.offset
+    }
+    returnValue.netPnl -= totalFee
+
+    // Recalculate the average entry and exit price
+    if (pendingPositionData.size > 0n) {
+      returnValue.averageEntryPrice = calcExecutionPriceWithImpact({
+        notional:
+          BigInt(graphPosition.openNotional) + calcNotional(pendingPositionData.latestPrice, pendingPositionData.size),
+        offset: BigInt(graphPosition.openOffset) + pendingPositionData.offset,
+        size: openSize + pendingPositionData.size,
+        side,
+      })
+    } else if (pendingPositionData.size < 0n) {
+      returnValue.averageExitPrice = calcExecutionPriceWithImpact({
+        notional:
+          BigInt(graphPosition.closeNotional) + calcNotional(pendingPositionData.latestPrice, pendingPositionData.size),
+        offset: BigInt(graphPosition.closeOffset) + pendingPositionData.offset,
+        size: closeSize * -1n + pendingPositionData.size,
+        side,
       })
     }
+    // Add pending position data to total notional
+    returnValue.totalNotional += calcNotional(pendingPositionData.latestPrice, pendingPositionData.size)
+    if (pendingPositionData.size !== 0n) returnValue.trades += 1n
   }
 
-  return { changes, hasMore: updateds.length === first }
+  return returnValue
+}
+
+export type SubPositionChange = Awaited<ReturnType<typeof fetchSubPositions>>[number]
+/**
+ * Fetches the sub positions activity for a given position
+ * @param address Wallet Address
+ * @param market {@link SupportedMarket}
+ * @param positionId BigInt
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination
+ * @param graphClient GraphQLClient
+ * @returns User's sub positions.
+ */
+export async function fetchSubPositions({
+  address,
+  market,
+  positionId,
+  first = GraphDefaultPageSize,
+  skip = 0,
+  chainId,
+  graphClient,
+}: {
+  chainId: SupportedChainId
+  graphClient: GraphQLClient
+  address: Address
+  market: SupportedMarket
+  positionId: bigint
+  first?: number
+  skip?: number
+}) {
+  const marketAddress = ChainMarkets[chainId][market]
+  if (!marketAddress) return []
+
+  const { orders } = await graphClient.request(QueryMarketAccountPositionOrders, {
+    account: address,
+    market: marketAddress,
+    positionId: positionId.toString(),
+    first,
+    skip,
+  })
+
+  const processedOrders = orders.map((order) => processOrder(market, order))
+
+  return processedOrders
 }
 
 /**
@@ -687,48 +543,25 @@ export async function fetchSubPositions({
  * @returns User's trade history.
  */
 export async function fetchTradeHistory({
+  chainId,
   graphClient,
   address,
   fromTs,
   toTs,
 }: {
+  chainId: SupportedChainId
   graphClient: GraphQLClient
   address: Address
   fromTs?: bigint
   toTs?: bigint
 }) {
   const defaultTimeRange = Day * 7n
-  const maxTimeRange = Day * 30n
   const now = BigInt(nowSeconds())
   if (!toTs) toTs = now
   if (!fromTs) fromTs = toTs - defaultTimeRange
 
-  if (toTs - fromTs > maxTimeRange) {
-    throw new Error('The time range exceeds the maximum allowed range of 7 days.')
-  }
-  // TODO(arjun): update this query to use trades entity in subgraph when available
-  const tradeHistoryQuery = gql(`
-  query fetchTradeHistory($account: Bytes!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-    accountPositionProcesseds(
-      where: { account: $account, toOracleVersion_gte: $fromTs, toOracleVersion_lt: $toTs },
-      orderBy: toOracleVersion,
-      orderDirection: desc,
-      first: $first,
-      skip: $skip
-    ) {
-      accumulationResult_collateralAmount, accumulationResult_keeper, accumulationResult_positionFee, priceImpactFee
-      accumulatedPnl, accumulatedFunding, accumulatedInterest, accumulatedMakerPositionFee, accumulatedValue
-      side, size, fromOracleVersion, toOracleVersion, toVersionPrice, toVersionValid, collateral, blockNumber,
-      market, update {
-        version, collateral, newMaker, newLong, newShort, valid, transactionHash, price, priceImpactFee,
-        localPositionId, globalPositionId, market, account, blockNumber, blockTimestamp, protect, interfaceFee, orderFee, side, delta
-      }
-    }
-  }
-  `)
-
-  const { accountPositionProcesseds } = await queryAll(async (pageNumber) =>
-    graphClient.request(tradeHistoryQuery, {
+  const { orders } = await queryAll(async (pageNumber) =>
+    graphClient.request(QueryAccountOrders, {
       account: address,
       first: GraphDefaultPageSize,
       skip: pageNumber * GraphDefaultPageSize,
@@ -737,434 +570,239 @@ export async function fetchTradeHistory({
     }),
   )
 
-  const marketAccountPositionProcesseds = accountPositionProcesseds.reduce(
-    (acc, entity) => {
-      const market = getAddress(entity.market)
-      if (!acc[market]) acc[market] = []
-      acc[market].push(entity)
-      return acc
-    },
-    {} as Record<Address, typeof accountPositionProcesseds>,
-  )
+  const processedOrders = orders.map((order) => processOrder(addressToMarket(chainId, order.market.id), order))
 
-  type Update = {
-    update: NonNullable<(typeof accountPositionProcesseds)[number]['update']>
-    accumulations: typeof accountPositionProcesseds
-  }
-
-  const trades = Object.entries(marketAccountPositionProcesseds).reduce(
-    (acc, [market, entities]) => {
-      const updates: Update[] = []
-      entities.forEach((entity) => {
-        if (
-          entity.update &&
-          entity.update.side !== 'none' &&
-          entity.update.delta !== '0' &&
-          entity.update.collateral !== '0'
-        ) {
-          updates.push({ update: entity.update, accumulations: [entity] })
-        } else {
-          const update = updates.at(-1) ?? {
-            update: entities.find(
-              (e) => e.update && e.update.side !== 'none' && e.update.delta !== '0' && e.update.collateral !== '0',
-            ),
-            accumulations: [] as typeof accountPositionProcesseds,
-          }
-          if (update.update) {
-            update.accumulations.push(entity)
-          }
-        }
-      })
-
-      acc[getAddress(market)] = updates.map(({ update, accumulations }, i, self) => {
-        return processSubPosition(
-          update,
-          i,
-          self.map((u) => u.update),
-          accumulations,
-        )
-      })
-      return acc
-    },
-    {} as Record<Address, SubPositionChange[]>,
-  )
-  return trades
+  return processedOrders
 }
 
-type SubPositionUpdate = NonNullable<FetchSubPositions_AccountUpdatesQuery['updateds'][number]>
-type SubPositionAccumulations = NonNullable<FetchSubPositions_AccountUpdatesQuery['accountPositionProcesseds']>
+function processOrder(market: SupportedMarket, order: OrderDataFragment) {
+  const side = positionSide(order.position.startMaker, order.position.startLong, order.position.startShort)
+  const delta = orderSize(order.maker, order.long, order.short)
+  const collateral = BigInt(order.collateral)
 
-function processSubPosition(
-  update: SubPositionUpdate,
-  updateIndex: number,
-  allUpdates: SubPositionUpdate[],
-  accumulations: SubPositionAccumulations,
-  startVersion?: bigint,
-) {
-  const magnitude_ = magnitude(update.newMaker, update.newLong, update.newShort)
-  const side = positionSide(update.newMaker, update.newLong, update.newShort)
-  const prevValid = allUpdates.find((u) => u.version < update.version && u.valid)
-  const prevMagnitude = prevValid ? magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort) : null
-  const prevSide = prevValid
-    ? positionSide(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
-    : PositionSide.none
+  const priceWithImpact =
+    delta !== 0n
+      ? calcExecutionPriceWithImpact({
+          notional: calcNotional(BigInt(order.executionPrice), delta),
+          offset: BigInt(order.accumulation.collateral_subAccumulation_offset),
+          size: delta,
+          side,
+        })
+      : BigInt(order.executionPrice)
+  const percentDenominator = BigInt(order.startCollateral) + (collateral > 0n ? collateral : 0n)
+  let totalPnl = BigOrZero(order.accumulation.collateral_accumulation)
+  let totalFees = BigOrZero(order.accumulation.fee_accumulation)
+  const pnlAccumulations = accumulateRealized([order.accumulation])
+  const feeAccumulations = accumulateRealizedFees([order.accumulation])
+  // If this is a maker position, move offset to trade fee
+  if (side === PositionSide.maker) {
+    const offsetAsFee = pnlAccumulations.offset * -1n // Convert offset to a fee
+    feeAccumulations.trade += offsetAsFee // add offset fee to trade fee
+    totalFees += offsetAsFee // add offset fee to total fee
 
-  const delta =
-    (prevValid && update.valid) || (prevValid && !update.valid && updateIndex === 0)
-      ? magnitude_ - magnitude(prevValid.newMaker, prevValid.newLong, prevValid.newShort)
-      : BigInt(update.version) === startVersion || updateIndex === allUpdates.length - 1
-        ? magnitude_
-        : null
+    pnlAccumulations.offset = 0n // remove offset from pnl offset
+    totalPnl -= pnlAccumulations.offset // remove offset from total pnl
+  }
+  const netPnl = BigInt(order.accumulation.collateral_accumulation) - BigInt(order.accumulation.fee_accumulation)
 
-  const realizedValues = accumulateRealized(accumulations)
-  const collateralOnly = delta === 0n && BigOrZero(update.collateral) !== 0n
-  const settlementOnly =
-    BigOrZero(update.collateral) === 0n &&
-    updateIndex !== allUpdates.length - 1 &&
-    !update.valid &&
-    prevMagnitude !== null &&
-    magnitude_ - prevMagnitude === 0n
-
-  let priceWithImpact = BigInt(update.price)
-
-  // Handle price impact. This is the price plus/minus the price impact fee divided by the delta. This is
-  // directional - long opens and short closes increase the price, short opens and long closes decrease the price
-  if (!!delta && (side === 'long' || prevSide === 'long'))
-    priceWithImpact = priceWithImpact + Big6Math.div(BigOrZero(update.priceImpactFee), delta)
-  if (!!delta && (side === 'short' || prevSide === 'short'))
-    priceWithImpact = priceWithImpact - Big6Math.div(BigOrZero(update.priceImpactFee), delta)
-  // If taker, subtract the price impact fee from the realized pnl
-  if (side !== 'maker') realizedValues.pnl = realizedValues.pnl - BigInt(update.priceImpactFee)
-  return {
-    ...update,
+  const returnValue = {
+    // Position Metadata
+    market,
     side,
-    magnitude: magnitude_,
-    priceWithImpact,
+    orderId: BigInt(order.orderId),
+    version: BigInt(order.oracleVersion.timestamp),
+    valid: order.oracleVersion.valid,
     delta,
-    accumulations,
-    realizedValues,
-    collateralOnly,
-    settlementOnly,
+    magnitude: magnitude(order.maker, order.long, order.short),
+    executionPrice: BigInt(order.executionPrice),
+    executionPriceWithOffset: priceWithImpact,
+    startCollateral: BigInt(order.startCollateral),
+    netDeposits: collateral,
+    // PNL
+    netPnl,
+    netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
+    // Accumulation Breakdowns
+    totalPnl,
+    totalFees,
+    pnlAccumulations,
+    feeAccumulations,
+    liquidation: Boolean(order.liquidation),
+    liquidationFee: BigOrZero(order.accumulation.fee_subAccumulation_liquidation),
+    transactionHashes: order.transactionHashes,
   }
+
+  return returnValue
 }
 
-export type OpenOrder = NonNullable<NonNullable<Awaited<ReturnType<typeof fetchOpenOrders>>>>['openOrders'][number]
+export type OpenOrder = NonNullable<NonNullable<Awaited<ReturnType<typeof fetchOpenOrders>>>>[number]
 /**
  * Fetches the open orders for a given address
  * @param address Wallet Address
- * @param markets List of {@link Markets} to fetch open orders for
- * @param pageParam Page number
- * @param pageSize Page size
+ * @param markets List of {@link SupportedMarket} to fetch open orders for
+ * @param chainId {@link SupportedChainId}
+ * @param [first={@link GraphDefaultPageSize}] Number of entities to fetch
+ * @param [skip=0] Offset for pagination number
+ * @param isMaker boolean - Filter for maker orders
  * @param graphClient GraphQLClient
  * @returns User's open orders.
  */
 export async function fetchOpenOrders({
+  chainId,
   graphClient,
   markets,
   address,
-  pageParam = 0,
-  pageSize = 100,
+  first = GraphDefaultPageSize,
+  skip = 0,
   isMaker,
 }: {
+  chainId: SupportedChainId
   graphClient: GraphQLClient
-  markets: Markets
+  markets: SupportedMarket[]
   address: Address
-  pageParam: number
-  pageSize: number
+  first?: number
+  skip?: number
   isMaker?: boolean
 }) {
-  const queryOpenOrders = gql(`
-  query OpenOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
-    multiInvokerOrderPlaceds(
-      where: { account: $account, market_in: $markets, cancelled: false, executed: false, order_side_in: $side },
-      orderBy: nonce, orderDirection: desc, first: $first, skip: $skip
-    ) {
-        account, market, nonce, order_side, order_comparison, order_fee, order_price, order_delta
-        blockNumber, blockTimestamp, transactionHash
-      }
-  }
-`)
-
-  const { multiInvokerOrderPlaceds: openOrders } = await graphClient.request(queryOpenOrders, {
+  const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
+  const { multiInvokerTriggerOrders } = await graphClient.request(QueryMultiInvokerOpenOrders, {
     account: address,
-    markets: markets.map(({ marketAddress }) => marketAddress),
-    first: pageSize,
-    skip: pageParam * pageSize,
+    markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
+    first,
+    skip,
     side: isMaker ? [0, 3] : [1, 2, 3], // 3 = collateral withdrawal
   })
 
-  const associatedCollateral = gql(`
-  query AssociatedCollateral($account: Bytes!, $markets: [Bytes!]!, $transactionHashes: [Bytes!]!, $first: Int!, $skip: Int!) {
-    updateds(
-      where: { account: $account, market_in: $markets, transactionHash_in: $transactionHashes, collateral_gt: 0 },
-      orderBy: blockTimestamp, orderDirection: desc, first: $first, skip: $skip
-    ) {
-      market, collateral, transactionHash
-    }
-  }
-  `)
-
-  // Only look at the transaction hashes of the open orders that have a positive position delta
-  const transactionHashes = unique(
-    openOrders
-      .filter(({ order_delta, order_side }) => BigInt(order_side) !== 3n && BigInt(order_delta) > 0n)
-      .map((o) => o.transactionHash),
-  )
-
-  let collateralUpdateMap = {} as Record<string, bigint>
-  if (transactionHashes.length > 0) {
-    const { updateds: collateralUpdates } = await queryAll((page) =>
-      graphClient.request(associatedCollateral, {
-        account: address,
-        markets: markets.map(({ marketAddress }) => marketAddress),
-        transactionHashes,
-        first: pageSize,
-        skip: page * pageSize,
-      }),
-    )
-
-    collateralUpdateMap = collateralUpdates.reduce((acc, u) => {
-      const key = `${u.transactionHash}_${u.market}`.toLowerCase()
-      if (!acc[key]) acc[key] = 0n
-      acc[key] += BigInt(u.collateral)
-      return acc
-    }, collateralUpdateMap)
-  }
-
-  const openOrdersWithCollateral = openOrders.map((order) => {
-    const collateral = collateralUpdateMap[`${order.transactionHash}_${order.market}`.toLowerCase()]
-    return {
-      ...order,
-      linkedDeposit: BigInt(order.order_delta) > 0n ? collateral ?? 0n : 0n,
-    }
-  })
-
-  return {
-    openOrders: openOrdersWithCollateral,
-    nextPageParam: openOrders.length === pageSize ? pageParam + 1 : undefined,
-  }
+  return multiInvokerTriggerOrders.map((triggerOrder) => ({
+    ...triggerOrder,
+    market: addressToMarket(chainId, triggerOrder.market),
+    marketAddress: getAddress(triggerOrder.market),
+  }))
 }
 
-/**
- * Fetches the 24hr volume data for a given market
- * @param market Market Address
- * @param graphClient GraphQLClient
- * @returns Market 24hr volume data.
- */
-export async function fetchMarket24hrData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
-  const volumeRes = await fetchMarkets24hrVolume({ graphClient, markets: [market] })
-  return {
-    volume: volumeRes[market] || [],
-  }
-}
 /**
  * Fetches the 24hr volume data for a list of market
- * @param markets List of market Addresses
+ * @param markets List of {@link SupportedMarket}
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
  * @returns Markets 24hr volume data.
  */
-export async function fetchMarkets24hrVolume({
+export async function fetchMarkets24hrData({
+  chainId,
   graphClient,
   markets,
 }: {
+  chainId: SupportedChainId
   graphClient: GraphQLClient
-  markets: Address[]
+  markets: SupportedMarket[]
 }) {
   const { from, to } = last24hrBounds()
-  const query = gql(`
-    query Markets24hrVolume($markets: [Bytes!]!, $from: BigInt!, $to: BigInt!) {
-      volume: bucketedVolumes(
-        where:{bucket: hourly, market_in: $markets, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
-        orderBy: periodStartTimestamp
-        orderDirection: asc
-      ) {
-        periodStartTimestamp
-        longNotional
-        shortNotional
-        market
-      }
-    }
-  `)
 
-  const volumeData = await graphClient.request(query, {
+  return fetchMarketsHistoricalData({
+    chainId,
+    graphClient,
     markets,
-    from: from.toString(),
-    to: to.toString(),
+    fromTs: BigInt(from),
+    toTs: BigInt(to),
+    bucket: Bucket.Hourly,
   })
-
-  return volumeData.volume.reduce(
-    (acc, v) => {
-      if (!acc[getAddress(v.market)]) acc[getAddress(v.market)] = [] as (typeof acc)[Address]
-      acc[getAddress(v.market)].push({
-        periodStartTimestamp: v.periodStartTimestamp,
-        longNotional: v.longNotional,
-        shortNotional: v.shortNotional,
-        market: v.market,
-      })
-      return acc
-    },
-    {} as Record<
-      Address,
-      { periodStartTimestamp: string; longNotional: string; shortNotional: string; market: string }[]
-    >,
-  )
 }
 /**
- * Fetches the 7d data for a given market
- * @param market Market Address
+ * Fetches Historical data for markets
+ * @param markets List of {@link SupportedMarket}
+ * @param chainId {@link SupportedChainId}
  * @param graphClient GraphQLClient
+ * @param fromTs bigint - Start timestamp in seconds
+ * @param toTs bigint - Start timestamp in seconds
+ * @param bucket {@link Bucket}
  * @returns Market 7d data.
  */
-export async function fetchMarket7dData({ graphClient, market }: { graphClient: GraphQLClient; market: Address }) {
-  const { to, from } = last7dBounds()
-
-  const query = gql(`
-    query Market7DayVolume($market: Bytes!, $from: BigInt!, $to: BigInt!) {
-      volume: bucketedVolumes(
-        where:{bucket: daily, market: $market, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
-        orderBy: periodStartTimestamp, orderDirection: asc
-      ) {
-        market
-        longNotional
-        shortNotional
-      }
-
-      hourlyFunding: bucketedVolumes(
-        where: {bucket: hourly, market: $market, periodStartTimestamp_gte: $from, periodStartTimestamp_lte: $to}
-        orderBy: periodStartTimestamp, orderDirection: asc
-      ) {
-        market
-        weightedLongFunding
-        weightedLongInterest
-        weightedMakerFunding
-        weightedMakerInterest
-        totalWeight
-        periodStartTimestamp
-        periodEndTimestamp
-      }
-
-      firstNonZeroFunding: bucketedVolumes(
-        where: {
-          and: [
-            {bucket: hourly, market: $market, periodStartTimestamp_lt: $from },
-            {or: [
-              {weightedLongFunding_gt: 0 },
-              {weightedLongInterest_gt: 0 },
-            ]}
-          ]
-        }
-        orderBy: periodStartTimestamp, orderDirection: desc, first: 1
-      ) {
-        market
-        weightedLongFunding
-        weightedLongInterest
-        weightedMakerFunding
-        weightedMakerInterest
-        totalWeight
-        periodStartTimestamp
-        periodEndTimestamp
-      }
-
-      currentAccumulator: marketAccumulators(
-        where: { market: $market, latest: true }
-      ) {
-        market, fundingMaker, interestMaker, positionFeeMaker
-      }
-
-      startAccumulator: marketAccumulators(
-        where: { market: $market, version_gte: $from }, first: 1, orderBy: version, orderDirection: asc
-      ) {
-        market, fundingMaker, interestMaker, positionFeeMaker, version
-      }
-    }
-  `)
-
-  const { volume, hourlyFunding, firstNonZeroFunding, currentAccumulator, startAccumulator } =
-    await graphClient.request(query, {
-      market: market,
-      from: from.toString(),
-      to: to.toString(),
-    })
-
-  const takerVolumes = {
-    long: sum(volume.map((v) => BigInt(v.longNotional))),
-    short: sum(volume.map((v) => BigInt(v.shortNotional))),
-  }
-
-  const fundingRates = hourlyFunding
-    .map((f, i) => {
-      let [takerTotal, makerTotal, totalWeight] = [
-        BigOrZero(f?.weightedLongFunding) + BigOrZero(f?.weightedLongInterest),
-        BigOrZero(f?.weightedMakerFunding) + BigOrZero(f?.weightedMakerInterest),
-        BigOrZero(f?.totalWeight),
-      ]
-
-      // Set the initial rate to the first non-zero funding rate if the first bucket is zero
-      if (i === 0 && takerTotal === 0n) {
-        takerTotal =
-          BigOrZero(firstNonZeroFunding.at(0)?.weightedLongFunding) +
-          BigOrZero(firstNonZeroFunding.at(0)?.weightedLongInterest)
-        totalWeight = BigOrZero(firstNonZeroFunding.at(0)?.totalWeight)
-      }
-      if (i === 0 && makerTotal === 0n) {
-        makerTotal =
-          BigOrZero(firstNonZeroFunding.at(0)?.weightedMakerFunding) +
-          BigOrZero(firstNonZeroFunding.at(0)?.weightedMakerInterest)
-      }
-
-      const scaleFactor =
-        totalWeight !== 0n ? Big6Math.fromFloatString((Number(Hour) / Number(totalWeight)).toString()) : 0n
-      const takerUnscaledRate = totalWeight !== 0n ? takerTotal / totalWeight : 0n
-      const makerUnscaledRate = totalWeight !== 0n ? makerTotal / totalWeight : 0n
-      const takerHrRate = takerUnscaledRate * scaleFactor
-      const makerHrRate = makerUnscaledRate * scaleFactor
-      return { timestamp: BigInt(f.periodStartTimestamp), takerHrRate, makerHrRate }
-    })
-    .filter(notEmpty)
-
-  // Scale accumulation values to fill the 7d window
-  const accumulatorScaleFactor = Big6Math.fromFloatString(
-    (Number(7n * Day) / Number(to - Number(startAccumulator.at(0)?.version ?? from))).toString(),
-  )
-  return {
-    takerVolumes,
-    fundingRates,
-    // Accumulations are the delta between now and start, scaled to fill the 7d window
-    makerAccumulation: {
-      funding: Big6Math.mul(
-        BigOrZero(currentAccumulator[0]?.fundingMaker) - BigOrZero(startAccumulator[0]?.fundingMaker),
-        accumulatorScaleFactor,
-      ),
-      interest: Big6Math.mul(
-        BigOrZero(currentAccumulator[0]?.interestMaker) - BigOrZero(startAccumulator[0]?.interestMaker),
-        accumulatorScaleFactor,
-      ),
-      positionFee: Big6Math.mul(
-        BigOrZero(currentAccumulator[0]?.positionFeeMaker) - BigOrZero(startAccumulator[0]?.positionFeeMaker),
-        accumulatorScaleFactor,
-      ),
-    },
-  }
-}
-
-export const getPriceAtVersion = async ({
+export async function fetchMarketsHistoricalData({
+  chainId,
   graphClient,
-  market,
-  version,
+  markets,
+  fromTs,
+  toTs,
+  bucket = Bucket.Daily,
 }: {
+  chainId: SupportedChainId
   graphClient: GraphQLClient
-  market: Address
-  version: bigint
-}) => {
-  const query = gql(`
-    query PriceAtVersion($versionId: ID!) {
-      marketVersionPrice(id: $versionId) { price }
-    }
-  `)
-
-  const res = await graphClient.request(query, {
-    versionId: `${market}:${version.toString()}`.toLowerCase(),
+  markets: SupportedMarket[]
+  fromTs: bigint
+  toTs: bigint
+  bucket?: Bucket
+}) {
+  const marketAddresses = chainMarketsWithAddress(chainId, markets)
+  const { marketData } = await graphClient.request(QueryMarketAccumulationData, {
+    markets: marketAddresses.map((m) => m.marketAddress),
+    fromTs: fromTs.toString(),
+    toTs: toTs.toString(),
+    bucket,
   })
 
-  return res.marketVersionPrice?.price ?? 0n
+  const parsedData = marketAddresses.map(({ market, marketAddress }) => {
+    const data = marketData.find((m) => getAddress(m.id) === marketAddress)
+    const fromAccumulator = data?.fromAccumulator.at(0)
+    const toAccumulator = data?.toAccumulator.at(0)
+
+    const scaleFactorDenominator = Big6Math.fromDecimals(
+      BigInt(toAccumulator?.toVersion ?? toTs) - BigInt(fromAccumulator?.fromVersion ?? fromTs),
+      0,
+    )
+    const accumulatorScaleFactor =
+      scaleFactorDenominator !== 0n ? Big6Math.div(Big6Math.fromDecimals(toTs - fromTs, 0), scaleFactorDenominator) : 0n
+
+    const accumulations = data?.accumulations ?? []
+    const takerVolumes = accumulations.map((vol) => ({
+      timestamp: vol.timestamp,
+      longNotional: BigInt(vol.longNotional),
+      shortNotional: BigInt(vol.shortNotional),
+    }))
+    const fundingRates = accumulations.map((rate) => ({
+      timestamp: rate.timestamp,
+      makerAPR: BigInt(rate.fundingRateMaker),
+      longAPR: BigInt(rate.fundingRateLong),
+      shortAPR: BigInt(rate.fundingRateShort),
+    }))
+    const interestRates = accumulations.map((rate) => ({
+      timestamp: rate.timestamp,
+      makerAPR: BigInt(rate.interestRateMaker),
+      longAPR: BigInt(rate.interestRateLong),
+      shortAPR: BigInt(rate.interestRateShort),
+    }))
+
+    return {
+      market,
+      address: marketAddress,
+      takerVolumes,
+      fundingRates,
+      interestRates,
+      // Accumulations are the delta between to and from, scaled to fill the window
+      makerAccumulation: {
+        funding: Big6Math.mul(
+          BigOrZero(toAccumulator?.fundingMaker) - BigOrZero(fromAccumulator?.fundingMaker),
+          accumulatorScaleFactor,
+        ),
+        interest: Big6Math.mul(
+          BigOrZero(toAccumulator?.interestMaker) - BigOrZero(fromAccumulator?.interestMaker),
+          accumulatorScaleFactor,
+        ),
+        positionFee: Big6Math.mul(
+          BigOrZero(toAccumulator?.positionFeeMaker) - BigOrZero(fromAccumulator?.positionFeeMaker),
+          accumulatorScaleFactor,
+        ),
+        exposure: Big6Math.mul(
+          BigOrZero(toAccumulator?.exposureMaker) - BigOrZero(fromAccumulator?.exposureMaker),
+          accumulatorScaleFactor,
+        ),
+      },
+    }
+  })
+
+  return parsedData.reduce(
+    (acc, market) => {
+      acc[market.market] = market
+      return acc
+    },
+    {} as Record<SupportedMarket, (typeof parsedData)[0]>,
+  )
 }

@@ -21,7 +21,7 @@ contract Lens {
   UFixed6 private constant noOp = UFixed6Lib.MAX;
 
   struct MarketSnapshot {
-    IMarket market;
+    IMarket marketAddress;
     MarketParameter parameter;
     RiskParameter riskParameter;
     Global global;
@@ -36,7 +36,7 @@ contract Lens {
   }
 
   struct MarketAccountSnapshot {
-    IMarket market;
+    IMarket marketAddress;
     address account;
     Local local;
     Order latestOrder;
@@ -101,7 +101,7 @@ contract Lens {
   }
 
   function snapshotMarket(IMarket market) public view returns (MarketSnapshot memory marketSnapshot) {
-    marketSnapshot.market = market;
+    marketSnapshot.marketAddress = market;
     marketSnapshot.parameter = market.parameter();
     marketSnapshot.riskParameter = market.riskParameter();
     marketSnapshot.global = market.global();
@@ -121,7 +121,7 @@ contract Lens {
   }
 
   function snapshotMarketAccount(IMarket market, address account) public view returns (MarketAccountSnapshot memory marketAccountSnapshot) {
-    marketAccountSnapshot.market = market;
+    marketAccountSnapshot.marketAddress = market;
     marketAccountSnapshot.account = account;
     marketAccountSnapshot.local = market.locals(account);
     marketAccountSnapshot.latestOrder = market.pendingOrders(account, marketAccountSnapshot.local.latestId);

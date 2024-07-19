@@ -2,7 +2,7 @@ import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
 import { BackupPythClient, SupportedChainId } from '../constants/network'
-import { unique } from './arrayUtils'
+import { notEmpty, unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
 
 const DefaultPythOptions = { encoding: 'hex', parsed: true } as const
@@ -29,17 +29,21 @@ export const getRecentVaa = async ({
     const uniqueFeeds = unique(feeds.map((f) => f.underlyingId))
     const priceFeeds = await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythOptions)
     if (!priceFeeds || !priceFeeds.parsed) throw new Error('No price feeds found')
+    const parsedData = priceFeeds.parsed
 
-    return priceFeeds.parsed.map((priceFeed) => {
-      const publishTime = priceFeed.price.publish_time
-      const minValidTime = feeds.find(({ underlyingId }) => `0x${underlyingId}` === priceFeed.id)?.minValidTime
-      return {
-        feedId: priceFeed.id,
-        vaa: `0x${priceFeeds.binary.data}`,
-        publishTime,
-        version: BigInt(publishTime) - (minValidTime ?? 4n),
-      }
-    })
+    return feeds
+      .map((priceFeed) => {
+        const priceFeedUpdate = parsedData.find((p) => priceFeed.underlyingId === `0x${p.id}`.toLowerCase())
+        if (!priceFeedUpdate) return null
+        const publishTime = priceFeedUpdate?.price.publish_time
+        return {
+          feedId: priceFeed.underlyingId,
+          vaa: `0x${priceFeeds.binary.data}`,
+          publishTime,
+          version: BigInt(publishTime) - priceFeed.minValidTime,
+        }
+      })
+      .filter(notEmpty)
   } catch (err: any) {
     console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
     // Only use backup if we are on mainnet
@@ -57,7 +61,7 @@ export const buildCommitmentsForOracles = async ({
   publicClient,
   useBackupOnError = true,
   backupPythClient = BackupPythClient,
-  marketOracles: _marketOracles,
+  marketOracles,
   onError,
   onSuccess,
 }: {
@@ -85,14 +89,6 @@ export const buildCommitmentsForOracles = async ({
   }[]
 > => {
   try {
-    // Filter market oracles which have the same providerFactory and providerID
-    const marketOracles = _marketOracles.filter(
-      (oracle, i, self) =>
-        self.findIndex(
-          (t) => t.providerFactoryAddress === oracle.providerFactoryAddress && t.underlyingId === oracle.underlyingId,
-        ) === i,
-    )
-
     const feedIds = marketOracles.map(({ underlyingId, minValidTime }) => ({
       underlyingId,
       minValidTime,
@@ -105,30 +101,39 @@ export const buildCommitmentsForOracles = async ({
     const publishTimeMap = priceFeedUpdateData.parsed.reduce(
       (acc, p) => {
         if (!acc[p.price.publish_time]) acc[p.price.publish_time] = []
-        const oracle = marketOracles.find((o) => o.underlyingId.toLowerCase() === `0x${p.id}`.toLowerCase())
-        if (!oracle) return acc
+        const oracles = marketOracles.filter((o) => o.underlyingId.toLowerCase() === `0x${p.id}`.toLowerCase())
+        if (!oracles) return acc
 
-        acc[p.price.publish_time].push(oracle)
+        // We can't commit two oracles with the same underlying ID at once
+        // So if there is multiple oracles with the same underlying ID, split them into separate commitments
+        oracles.forEach((o, i) => {
+          if (!acc[p.price.publish_time][i]) acc[p.price.publish_time][i] = []
+          acc[p.price.publish_time][i].push(o)
+        })
         return acc
       },
-      {} as Record<number, { providerId: Hex; minValidTime: bigint }[]>,
+      {} as Record<number, { providerId: Hex; minValidTime: bigint }[][]>,
     )
 
     onSuccess?.()
-    return Object.entries(publishTimeMap).map(([publishTime, oracles]) => ({
-      keeperFactory: marketOracles[0].providerFactoryAddress,
-      version: BigInt(publishTime) - Big6Math.max(...oracles.map((o) => o.minValidTime)),
-      value: BigInt(uniqueFeeds.length),
-      ids: oracles.map((o) => o.providerId),
-      updateData: `0x${priceFeedUpdateData.binary.data[0]}` as Hex,
-    }))
+    return Object.entries(publishTimeMap)
+      .map(([publishTime, allOracles]) => {
+        return allOracles.map((oracles) => ({
+          keeperFactory: marketOracles[0].providerFactoryAddress,
+          version: BigInt(publishTime) - Big6Math.max(...oracles.map((o) => o.minValidTime)),
+          value: BigInt(uniqueFeeds.length),
+          ids: oracles.map((o) => o.providerId),
+          updateData: `0x${priceFeedUpdateData.binary.data[0]}` as Hex,
+        }))
+      })
+      .flat()
   } catch (err: any) {
     console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
     if (useBackupOnError && backupPythClient) {
       return buildCommitmentsForOracles({
         chainId,
         pyth: backupPythClient,
-        marketOracles: _marketOracles,
+        marketOracles,
         publicClient,
         backupPythClient: null,
         useBackupOnError: false,

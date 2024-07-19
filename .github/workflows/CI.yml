@@ -43,4 +43,5 @@ jobs:
       - name: Build
         env:
           GRAPH_URL_ARBITRUM: ${{ secrets.GRAPH_URL_ARBITRUM }}
+          GRAPH_URL_ARBITRUM_NEW: ${{ secrets.GRAPH_URL_ARBITRUM_NEW }}
         run: pnpm run build
