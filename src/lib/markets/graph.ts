@@ -218,6 +218,7 @@ export async function fetchActivePositionsPnl({
       startPrice: userMarketSnapshot.prices[0],
       positionId: userMarketSnapshot.local.currentId,
       startCollateral,
+      startTransactionHash: null,
       totalPnl: pendingTradeImpactAsOffset,
       totalFees: pendingTradeFee + pendingOrderSettlementFee,
       totalNotional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
@@ -430,6 +431,7 @@ function processGraphPosition(
     startPrice: BigInt(graphPosition?.openOrder.at(0)?.executionPrice ?? 0n),
     startCollateral: BigInt(graphPosition.startCollateral),
     netDeposits,
+    startTransactionHash: graphPosition?.openOrder.at(0)?.transactionHashes.at(0) ?? null,
     // PNL
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
@@ -618,6 +620,8 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
     executionPriceWithOffset: priceWithImpact,
     startCollateral: BigInt(order.startCollateral),
     netDeposits: collateral,
+    depositTotal: BigInt(order.depositTotal),
+    withdrawalTotal: BigInt(order.withdrawalTotal),
     // PNL
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
