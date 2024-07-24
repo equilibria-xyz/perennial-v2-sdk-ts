@@ -28,6 +28,7 @@ import {
   fetchSubPositions,
   fetchTradeHistory,
 } from './graph'
+import { getMarketHoursData } from './metadata'
 import {
   BuildCancelOrderTxArgs,
   BuildClaimFeeTxArgs,
@@ -336,6 +337,9 @@ export class MarketsModule {
           markets: this.config.supportedMarkets,
           ...args,
         })
+      },
+      marketHoursData: (market: SupportedMarket) => {
+        return getMarketHoursData(market)
       },
     }
   }
