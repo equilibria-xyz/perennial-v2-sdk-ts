@@ -107,7 +107,7 @@ export const QueryMultiInvokerOpenOrders = gql(`
       orderBy: nonce, orderDirection: desc, first: $first, skip: $skip
     ) {
         account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
-        blockTimestamp, transactionHash, associatedOrder { collateral }
+        blockTimestamp, transactionHash, associatedOrder { collateral, depositTotal, withdrawalTotal }
       }
   }
 `)
