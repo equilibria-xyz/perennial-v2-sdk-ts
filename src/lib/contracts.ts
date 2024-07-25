@@ -2,9 +2,9 @@ import { Address, GetContractReturnType, PublicClient, WalletClient, getContract
 
 import { DefaultChain, EmptysetReserveAbi, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
+import { KeeperFactoryAbi } from '../abi/KeeperFactoryAbi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
-import { PythFactoryAbi } from '../abi/PythFactory.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'
 import {
   DSUAddresses,
@@ -90,6 +90,26 @@ export const getMarketFactoryContract = (chainId: SupportedChainId = DefaultChai
 
 // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
 /**
+ * Returns the KeeperFactory contract instance.
+ * @param keeperFactoryAddress {@link Address}
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The KeeperFactory contract instance.
+ */
+export const getKeeperFactoryContract = (
+  keeperFactoryAddress: Address,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof KeeperFactoryAbi, { public: PublicClient }, Address> => {
+  const contract = getContract({
+    address: keeperFactoryAddress,
+    abi: KeeperFactoryAbi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+
+// Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+/**
  * Returns the PythFactory contract instance.
  * @param chainId {@link SupportedChainId}
  * @param publicClient {@link PublicClient}
@@ -98,13 +118,8 @@ export const getMarketFactoryContract = (chainId: SupportedChainId = DefaultChai
 export const getPythFactoryContract = (
   chainId: SupportedChainId = DefaultChain.id,
   publicClient: PublicClient,
-): GetContractReturnType<typeof PythFactoryAbi, { public: PublicClient }, Address> => {
-  const contract = getContract({
-    address: PythFactoryAddresses[chainId],
-    abi: PythFactoryAbi,
-    client: { public: publicClient },
-  })
-  return contract
+): GetContractReturnType<typeof KeeperFactoryAbi, { public: PublicClient }, Address> => {
+  return getKeeperFactoryContract(PythFactoryAddresses[chainId], publicClient)
 }
 /**
  * Returns the VaultFactory contract instance.
@@ -228,10 +243,22 @@ export class ContractsModule {
 
   // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
   /**
+   * Returns the KeeperFactory contract instance.
+   * @param keeperFactoryAddress - The keeper factory address.
+   * @returns The KeeperFactory contract instance.
+   */
+  public getKeeperFactoryContract(
+    keeperFactoryAddress: Address,
+  ): GetContractReturnType<typeof KeeperFactoryAbi, { public: PublicClient }, Address> {
+    return getKeeperFactoryContract(keeperFactoryAddress, this.config.publicClient)
+  }
+
+  // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
+  /**
    * Returns the PythFactory contract instance.
    * @returns The PythFactory contract instance.
    */
-  public getPythFactoryContract(): GetContractReturnType<typeof PythFactoryAbi, { public: PublicClient }, Address> {
+  public getPythFactoryContract(): GetContractReturnType<typeof KeeperFactoryAbi, { public: PublicClient }, Address> {
     return getPythFactoryContract(this.config.chainId, this.config.publicClient)
   }
   /**

@@ -162,7 +162,7 @@ export { VaultAbi } from './abi/Vault.abi'
 export { VaultFactoryAbi } from './abi/VaultFactory.abi'
 export { VaultLensAbi } from './abi/VaultLens.abi'
 export { KeeperOracleAbi } from './abi/KeeperOracle.abi'
-export { PythFactoryAbi } from './abi/PythFactory.abi'
+export { KeeperFactoryAbi as PythFactoryAbi } from './abi/KeeperFactoryAbi'
 export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
 
 /* #################### Types #################### */
