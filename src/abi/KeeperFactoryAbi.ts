@@ -1,94 +1,4 @@
-export const PythFactoryAbi = [
-  {
-    inputs: [
-      {
-        internalType: 'contract AbstractPyth',
-        name: 'pyth_',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'implementation_',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'validFrom_',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'validTo_',
-        type: 'uint256',
-      },
-      {
-        components: [
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierCalldata',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferCalldata',
-            type: 'uint256',
-          },
-        ],
-        internalType: 'struct IKept.KeepConfig',
-        name: 'commitKeepConfig_',
-        type: 'tuple',
-      },
-      {
-        components: [
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierCalldata',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferCalldata',
-            type: 'uint256',
-          },
-        ],
-        internalType: 'struct IKept.KeepConfig',
-        name: 'settleKeepConfig_',
-        type: 'tuple',
-      },
-      {
-        internalType: 'uint256',
-        name: 'keepCommitIncrementalBufferData_',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'constructor',
-  },
-  {
-    inputs: [],
-    name: 'DivisionByZero',
-    type: 'error',
-  },
+export const KeeperFactoryAbi = [
   {
     inputs: [],
     name: 'FactoryNotInstanceError',
@@ -191,22 +101,6 @@ export const PythFactoryAbi = [
   {
     inputs: [],
     name: 'PausablePausedError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'PythFactoryInvalidIdError',
-    type: 'error',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'int256',
-        name: 'value',
-        type: 'int256',
-      },
-    ],
-    name: 'UFixed18UnderflowError',
     type: 'error',
   },
   {
@@ -414,69 +308,6 @@ export const PythFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'ARB_FIXED_OVERHEAD',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'ARB_GAS_MULTIPLIER',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'MAX_GRANULARITY',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'bytes32',
-        name: '',
-        type: 'bytes32',
-      },
-    ],
-    name: '_toUnderlyingPayoff',
-    outputs: [
-      {
-        internalType: 'contract IPayoffProvider',
-        name: 'provider',
-        type: 'address',
-      },
-      {
-        internalType: 'int16',
-        name: 'decimals',
-        type: 'int16',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
     name: 'acceptOwner',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -504,25 +335,6 @@ export const PythFactoryAbi = [
       },
     ],
     name: 'authorized',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'contract IFactory',
-        name: '',
-        type: 'address',
-      },
-    ],
-    name: 'callers',
     outputs: [
       {
         internalType: 'bool',
@@ -631,7 +443,7 @@ export const PythFactoryAbi = [
     outputs: [
       {
         internalType: 'contract IKeeperOracle',
-        name: 'newOracle',
+        name: 'oracle',
         type: 'address',
       },
     ],
@@ -668,12 +480,12 @@ export const PythFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: '',
+        name: 'underlyingId',
         type: 'bytes32',
       },
       {
         internalType: 'contract IPayoffProvider',
-        name: '',
+        name: 'payoff',
         type: 'address',
       },
     ],
@@ -685,7 +497,7 @@ export const PythFactoryAbi = [
         type: 'bytes32',
       },
     ],
-    stateMutability: 'view',
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -735,7 +547,7 @@ export const PythFactoryAbi = [
     inputs: [
       {
         internalType: 'contract IOracleFactory',
-        name: 'oracleFactory_',
+        name: 'oracleFactory',
         type: 'address',
       },
       {
@@ -787,23 +599,10 @@ export const PythFactoryAbi = [
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'oracleFactory',
-    outputs: [
-      {
-        internalType: 'contract IOracleFactory',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
     inputs: [
       {
         internalType: 'bytes32',
-        name: '',
+        name: 'id',
         type: 'bytes32',
       },
     ],
@@ -865,43 +664,11 @@ export const PythFactoryAbi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'contract IPayoffProvider',
-        name: '',
-        type: 'address',
-      },
-    ],
-    name: 'payoffs',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
     inputs: [],
     name: 'pendingOwner',
     outputs: [
       {
         internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'pyth',
-    outputs: [
-      {
-        internalType: 'contract AbstractPyth',
         name: '',
         type: 'address',
       },
@@ -989,7 +756,7 @@ export const PythFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: '',
+        name: 'id',
         type: 'bytes32',
       },
     ],
@@ -1028,7 +795,7 @@ export const PythFactoryAbi = [
           },
         ],
         internalType: 'struct IKeeperFactory.PayoffDefinition',
-        name: '',
+        name: 'payoff',
         type: 'tuple',
       },
     ],

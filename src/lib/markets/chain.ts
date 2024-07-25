@@ -17,7 +17,7 @@ import {
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
 import { buildCommitmentsForOracles } from '../../utils/pythUtils'
-import { getMarketContract, getOracleContract, getPythFactoryContract } from '../contracts'
+import { getKeeperFactoryContract, getKeeperOracleContract, getMarketContract, getOracleContract } from '../contracts'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -36,25 +36,26 @@ export async function fetchMarketOracles(
   const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
     const metadata = MarketMetadata[market]
     const marketContract = getMarketContract(marketAddress, publicClient)
-    const pythFactory = getPythFactoryContract(chainId, publicClient)
     const oracleAddress = await marketContract.read.oracle()
     // Fetch oracle data
     const oracle = getOracleContract(oracleAddress, publicClient)
     const global = await oracle.read.global()
     const [keeperOracle] = await oracle.read.oracles([global[0]])
+    const keeperOracleContract = getKeeperOracleContract(keeperOracle, publicClient)
+    const factory = getKeeperFactoryContract(await keeperOracleContract.read.factory(), publicClient)
 
-    // TODO(arjun): Pull these from the registry once available
+    // TODO(arjun): Pull these from the factory in v2.3+
     const providerId = metadata.providerId
     const [validFrom, underlyingId] = await Promise.all([
-      pythFactory.read.validFrom(),
-      pythFactory.read.toUnderlyingId([providerId]),
+      factory.read.validFrom(),
+      factory.read.toUnderlyingId([providerId]),
     ])
 
     return {
       market,
       marketAddress,
       address: oracleAddress,
-      providerFactoryAddress: pythFactory.address,
+      providerFactoryAddress: factory.address,
       providerAddress: keeperOracle,
       providerId,
       underlyingId,
