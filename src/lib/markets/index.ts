@@ -28,7 +28,7 @@ import {
   fetchSubPositions,
   fetchTradeHistory,
 } from './graph'
-import { getMarketHoursData } from './metadata'
+import { getPythMarketHours } from './metadata'
 import {
   BuildCancelOrderTxArgs,
   BuildClaimFeeTxArgs,
@@ -338,8 +338,14 @@ export class MarketsModule {
           ...args,
         })
       },
-      marketHoursData: (market: SupportedMarket) => {
-        return getMarketHoursData(market)
+      /**
+       * Fetches data for if a market is open, when it opens and closes
+       * from the pyth. Relevant for markets that observe traditional trading hours.
+       * @param pythFeedId string
+       * @returns {@link MarketHours}
+       */
+      pythMarketHours: (pythFeedId: string) => {
+        return getPythMarketHours(pythFeedId)
       },
     }
   }

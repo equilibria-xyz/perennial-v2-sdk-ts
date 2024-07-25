@@ -1,15 +1,12 @@
-import { AssetMetadata } from '../..'
-import { SupportedMarket } from '../../constants'
 import { PythPriceFeedUrl } from '../../constants'
 
-export const getMarketHoursData = async (
-  market: SupportedMarket,
-): Promise<{
+export type MarketHours = {
   is_open: boolean
   next_open: number
   next_close: number
-} | null> => {
-  const { pythFeedId } = AssetMetadata[market]
+}
+
+export const getPythMarketHours = async (pythFeedId: string): Promise<MarketHours | null> => {
   const res = await fetch(`${PythPriceFeedUrl}${pythFeedId})`)
   const marketData = await res.json()
   if (!marketData || !marketData.market_hours) return null
