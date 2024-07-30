@@ -228,6 +228,7 @@ export const ChainMarkets: {
     [SupportedMarket.msqBTC]: getAddress('0x768a5909f0B6997efa56761A89344eA2BD5560fd'),
     [SupportedMarket.cmsqETH]: getAddress('0x004E1Abf70e4FF99BC572843B63a63a58FAa08FF'),
     [SupportedMarket.jup]: getAddress('0xbfa99F19a376F25968865983c41535fa368B28da'),
+    [SupportedMarket.xau]: getAddress('0x1A1745e9cc740269D3e75b506e1AbF7Cbf1fE7d3'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
