@@ -146,8 +146,8 @@ export const buildCommitmentsForOracles = async ({
   }
 }
 
-export function pythPriceToBig6(price: bigint, expo: number) {
-  const normalizedExpo = price ? 6 + expo : 0
+export function pythPriceToBig18(price: bigint, expo: number) {
+  const normalizedExpo = price ? 18 + expo : 0
   const normalizedPrice =
     normalizedExpo >= 0 ? price * 10n ** BigInt(normalizedExpo) : price / 10n ** BigInt(Math.abs(normalizedExpo))
   return normalizedPrice
