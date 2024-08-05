@@ -180,6 +180,6 @@ export class Big6Math {
       return newtonIteration(n, x1)
     }
 
-    return newtonIteration(a, 1n)
+    return newtonIteration(a, 1n) * BigInt(10 ** 3)
   }
 }
