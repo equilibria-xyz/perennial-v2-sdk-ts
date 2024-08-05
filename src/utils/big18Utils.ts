@@ -116,4 +116,8 @@ export class Big18Math {
   public static fromDecimals(amount: bigint, decimals: number): bigint {
     return amount * 10n ** BigInt(Big18Math.FIXED_DECIMALS - decimals)
   }
+
+  public static toDecimals(amount: bigint, decimals: number): bigint {
+    return amount / 10n ** BigInt(Big18Math.FIXED_DECIMALS - decimals)
+  }
 }

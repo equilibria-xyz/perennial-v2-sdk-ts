@@ -6,7 +6,10 @@ import { notEmpty } from '../utils/arrayUtils'
 import {
   centimilliPowerTwoTransform,
   centimilliPowerTwoUntransform,
+  decimalTransform,
+  decimalUntransform,
   linearTransform,
+  linearUntransform,
   microPowerTwoTransform,
   microPowerTwoUntransform,
 } from '../utils/payoffUtils'
@@ -27,6 +30,7 @@ export enum SupportedMarket {
   cmsqETH = 'eth²',
   jup = 'jup',
   xau = 'xau',
+  mog = 'mog',
 
   unknown = 'unknown',
 }
@@ -61,8 +65,8 @@ export type MarketMetadataType = {
     baseCurrency: SupportedMarket
     quoteCurrency: QuoteCurrency
     providerId: Hex
-    transform: (value: bigint) => bigint
-    untransform: (value: bigint) => bigint
+    transform: (value18: bigint) => bigint
+    untransform: (value6: bigint) => bigint
   }
 }
 
@@ -74,7 +78,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.eth]: {
     symbol: 'ETH-USD',
@@ -83,7 +87,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.arb]: {
     symbol: 'ARB-USD',
@@ -92,7 +96,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
 
   [SupportedMarket.sol]: {
@@ -102,7 +106,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.matic]: {
     symbol: 'MATIC-USD',
@@ -111,7 +115,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.tia]: {
     symbol: 'TIA-USD',
@@ -120,7 +124,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x09f7c1d7dfbb7df2b8fe3d3d87ee94a2259d212da4f30c1f0540d066dfa44723',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.rlb]: {
     symbol: 'RLB-USD',
@@ -129,7 +133,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x2f2d17abbc1e781bd87b4a5d52c8b2856886f5c482fa3593cebf6795040ab0b6',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
 
   [SupportedMarket.link]: {
@@ -139,7 +143,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.bnb]: {
     symbol: 'BNB-USD',
@@ -148,7 +152,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.xrp]: {
     symbol: 'XRP-USD',
@@ -157,7 +161,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.msqBTC]: {
     symbol: 'BTC²-USD',
@@ -184,7 +188,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
   [SupportedMarket.xau]: {
     symbol: 'XAU-USD',
@@ -193,7 +197,16 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: '0x765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2',
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
+  },
+  [SupportedMarket.mog]: {
+    symbol: 'MOG-USD',
+    name: 'Mog Coin',
+    baseCurrency: SupportedMarket.mog,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x17894b9fff49cd07efeab94a0d02db16f158efe04e0dee1db6af5f069082ce83',
+    transform: decimalTransform(6n),
+    untransform: decimalUntransform(6n),
   },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
@@ -202,7 +215,7 @@ export const MarketMetadata: MarketMetadataType = {
     quoteCurrency: QuoteCurrency.usd,
     providerId: zeroHash,
     transform: linearTransform,
-    untransform: linearTransform,
+    untransform: linearUntransform,
   },
 }
 
@@ -229,6 +242,7 @@ export const ChainMarkets: {
     [SupportedMarket.cmsqETH]: getAddress('0x004E1Abf70e4FF99BC572843B63a63a58FAa08FF'),
     [SupportedMarket.jup]: getAddress('0xbfa99F19a376F25968865983c41535fa368B28da'),
     [SupportedMarket.xau]: getAddress('0x1A1745e9cc740269D3e75b506e1AbF7Cbf1fE7d3'),
+    [SupportedMarket.mog]: getAddress('0xc8b73eCFdb775cB9899A0d22fFc8d11228Ac35CB'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),

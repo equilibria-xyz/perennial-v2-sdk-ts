@@ -216,7 +216,7 @@ export {
 } from './utils/multiinvoker'
 
 // Payoff Utils
-export { linearTransform, microPowerTwoTransform, milliPowerTwoTransform } from './utils/payoffUtils'
+export { linearTransform, microPowerTwoTransform } from './utils/payoffUtils'
 
 // Position Utils
 export {
@@ -248,7 +248,7 @@ export {
 } from './utils/positionUtils'
 
 // Pyth Utils
-export { getRecentVaa, buildCommitmentsForOracles, pythPriceToBig6 } from './utils/pythUtils'
+export { getRecentVaa, buildCommitmentsForOracles, pythPriceToBig18 } from './utils/pythUtils'
 
 // Time Utils
 export {
