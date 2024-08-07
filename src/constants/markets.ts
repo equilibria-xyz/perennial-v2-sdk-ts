@@ -8,6 +8,8 @@ import {
   centimilliPowerTwoUntransform,
   decimalTransform,
   decimalUntransform,
+  inverseTransform,
+  inverseUntransform,
   linearTransform,
   linearUntransform,
   microPowerTwoTransform,
@@ -31,6 +33,7 @@ export enum SupportedMarket {
   jup = 'jup',
   xau = 'xau',
   mog = 'mog',
+  jpy = 'jpy',
 
   unknown = 'unknown',
 }
@@ -208,6 +211,15 @@ export const MarketMetadata: MarketMetadataType = {
     transform: decimalTransform(6n),
     untransform: decimalUntransform(6n),
   },
+  [SupportedMarket.jpy]: {
+    symbol: 'JPY-USD',
+    name: 'Japanese Yen',
+    baseCurrency: SupportedMarket.jpy,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52',
+    transform: inverseTransform(3n),
+    untransform: inverseUntransform(3n),
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -243,6 +255,7 @@ export const ChainMarkets: {
     [SupportedMarket.jup]: getAddress('0xbfa99F19a376F25968865983c41535fa368B28da'),
     [SupportedMarket.xau]: getAddress('0x1A1745e9cc740269D3e75b506e1AbF7Cbf1fE7d3'),
     [SupportedMarket.mog]: getAddress('0xc8b73eCFdb775cB9899A0d22fFc8d11228Ac35CB'),
+    [SupportedMarket.jpy]: getAddress('0xB7558189c794239ef9453208f2e58Fa049E1035c'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
