@@ -11,7 +11,7 @@ import {
   SupportedChainId,
   SupportedMarket,
   addressToMarket,
-  calculateFundingForSides,
+  calculateFundingAndInterestForSides,
   chainMarketsWithAddress,
 } from '../..'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
@@ -175,7 +175,7 @@ export async function fetchMarketSnapshots({
         const nextMajor = Big6Math.max(snapshot.nextPosition.long, snapshot.nextPosition.short)
         const minor = Big6Math.min(snapshot.position.long, snapshot.position.short)
         const nextMinor = Big6Math.min(snapshot.nextPosition.long, snapshot.nextPosition.short)
-        const fundingRates = calculateFundingForSides(snapshot)
+        const fundingRates = calculateFundingAndInterestForSides(snapshot)
         const socializationFactor = !Big6Math.isZero(major)
           ? Big6Math.min(Big6Math.div(minor + snapshot.nextPosition.maker, major), Big6Math.ONE)
           : Big6Math.ONE
@@ -195,11 +195,7 @@ export async function fetchMarketSnapshots({
           minorSide: minor === snapshot.position.long ? PositionSide.long : PositionSide.short,
           nextMinor,
           nextMinorSide: nextMinor === snapshot.nextPosition.long ? PositionSide.long : PositionSide.short,
-          fundingRate: {
-            long: fundingRates.long,
-            short: fundingRates.short,
-            maker: fundingRates.maker,
-          },
+          fundingRate: fundingRates,
           socializationFactor,
           isSocialized: socializationFactor < Big6Math.ONE,
           makerTotal,
