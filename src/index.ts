@@ -216,7 +216,16 @@ export {
 } from './utils/multiinvoker'
 
 // Payoff Utils
-export { linearTransform, microPowerTwoTransform, inverseTransform } from './utils/payoffUtils'
+export {
+  linearTransform,
+  microPowerTwoTransform,
+  decimalTransform,
+  inverseTransform,
+  linearUntransform,
+  microPowerTwoUntransform,
+  decimalUntransform,
+  inverseUntransform,
+} from './utils/payoffUtils'
 
 // Position Utils
 export {
