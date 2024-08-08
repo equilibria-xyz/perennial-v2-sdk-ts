@@ -27,9 +27,10 @@ function linearInterpolation(startX: bigint, startY: bigint, endX: bigint, endY:
 /**
  * Calculates the funding for each side of the market
  * @param snapshot
- * @returns The long, short and maker funding rates
+ * @returns The long, short and maker funding + interest rates, along with per side funding and interest rates.
+ *          Negative values indicate receiving, positive values indicate paying.
  */
-export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
+export function calculateFundingAndInterestForSides(snapshot: ChainMarketSnapshot) {
   const {
     global: { pAccumulator },
     parameter: { fundingFee, interestFee },
@@ -40,7 +41,7 @@ export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   // Funding
   const timeDelta = BigInt(nowSeconds()) - timestamp
   const marketFunding = pAccumulator._value + Big6Math.mul(timeDelta, Big6Math.div(pAccumulator._skew, pController.k))
-  const funding = Big6Math.max(Big6Math.min(marketFunding, pController.max), -pController.max)
+  const funding = Big6Math.max(Big6Math.min(marketFunding, pController.max), pController.min)
   const major = Big6Math.max(long, short)
   const minor = Big6Math.min(long, short)
   // Interest
@@ -54,8 +55,8 @@ export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const totalInterestFee = Big6Math.mul(interest, interestFee)
 
   const totalFundingFee = Big6Math.mul(Big6Math.abs(funding), fundingFee) / 2n
-  const longRate = funding + totalFundingFee + interest
-  const shortRate = -funding + totalFundingFee + interest
+  const longFunding = funding + totalFundingFee
+  const shortFunding = -funding + totalFundingFee
 
   const makerUtil =
     maker > 0n ? Big6Math.max(Big6Math.min(Big6Math.div(long - short, maker), Big6Math.ONE), -Big6Math.ONE) : 0n
@@ -63,5 +64,19 @@ export function calculateFundingForSides(snapshot: ChainMarketSnapshot) {
   const makerFundingFee = Big6Math.mul(Big6Math.abs(makerUtil), totalFundingFee)
   const makerRate = (makerFunding - makerFundingFee + (interest - totalInterestFee)) * -1n
 
-  return { long: longRate, short: shortRate, maker: makerRate }
+  return {
+    long: longFunding + interest,
+    short: shortFunding + interest,
+    maker: makerRate,
+    fundingRates: {
+      long: funding + totalFundingFee,
+      short: -funding + totalFundingFee,
+      maker: -1n * (makerFunding - makerFundingFee),
+    },
+    interestRates: {
+      long: interest,
+      short: interest,
+      maker: -1n * (interest - totalInterestFee),
+    },
+  }
 }
