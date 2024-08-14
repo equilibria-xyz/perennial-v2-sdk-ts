@@ -1,22 +1,18 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
-import { BackupPythClient, SupportedChainId } from '../constants/network'
+import { SupportedChainId } from '../constants/network'
 import { notEmpty, unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
 
 const DefaultPythOptions = { encoding: 'hex', parsed: true } as const
 
 export const getRecentVaa = async ({
-  pyth,
+  pyth: pyth_,
   feeds,
-  useBackupOnError = true,
-  backupPythClient = BackupPythClient,
 }: {
-  pyth: HermesClient
+  pyth: HermesClient | HermesClient[]
   feeds: { underlyingId: string; minValidTime: bigint }[]
-  useBackupOnError?: boolean
-  backupPythClient?: HermesClient | null
 }): Promise<
   {
     feedId: string
@@ -25,6 +21,9 @@ export const getRecentVaa = async ({
     version: bigint
   }[]
 > => {
+  const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_
+  if (!pyth) throw new Error('No Pyth client provided')
+
   try {
     const uniqueFeeds = unique(feeds.map((f) => f.underlyingId))
     const priceFeeds = await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythOptions)
@@ -45,11 +44,11 @@ export const getRecentVaa = async ({
       })
       .filter(notEmpty)
   } catch (err: any) {
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
-    // Only use backup if we are on mainnet
-    if (useBackupOnError && backupPythClient) {
-      return getRecentVaa({ pyth: backupPythClient, feeds, useBackupOnError: false, backupPythClient: null })
-    }
+    const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
+    const useBackup = nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
+
+    if (useBackup) return getRecentVaa({ pyth: nextPyth, feeds })
 
     throw err
   }
@@ -57,19 +56,15 @@ export const getRecentVaa = async ({
 
 export const buildCommitmentsForOracles = async ({
   chainId,
-  pyth,
+  pyth: pyth_,
   publicClient,
-  useBackupOnError = true,
-  backupPythClient = BackupPythClient,
   marketOracles,
   onError,
   onSuccess,
 }: {
   chainId: SupportedChainId
-  pyth: HermesClient
+  pyth: HermesClient | HermesClient[]
   publicClient: PublicClient
-  useBackupOnError?: boolean
-  backupPythClient?: HermesClient | null
   marketOracles: {
     providerAddress: Address
     providerFactoryAddress: Address
@@ -88,6 +83,9 @@ export const buildCommitmentsForOracles = async ({
     updateData: Address
   }[]
 > => {
+  const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_
+  if (!pyth) throw new Error('No Pyth client provided')
+
   try {
     const feedIds = marketOracles.map(({ underlyingId, minValidTime }) => ({
       underlyingId,
@@ -128,15 +126,16 @@ export const buildCommitmentsForOracles = async ({
       })
       .flat()
   } catch (err: any) {
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
-    if (useBackupOnError && backupPythClient) {
+    const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
+    const useBackup = nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
+
+    if (useBackup) {
       return buildCommitmentsForOracles({
         chainId,
-        pyth: backupPythClient,
+        pyth: nextPyth,
         marketOracles,
         publicClient,
-        backupPythClient: null,
-        useBackupOnError: false,
       })
     }
     if (onError) {

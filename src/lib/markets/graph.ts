@@ -68,7 +68,7 @@ export async function fetchActivePositionsPnl({
   marketSnapshots?: MarketSnapshots
   markToMarket?: boolean
   chainId: SupportedChainId
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   publicClient: PublicClient
   graphClient: GraphQLClient
 }): Promise<
