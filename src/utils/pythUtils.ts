@@ -35,6 +35,9 @@ export const getRecentVaa = async ({
         const priceFeedUpdate = parsedData.find((p) => priceFeed.underlyingId === `0x${p.id}`.toLowerCase())
         if (!priceFeedUpdate) return null
         const publishTime = priceFeedUpdate?.price.publish_time
+
+        // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes
+
         return {
           feedId: priceFeed.underlyingId,
           vaa: `0x${priceFeeds.binary.data}`,
@@ -96,6 +99,8 @@ export const buildCommitmentsForOracles = async ({
     const priceFeedUpdateData = await pyth.getLatestPriceUpdates(uniqueFeeds)
     if (!priceFeedUpdateData || !priceFeedUpdateData.parsed) throw new Error('No price feed update data found')
 
+    // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes
+
     const publishTimeMap = priceFeedUpdateData.parsed.reduce(
       (acc, p) => {
         if (!acc[p.price.publish_time]) acc[p.price.publish_time] = []
@@ -104,6 +109,7 @@ export const buildCommitmentsForOracles = async ({
 
         // We can't commit two oracles with the same underlying ID at once
         // So if there is multiple oracles with the same underlying ID, split them into separate commitments
+        // TODO: Change this once submitting for multiple oracles with the same underlying ID is supported in v2.3
         oracles.forEach((o, i) => {
           if (!acc[p.price.publish_time][i]) acc[p.price.publish_time][i] = []
           acc[p.price.publish_time][i].push(o)
