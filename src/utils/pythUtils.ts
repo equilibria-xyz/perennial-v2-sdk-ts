@@ -45,9 +45,10 @@ export const getRecentVaa = async ({
       .filter(notEmpty)
   } catch (err: any) {
     const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : null
-    console.error('Pyth Recent VAA Error', `Use backup: ${Boolean(nextPyth)}`, err)
+    const useBackup = nextPyth !== null && nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
 
-    if (nextPyth) return getRecentVaa({ pyth: nextPyth, feeds })
+    if (useBackup) return getRecentVaa({ pyth: nextPyth, feeds })
 
     throw err
   }
@@ -126,8 +127,10 @@ export const buildCommitmentsForOracles = async ({
       .flat()
   } catch (err: any) {
     const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : null
-    console.error('Pyth Recent VAA Error', `Use backup: ${Boolean(nextPyth)}`, err)
-    if (nextPyth) {
+    const useBackup = nextPyth !== null && nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
+
+    if (useBackup) {
       return buildCommitmentsForOracles({
         chainId,
         pyth: nextPyth,
