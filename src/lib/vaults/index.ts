@@ -34,7 +34,7 @@ export const fetchVaultCommitments = async ({
   publicClient,
 }: {
   chainId: SupportedChainId
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
   marketOracles: MarketOracles
   publicClient: PublicClient
@@ -71,7 +71,7 @@ type VaultConfig = {
   chainId: SupportedChainId
   publicClient: PublicClient
   graphClient?: GraphQLClient
-  pythClient: HermesClient
+  pythClient: HermesClient[]
   walletClient?: WalletClient
   operatingFor?: Address
 }

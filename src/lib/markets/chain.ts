@@ -140,7 +140,7 @@ export async function fetchMarketSnapshots({
   onSuccess,
 }: {
   publicClient: PublicClient
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
@@ -156,7 +156,7 @@ export async function fetchMarketSnapshots({
     address,
     marketOracles,
     publicClient,
-    pyth: pythClient,
+    pyth: Array.isArray(pythClient) ? pythClient : [pythClient],
     onPythError: onError,
     resetPythError: onSuccess,
   })
@@ -300,7 +300,7 @@ async function fetchMarketSnapshotsAfterSettle({
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: HermesClient
+  pyth: HermesClient[]
   onPythError?: () => void
   resetPythError?: () => void
 }) {

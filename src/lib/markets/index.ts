@@ -55,7 +55,7 @@ export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -105,7 +105,7 @@ type MarketsModuleConfig = {
   chainId: SupportedChainId
   graphClient?: GraphQLClient
   publicClient: PublicClient
-  pythClient: HermesClient
+  pythClient: HermesClient[]
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets: SupportedMarket[]

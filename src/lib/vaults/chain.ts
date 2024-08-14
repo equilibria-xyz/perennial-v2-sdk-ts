@@ -50,7 +50,7 @@ export async function fetchVaultSnapshots({
   address: Address
   marketOracles?: MarketOracles
   publicClient: PublicClient
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   onError?: () => void
   onSuccess?: () => void
 }) {
@@ -68,7 +68,7 @@ export async function fetchVaultSnapshots({
     address,
     marketOracles,
     publicClient,
-    pyth: pythClient,
+    pyth: Array.isArray(pythClient) ? pythClient : [pythClient],
     onPythError: onError,
     resetPythError: onSuccess,
   })
@@ -123,7 +123,7 @@ const fetchVaultSnapshotsAfterSettle = async ({
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: HermesClient
+  pyth: HermesClient[]
   onPythError?: () => void
   resetPythError?: () => void
 }) => {
