@@ -34,6 +34,7 @@ export enum SupportedMarket {
   xau = 'xau',
   mog = 'mog',
   jpy = 'jpy',
+  mkr = 'mkr',
 
   unknown = 'unknown',
 }
@@ -220,6 +221,15 @@ export const MarketMetadata: MarketMetadataType = {
     transform: inverseTransform(3n),
     untransform: inverseUntransform(3n),
   },
+  [SupportedMarket.mkr]: {
+    symbol: 'MKR-USD',
+    name: 'Maker',
+    baseCurrency: SupportedMarket.mkr,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x9375299e31c0deb9c6bc378e6329aab44cb48ec655552a70d4b9050346a30378',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -256,6 +266,7 @@ export const ChainMarkets: {
     [SupportedMarket.xau]: getAddress('0x1A1745e9cc740269D3e75b506e1AbF7Cbf1fE7d3'),
     [SupportedMarket.mog]: getAddress('0xc8b73eCFdb775cB9899A0d22fFc8d11228Ac35CB'),
     [SupportedMarket.jpy]: getAddress('0xB7558189c794239ef9453208f2e58Fa049E1035c'),
+    [SupportedMarket.mkr]: getAddress('0xe8BF156034b64A7266AcD28046F67f3fa7Ecc53a'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),

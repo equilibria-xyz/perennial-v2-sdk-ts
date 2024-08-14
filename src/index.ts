@@ -197,7 +197,11 @@ export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from 
 export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
 
 // Funding and Interest Rate Utils
-export { computeInterestRate, calculateFundingForSides } from './utils/fundingAndInterestUtils'
+export {
+  computeInterestRate,
+  calculateFundingAndInterestForSides,
+  calculateFundingAndInterestForSides as calculateFundingForSides, // Deprecated - Use calculateFundingAndInterestForSides
+} from './utils/fundingAndInterestUtils'
 
 // Graph Utils
 export { queryAll } from './utils/graphUtils'
