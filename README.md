@@ -32,14 +32,12 @@ $ npm install @perennial/sdk --save
 
 **Read-Only Usage**
 
-To initalize the package you'll need to specify three `env` variables:
+To initalize the SDK you'll need to specify the following arguments.
 
-- `RPC_URL_ARBITRUM`: A RPC url for Arbitrum which **must** support `eth_call`
-- `GRAPH_URL_ARBITRUM`: A hosted subgraph url for the Perennial protocol. This argument is optional, but graph dependant read methods will throw an error if it is omitted.
+- `rpcUrl`: A RPC url for Arbitrum which **must** support `eth_call`
+- `graphUrl`: A hosted subgraph url for the Perennial protocol. This argument is optional, but graph dependant read methods will throw an error if it is omitted.
   - You can find the Perennial subgraph repo [here](https://github.com/equilibria-xyz/perennial-v2-subgraph)
-- `PYTH_URL`: A url for Pyth
-
-Once you have these, you can initalize the SDK:
+- `pythUrl`: A url for Pyth
 
 ```javascript
 const RPC_URL = process.env.RPC_URL
@@ -57,7 +55,7 @@ const sdk = new PerennialSdk({
 
 **Read/Write Usage**
 
-In addition to the previous `env` varibles, you need to initalize the wallet:
+To enable writes requires a wallet client to be passed in via the `walletClient` argument:
 
 ```javascript
 import { arbitrum } from 'viem/chains'
@@ -242,7 +240,7 @@ const ethMarketSnapshot = marketSnapshots.market[SupportedMarket.eth]
 const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.modifyPosition({
-  marketAddress: ethMarketSnapshot.market,
+  marketAddress: ethMarketSnapshot.marketAddress,
   address: getAddress(<User address>),
   // marketSnapshots and marketOracles parameters are optional, but it is recommended
   // to prefetch these in your application to prevent unnecessary refetches
@@ -272,7 +270,7 @@ const ethMarketSnapshot = marketSnapshots.market[SupportedMarket.eth]
 const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.placeOrder({
-  marketAddress: ethMarketSnapshot.market,
+  marketAddress: ethMarketSnapshot.marketAddress,
   address: getAddress(<User address>),
   // As with `modifyPosition`, marketSnapshots and marketOracles are optional but recommended.
   marketSnapshots,
@@ -304,7 +302,7 @@ const ethUserMarketSnapshot = marketSnapshots.user[SupportedMarket.eth]
 
 sdk.markets.write.update({
   address,
-  marketAddress: ethMarketSnapshot.market,
+  marketAddress: ethMarketSnapshot.marketAddress,
   collateralDelta, // A negative collateral delta value withdraws collateral
   positionAbs, // Absolute size of desired position
   side,
