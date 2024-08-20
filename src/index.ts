@@ -35,8 +35,6 @@ export {
   buildLimitOrderTx,
   buildTakeProfitTx,
   buildStopLossTx,
-  buildSubmitVaaTx,
-  type BuildSubmitVaaTxArgs,
   type CancelOrderDetails,
   type BuildLimitOrderTxArgs,
   type BuildTakeProfitTxArgs,
@@ -261,8 +259,19 @@ export {
   waitForOrderSettlement,
 } from './utils/positionUtils'
 
+// Oracle Utils
+export {
+  type OracleProvider,
+  type OracleClients,
+  type UpdateDataRequest,
+  type UpdateDataResponse,
+  oracleProviderForFactoryAddress,
+  oracleCommitmentsLatest,
+  marketOraclesToUpdateDataRequest,
+} from './lib/oracle'
+
 // Pyth Utils
-export { getRecentVaa, buildCommitmentsForOracles, pythPriceToBig18 } from './utils/pythUtils'
+export { buildCommitmentsForOracles, pythPriceToBig18 } from './lib/oracle/pyth'
 
 // Time Utils
 export {

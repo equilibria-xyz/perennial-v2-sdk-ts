@@ -1,61 +1,9 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
-import { SupportedChainId } from '../constants/network'
-import { notEmpty, unique } from './arrayUtils'
-import { Big6Math } from './big6Utils'
-
-const DefaultPythOptions = { encoding: 'hex', parsed: true } as const
-
-export const getRecentVaa = async ({
-  pyth: pyth_,
-  feeds,
-}: {
-  pyth: HermesClient | HermesClient[]
-  feeds: { underlyingId: string; minValidTime: bigint }[]
-}): Promise<
-  {
-    feedId: string
-    vaa: string
-    publishTime: number
-    version: bigint
-  }[]
-> => {
-  const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_
-  if (!pyth) throw new Error('No Pyth client provided')
-
-  try {
-    const uniqueFeeds = unique(feeds.map((f) => f.underlyingId))
-    const priceFeeds = await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythOptions)
-    if (!priceFeeds || !priceFeeds.parsed) throw new Error('No price feeds found')
-    const parsedData = priceFeeds.parsed
-
-    return feeds
-      .map((priceFeed) => {
-        const priceFeedUpdate = parsedData.find((p) => priceFeed.underlyingId === `0x${p.id}`.toLowerCase())
-        if (!priceFeedUpdate) return null
-        const publishTime = priceFeedUpdate?.price.publish_time
-
-        // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes
-
-        return {
-          feedId: priceFeed.underlyingId,
-          vaa: `0x${priceFeeds.binary.data}`,
-          publishTime,
-          version: BigInt(publishTime) - priceFeed.minValidTime,
-        }
-      })
-      .filter(notEmpty)
-  } catch (err: any) {
-    const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
-    const useBackup = nextPyth.length > 0
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
-
-    if (useBackup) return getRecentVaa({ pyth: nextPyth, feeds })
-
-    throw err
-  }
-}
+import { SupportedChainId } from '../../constants/network'
+import { unique } from '../../utils/arrayUtils'
+import { Big6Math } from '../../utils/big6Utils'
 
 export const buildCommitmentsForOracles = async ({
   chainId,
@@ -83,7 +31,7 @@ export const buildCommitmentsForOracles = async ({
     version: bigint
     value: bigint
     ids: Hex[]
-    updateData: Address
+    updateData: Hex
   }[]
 > => {
   const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_

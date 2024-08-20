@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
@@ -16,8 +15,8 @@ import {
 } from '../..'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
-import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { getKeeperFactoryContract, getKeeperOracleContract, getMarketContract, getOracleContract } from '../contracts'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -121,7 +120,7 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
 /**
  * Fetches market snapshots for a given address
  * @param publicClient Public Client
- * @param pythClient Pyth Client
+ * @param oracleClients Oracle Clients {@link OracleClients}
  * @param chainId Chain ID {@link SupportedChainId}
  * @param address Wallet Address
  * @param marketOracles {@link MarketOracles}
@@ -131,7 +130,7 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
  */
 export async function fetchMarketSnapshots({
   publicClient,
-  pythClient,
+  oracleClients,
   chainId,
   address,
   marketOracles,
@@ -140,7 +139,7 @@ export async function fetchMarketSnapshots({
   onSuccess,
 }: {
   publicClient: PublicClient
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
@@ -156,7 +155,7 @@ export async function fetchMarketSnapshots({
     address,
     marketOracles,
     publicClient,
-    pyth: Array.isArray(pythClient) ? pythClient : [pythClient],
+    oracleClients,
     onPythError: onError,
     resetPythError: onSuccess,
   })
@@ -292,26 +291,24 @@ async function fetchMarketSnapshotsAfterSettle({
   address,
   marketOracles,
   publicClient,
-  pyth,
-  onPythError,
-  resetPythError,
+  oracleClients,
 }: {
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: HermesClient[]
+  oracleClients: OracleClients
   onPythError?: () => void
   resetPythError?: () => void
 }) {
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
-  const priceCommitments = await buildCommitmentsForOracles({
+
+  // TODO: Handle error callbacks
+  const priceCommitments = await oracleCommitmentsLatest({
     chainId,
-    marketOracles: Object.values(marketOracles),
-    pyth,
-    onError: onPythError,
-    onSuccess: resetPythError,
+    clients: oracleClients,
     publicClient,
+    requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
   })
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)

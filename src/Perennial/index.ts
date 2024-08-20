@@ -7,6 +7,7 @@ import { BackupPythClient, DefaultChain, chainIdToChainMap } from '../constants/
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { OperatorModule } from '../lib/operators'
+import { OracleClients } from '../lib/oracle'
 import { VaultsModule } from '../lib/vaults'
 
 export type SDKConfig = {
@@ -40,7 +41,7 @@ export default class PerennialSDK {
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
-  private _pythClient: HermesClient[]
+  private _oracleClients: OracleClients
   private _graphClient: GraphQLClient | undefined
   public contracts: ContractsModule
   public markets: MarketsModule
@@ -62,7 +63,9 @@ export default class PerennialSDK {
         multicall: true,
       },
     })
-    this._pythClient = this.buildPythClients(config.pythUrl)
+    this._oracleClients = {
+      pyth: this.buildPythClients(config.pythUrl),
+    }
     this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({
       chainId: config.chainId,
@@ -74,7 +77,7 @@ export default class PerennialSDK {
       publicClient: this._publicClient,
       walletClient: config.walletClient,
       graphClient: this._graphClient,
-      pythClient: this._pythClient,
+      oracleClients: this._oracleClients,
       operatingFor: this.config.operatingFor,
       supportedMarkets: this.config.supportedMarkets,
     })
@@ -83,7 +86,7 @@ export default class PerennialSDK {
       publicClient: this._publicClient,
       walletClient: config.walletClient,
       graphClient: this._graphClient,
-      pythClient: this._pythClient,
+      oracleClients: this._oracleClients,
       operatingFor: this.config.operatingFor,
     })
     this.operator = new OperatorModule({
@@ -118,20 +121,27 @@ export default class PerennialSDK {
     return this._graphClient
   }
 
-  get pythClient() {
-    return this._pythClient
+  get oracleClients() {
+    return this._oracleClients
   }
 
   private buildPythClients(urls_: string | string[]) {
     const urls = Array.isArray(urls_) ? urls_ : [urls_]
 
     return [
-      ...urls.map(
-        (url) =>
-          new HermesClient(url, {
-            timeout: 30000,
-          }),
-      ),
+      ...urls.map((url_) => {
+        const url = new URL(url_)
+        const headers: HeadersInit = {}
+        if (url.username && url.password) {
+          headers.Authorization = `Basic ${Buffer.from(`${url.username}:${url.password}`).toString('base64')}`
+          url.username = ''
+          url.password = ''
+        }
+        return new HermesClient(url.toString(), {
+          timeout: 30000,
+          headers,
+        })
+      }),
       BackupPythClient,
     ]
   }

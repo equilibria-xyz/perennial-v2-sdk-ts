@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, encodeFunctionData, zeroAddress } from 'viem'
 
 import { fetchVaultCommitments } from '.'
@@ -8,12 +7,13 @@ import { MultiInvokerAction } from '../../types/perennial'
 import { Big6Math, sum } from '../../utils'
 import { buildUpdateVault } from '../../utils/multiinvoker'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
+import { OracleClients } from '../oracle'
 import { VaultSnapshot, VaultSnapshots, fetchVaultSnapshots } from './chain'
 
 type BaseVaultUpdateTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   vaultAddress: Address
   address?: Address
   marketOracles?: MarketOracles
@@ -84,7 +84,7 @@ export function buildClaimTx(args: BuildClaimTxArgs) {
 const buildPerformVaultUpdateTx = async ({
   chainId,
   publicClient,
-  pythClient,
+  oracleClients,
   baseAction,
   vaultAddress,
   marketOracles,
@@ -104,7 +104,7 @@ const buildPerformVaultUpdateTx = async ({
       address: zeroAddress,
       publicClient,
       marketOracles,
-      pythClient,
+      oracleClients,
     })
   }
   if (!vaultSnapshots) throw new Error('Unable to fetch Vault Snapshots')
@@ -114,7 +114,7 @@ const buildPerformVaultUpdateTx = async ({
 
   const commitments = await fetchVaultCommitments({
     chainId,
-    pythClient,
+    oracleClients,
     marketOracles,
     publicClient,
     preMarketSnapshots: vaultMarketSnapshot,
