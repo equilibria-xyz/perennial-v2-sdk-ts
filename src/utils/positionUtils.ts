@@ -613,10 +613,9 @@ export async function waitForOrderSettlement({
       const logs = parseEventLogs({ logs: receipt.logs, abi: OracleAbi, eventName: 'OracleProviderVersionRequested' })
       const oracleVersionRequestedEvent = logs.at(0)
       if (!oracleVersionRequestedEvent) {
-        cleanup()
-        reject(new Error('OracleVersionRequested event not found'))
-        return
+        throw new Error('OracleVersionRequested event not found')
       }
+
       const { version } = oracleVersionRequestedEvent.args
 
       unwatch = publicClient.watchContractEvent({
@@ -626,9 +625,7 @@ export async function waitForOrderSettlement({
         onLogs: (logs) => {
           const versionFulfilledEvent = logs.at(0)
           if (versionFulfilledEvent?.args?.version?.timestamp === version) {
-            if (onSettlement) {
-              onSettlement(receipt)
-            }
+            onSettlement?.(receipt)
             cleanup()
             resolve(receipt)
           }
