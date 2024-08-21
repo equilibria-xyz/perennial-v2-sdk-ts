@@ -567,6 +567,10 @@ export class MarketsModule {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
 
+        if (!args.limitPrice && !args.stopLossPrice && !args.takeProfitPrice) {
+          console.warn('PlaceOrder: No order type specified. Please provide a limit, stop loss or take profit price.')
+        }
+
         let updateMarketTx
         let limitOrderTx
         let takeProfitTx
