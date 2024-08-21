@@ -41,55 +41,65 @@ export async function oracleCommitmentsLatest({
   clients,
   requests,
   publicClient,
+  onSuccess,
+  onError,
 }: {
   chainId: SupportedChainId
   requests: UpdateDataRequest[]
   clients: OracleClients
   publicClient: PublicClient
+  onError?: () => void
+  onSuccess?: () => void
 }): Promise<UpdateDataResponse[]> {
-  // Group by factory
-  const groupedRequests = requests.reduce((acc, req) => {
-    if (!acc.has(req.factory)) acc.set(req.factory, [])
-    acc.get(req.factory)?.push(req)
+  try {
+    // Group by factory
+    const groupedRequests = requests.reduce((acc, req) => {
+      if (!acc.has(req.factory)) acc.set(req.factory, [])
+      acc.get(req.factory)?.push(req)
 
-    return acc
-  }, new Map<Address, UpdateDataRequest[]>())
+      return acc
+    }, new Map<Address, UpdateDataRequest[]>())
 
-  // Generate commitment(s) gor each factory grouping
-  const commitmentPromises = Array.from(groupedRequests.entries()).map(
-    async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
-      const providerType = oracleProviderForFactoryAddress({ chainId, factory })
-      if (providerType === 'pyth') {
-        const pythResponse = await pythBuildCommitmentsForOracles({
-          chainId,
-          publicClient,
-          pyth: clients.pyth,
-          marketOracles: reqs.map((r) => ({
-            providerFactoryAddress: factory,
-            providerAddress: r.subOracle,
-            underlyingId: r.underlyingId,
-            providerId: r.id,
-            minValidTime: r.minValidTime,
-          })),
-        })
+    // Generate commitment(s) gor each factory grouping
+    const commitmentPromises = Array.from(groupedRequests.entries()).map(
+      async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
+        const providerType = oracleProviderForFactoryAddress({ chainId, factory })
+        if (providerType === 'pyth') {
+          const pythResponse = await pythBuildCommitmentsForOracles({
+            chainId,
+            publicClient,
+            pyth: clients.pyth,
+            marketOracles: reqs.map((r) => ({
+              providerFactoryAddress: factory,
+              providerAddress: r.subOracle,
+              underlyingId: r.underlyingId,
+              providerId: r.id,
+              minValidTime: r.minValidTime,
+            })),
+          })
 
-        return pythResponse.map((res) => ({
-          keeperFactory: factory,
-          version: res.version,
-          value: res.value,
-          ids: res.ids,
-          updateData: res.updateData,
-        }))
-      }
+          return pythResponse.map((res) => ({
+            keeperFactory: factory,
+            version: res.version,
+            value: res.value,
+            ids: res.ids,
+            updateData: res.updateData,
+          }))
+        }
 
-      // if (providerType === 'cryptex')
-      // if (providerType === 'chainlink')
+        // if (providerType === 'cryptex')
+        // if (providerType === 'chainlink')
 
-      return []
-    },
-  )
+        return []
+      },
+    )
 
-  return (await Promise.all(commitmentPromises)).flat()
+    onSuccess?.()
+    return (await Promise.all(commitmentPromises)).flat()
+  } catch (err: any) {
+    onError?.()
+    throw err
+  }
 }
 
 export function marketOraclesToUpdateDataRequest(marketOracles: MarketOracles[SupportedMarket][]): UpdateDataRequest[] {

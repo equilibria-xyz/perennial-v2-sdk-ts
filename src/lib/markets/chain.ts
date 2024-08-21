@@ -156,8 +156,8 @@ export async function fetchMarketSnapshots({
     marketOracles,
     publicClient,
     oracleClients,
-    onPythError: onError,
-    resetPythError: onSuccess,
+    onOracleError: onError,
+    resetOracleError: onSuccess,
   })
   if (snapshotData.commitments.some((commitment) => commitment !== '0x')) {
     const commitmentError = snapshotData.commitments.find((commitment) => commitment !== '0x')
@@ -292,23 +292,26 @@ async function fetchMarketSnapshotsAfterSettle({
   marketOracles,
   publicClient,
   oracleClients,
+  onOracleError,
+  resetOracleError,
 }: {
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
   oracleClients: OracleClients
-  onPythError?: () => void
-  resetPythError?: () => void
+  onOracleError?: () => void
+  resetOracleError?: () => void
 }) {
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
 
-  // TODO: Handle error callbacks
   const priceCommitments = await oracleCommitmentsLatest({
     chainId,
     clients: oracleClients,
     publicClient,
     requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
+    onError: onOracleError,
+    onSuccess: resetOracleError,
   })
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)

@@ -10,8 +10,6 @@ export const buildCommitmentsForOracles = async ({
   pyth: pyth_,
   publicClient,
   marketOracles,
-  onError,
-  onSuccess,
 }: {
   chainId: SupportedChainId
   pyth: HermesClient | HermesClient[]
@@ -23,8 +21,6 @@ export const buildCommitmentsForOracles = async ({
     providerId: Hex
     minValidTime: bigint
   }[]
-  onError?: () => void
-  onSuccess?: () => void
 }): Promise<
   {
     keeperFactory: Address
@@ -67,7 +63,6 @@ export const buildCommitmentsForOracles = async ({
       {} as Record<number, { providerId: Hex; minValidTime: bigint }[][]>,
     )
 
-    onSuccess?.()
     return Object.entries(publishTimeMap)
       .map(([publishTime, allOracles]) => {
         return allOracles.map((oracles) => ({
@@ -91,9 +86,6 @@ export const buildCommitmentsForOracles = async ({
         marketOracles,
         publicClient,
       })
-    }
-    if (onError) {
-      onError()
     }
     throw err
   }

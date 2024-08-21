@@ -68,8 +68,8 @@ export async function fetchVaultSnapshots({
     marketOracles,
     publicClient,
     oracleClients: oracleClients,
-    onPythError: onError,
-    resetPythError: onSuccess,
+    onOracleError: onError,
+    resetOracleError: onSuccess,
   })
 
   const vaultSnapshots = snapshotData.vault.reduce(
@@ -115,27 +115,28 @@ const fetchVaultSnapshotsAfterSettle = async ({
   marketOracles,
   publicClient,
   oracleClients,
+  onOracleError,
+  resetOracleError,
 }: {
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
   oracleClients: OracleClients
-  onPythError?: () => void
-  resetPythError?: () => void
+  onOracleError?: () => void
+  resetOracleError?: () => void
 }) => {
   const vaults = chainVaultsWithAddress(chainId)
   const vaultLensAddress = getContractAddress({ from: address, nonce: MaxUint256 - 1n })
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
 
-  // TODO: Handle error callbacks
   const priceCommitments = await oracleCommitmentsLatest({
     chainId,
     clients: oracleClients,
     publicClient,
     requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
-    /* onError: onPythError,
-    onSuccess: resetPythError, */
+    onError: onOracleError,
+    onSuccess: resetOracleError,
   })
 
   const vaultAddresses = vaults.map(({ vaultAddress }) => vaultAddress)
