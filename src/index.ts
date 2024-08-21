@@ -258,7 +258,7 @@ export {
   calcLpExposure,
   UpdateNoOp,
   calcMaxLeverage,
-  waitForSettlement,
+  waitForOrderSettlement,
 } from './utils/positionUtils'
 
 // Pyth Utils

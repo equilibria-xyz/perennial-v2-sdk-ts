@@ -1,4 +1,4 @@
-import { Address, Hash, PublicClient, TransactionReceipt, encodeErrorResult, parseAbiItem, parseEventLogs } from 'viem'
+import { Address, Hash, PublicClient, TransactionReceipt, encodeErrorResult, parseEventLogs } from 'viem'
 
 import { MarketAbi, OracleAbi } from '..'
 import { PositionSide, PositionStatus, SupportedChainId, SupportedMarket } from '../constants'
@@ -586,7 +586,7 @@ export const calcExecutionPriceWithImpact = ({
   return size !== 0n ? Big6Math.abs(Big6Math.div(numerator, size)) : 0n
 }
 
-export async function waitForSettlement({
+export async function waitForOrderSettlement({
   publicClient,
   txHash,
   timeoutMs = 30000,
@@ -611,22 +611,21 @@ export async function waitForSettlement({
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
 
       const logs = parseEventLogs({ logs: receipt.logs, abi: OracleAbi, eventName: 'OracleProviderVersionRequested' })
-      const oracleVersionRequestedEvent = logs[0]
+      const oracleVersionRequestedEvent = logs.at(0)
+      if (!oracleVersionRequestedEvent) {
+        cleanup()
+        reject(new Error('OracleVersionRequested event not found'))
+        return
+      }
       const { version } = oracleVersionRequestedEvent.args
 
-      unwatch = publicClient.watchEvent({
+      unwatch = publicClient.watchContractEvent({
         address: oracleVersionRequestedEvent.address,
-        // event: parseAbiItem(OracleAbi, 'OracleVersionFulfilled'),
-        event: parseAbiItem(
-          'event OracleProviderVersionFulfilled((uint256 timestamp, int256 price, bool valid) version)',
-        ),
+        abi: OracleAbi,
+        eventName: 'OracleProviderVersionFulfilled',
         onLogs: (logs) => {
-          const versionFulfilledEvent = parseEventLogs({
-            logs,
-            abi: OracleAbi,
-            eventName: 'OracleProviderVersionFulfilled',
-          })[0]
-          if (versionFulfilledEvent.args.version.timestamp === version) {
+          const versionFulfilledEvent = logs.at(0)
+          if (versionFulfilledEvent?.args?.version?.timestamp === version) {
             if (onSettlement) {
               onSettlement(receipt)
             }

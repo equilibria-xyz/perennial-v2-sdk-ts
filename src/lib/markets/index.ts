@@ -17,7 +17,7 @@ import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
-import { waitForSettlement } from '../../utils/positionUtils'
+import { waitForOrderSettlement } from '../../utils/positionUtils'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
@@ -343,8 +343,13 @@ export class MarketsModule {
        * @param txHash Transaction hash
        * @param onSettlement Optional callback to invoke on settlement
        */
-      waitForTxSettlement: async (txHash: Hash, onSettlement?: (txReceipt?: TransactionReceipt) => void) => {
-        return waitForSettlement({ publicClient: this.config.publicClient, txHash, onSettlement, timeoutMs: 30000 })
+      waitForOrderSettlement: async (txHash: Hash, onSettlement?: (txReceipt?: TransactionReceipt) => void) => {
+        return waitForOrderSettlement({
+          publicClient: this.config.publicClient,
+          txHash,
+          onSettlement,
+          timeoutMs: 30000,
+        })
       },
     }
   }
