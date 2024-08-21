@@ -5,15 +5,22 @@ import { SupportedChainId } from '../../constants/network'
 import { unique } from '../../utils/arrayUtils'
 import { Big6Math } from '../../utils/big6Utils'
 
+const DefaultPythArgs = {
+  encoding: 'hex',
+  parsed: true,
+} as const
+
 export const buildCommitmentsForOracles = async ({
   chainId,
   pyth: pyth_,
   publicClient,
   marketOracles,
+  timestamp,
 }: {
   chainId: SupportedChainId
   pyth: HermesClient | HermesClient[]
   publicClient: PublicClient
+  timestamp?: bigint
   marketOracles: {
     providerAddress: Address
     providerFactoryAddress: Address
@@ -40,7 +47,10 @@ export const buildCommitmentsForOracles = async ({
     }))
     // Get current VAAs for each price feed
     const uniqueFeeds = unique(feedIds.map((f) => f.underlyingId))
-    const priceFeedUpdateData = await pyth.getLatestPriceUpdates(uniqueFeeds)
+    const priceFeedUpdateData = Boolean(timestamp)
+      ? await pyth.getPriceUpdatesAtTimestamp(Number(timestamp), uniqueFeeds, DefaultPythArgs)
+      : await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythArgs)
+
     if (!priceFeedUpdateData || !priceFeedUpdateData.parsed) throw new Error('No price feed update data found')
 
     // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes

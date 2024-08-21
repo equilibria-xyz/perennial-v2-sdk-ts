@@ -40,6 +40,7 @@ export async function oracleCommitmentsLatest({
   chainId,
   clients,
   requests,
+  versionOverride,
   publicClient,
   onSuccess,
   onError,
@@ -47,6 +48,7 @@ export async function oracleCommitmentsLatest({
   chainId: SupportedChainId
   requests: UpdateDataRequest[]
   clients: OracleClients
+  versionOverride?: bigint
   publicClient: PublicClient
   onError?: () => void
   onSuccess?: () => void
@@ -79,11 +81,8 @@ export async function oracleCommitmentsLatest({
           })
 
           return pythResponse.map((res) => ({
+            ...res,
             keeperFactory: factory,
-            version: res.version,
-            value: res.value,
-            ids: res.ids,
-            updateData: res.updateData,
           }))
         }
 
@@ -95,7 +94,81 @@ export async function oracleCommitmentsLatest({
     )
 
     onSuccess?.()
-    return (await Promise.all(commitmentPromises)).flat()
+    const commitments = (await Promise.all(commitmentPromises)).flat()
+
+    // Override version if passed in
+    return commitments.map((c) => ({ ...c, version: versionOverride ?? c.version }))
+  } catch (err: any) {
+    onError?.()
+    throw err
+  }
+}
+
+export async function oracleCommitmentsTimestamp({
+  chainId,
+  clients,
+  requests,
+  timestamp,
+  versionOverride,
+  publicClient,
+  onSuccess,
+  onError,
+}: {
+  chainId: SupportedChainId
+  requests: UpdateDataRequest[]
+  timestamp: bigint
+  versionOverride?: bigint
+  clients: OracleClients
+  publicClient: PublicClient
+  onError?: () => void
+  onSuccess?: () => void
+}): Promise<UpdateDataResponse[]> {
+  try {
+    // Group by factory
+    const groupedRequests = requests.reduce((acc, req) => {
+      if (!acc.has(req.factory)) acc.set(req.factory, [])
+      acc.get(req.factory)?.push(req)
+
+      return acc
+    }, new Map<Address, UpdateDataRequest[]>())
+
+    // Generate commitment(s) gor each factory grouping
+    const commitmentPromises = Array.from(groupedRequests.entries()).map(
+      async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
+        const providerType = oracleProviderForFactoryAddress({ chainId, factory })
+        if (providerType === 'pyth') {
+          const pythResponse = await pythBuildCommitmentsForOracles({
+            chainId,
+            publicClient,
+            pyth: clients.pyth,
+            timestamp,
+            marketOracles: reqs.map((r) => ({
+              providerFactoryAddress: factory,
+              providerAddress: r.subOracle,
+              underlyingId: r.underlyingId,
+              providerId: r.id,
+              minValidTime: r.minValidTime,
+            })),
+          })
+
+          return pythResponse.map((res) => ({
+            ...res,
+            keeperFactory: factory,
+          }))
+        }
+
+        // if (providerType === 'cryptex')
+        // if (providerType === 'chainlink')
+
+        return []
+      },
+    )
+
+    onSuccess?.()
+    const commitments = (await Promise.all(commitmentPromises)).flat()
+
+    // Override version if passed in
+    return commitments.map((c) => ({ ...c, version: versionOverride ?? c.version }))
   } catch (err: any) {
     onError?.()
     throw err
