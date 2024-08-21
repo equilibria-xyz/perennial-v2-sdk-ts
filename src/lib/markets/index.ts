@@ -568,7 +568,7 @@ export class MarketsModule {
         throwIfZeroAddress(address)
 
         if (!args.limitPrice && !args.stopLossPrice && !args.takeProfitPrice) {
-          throw new Error('At least one of limitPrice, stopLossPrice or takeProfitPrice must be set')
+          console.warn('PlaceOrder: No order type specified. Please provide a limit, stop loss or take profit price.')
         }
 
         let updateMarketTx
