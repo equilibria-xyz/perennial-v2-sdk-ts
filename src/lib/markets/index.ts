@@ -1,6 +1,6 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
+import { Address, Hash, PublicClient, TransactionReceipt, WalletClient, zeroAddress } from 'viem'
 
 import {
   InterfaceFee,
@@ -17,6 +17,7 @@ import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
+import { waitForSettlement } from '../../utils/positionUtils'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
@@ -336,6 +337,14 @@ export class MarketsModule {
           markets: this.config.supportedMarkets,
           ...args,
         })
+      },
+      /**
+       * Waits for a perennial transaction to settle and invokes an optional callback
+       * @param txHash Transaction hash
+       * @param onSettlement Optional callback to invoke on settlement
+       */
+      waitForTxSettlement: async (txHash: Hash, onSettlement?: (txReceipt?: TransactionReceipt) => void) => {
+        return waitForSettlement({ publicClient: this.config.publicClient, txHash, onSettlement, timeoutMs: 30000 })
       },
     }
   }

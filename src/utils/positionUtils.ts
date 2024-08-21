@@ -1,6 +1,6 @@
-import { Address, encodeErrorResult } from 'viem'
+import { Address, Hash, PublicClient, TransactionReceipt, encodeErrorResult, parseAbiItem, parseEventLogs } from 'viem'
 
-import { MarketAbi } from '..'
+import { MarketAbi, OracleAbi } from '..'
 import { PositionSide, PositionStatus, SupportedChainId, SupportedMarket } from '../constants'
 import { MaxUint256 } from '../constants/units'
 import { MarketSnapshot, MarketSnapshots, UserMarketSnapshot } from '../lib'
@@ -584,4 +584,65 @@ export const calcExecutionPriceWithImpact = ({
   if (side === PositionSide.long) numerator = numerator - (size < 0n ? -offset : offset)
   if (side === PositionSide.short) numerator = numerator + (size < 0n ? -offset : offset)
   return size !== 0n ? Big6Math.abs(Big6Math.div(numerator, size)) : 0n
+}
+
+export async function waitForSettlement({
+  publicClient,
+  txHash,
+  timeoutMs = 30000,
+  onSettlement,
+}: {
+  publicClient: PublicClient
+  txHash: Hash
+  timeoutMs: number
+  onSettlement?: (txReceipt?: TransactionReceipt) => void
+}): Promise<TransactionReceipt> {
+  return new Promise(async (resolve, reject) => {
+    let timeoutId: NodeJS.Timeout
+    let unwatch: (() => void) | undefined
+
+    const cleanup = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (unwatch) unwatch()
+    }
+
+    try {
+      // Wait for transaction receipt
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+      const logs = parseEventLogs({ logs: receipt.logs, abi: OracleAbi, eventName: 'OracleProviderVersionRequested' })
+      const oracleVersionRequestedEvent = logs[0]
+      const { version } = oracleVersionRequestedEvent.args
+
+      unwatch = publicClient.watchEvent({
+        address: oracleVersionRequestedEvent.address,
+        // event: parseAbiItem(OracleAbi, 'OracleVersionFulfilled'),
+        event: parseAbiItem(
+          'event OracleProviderVersionFulfilled((uint256 timestamp, int256 price, bool valid) version)',
+        ),
+        onLogs: (logs) => {
+          const versionFulfilledEvent = parseEventLogs({
+            logs,
+            abi: OracleAbi,
+            eventName: 'OracleProviderVersionFulfilled',
+          })[0]
+          if (versionFulfilledEvent.args.version.timestamp === version) {
+            if (onSettlement) {
+              onSettlement(receipt)
+            }
+            cleanup()
+            resolve(receipt)
+          }
+        },
+      })
+
+      timeoutId = setTimeout(() => {
+        cleanup()
+        reject(new Error('Timeout waiting for OracleVersionFulfilled event'))
+      }, timeoutMs)
+    } catch (error) {
+      cleanup()
+      reject(error)
+    }
+  })
 }
