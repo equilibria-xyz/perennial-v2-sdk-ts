@@ -567,6 +567,10 @@ export class MarketsModule {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
 
+        if (!args.limitPrice && !args.stopLossPrice && !args.takeProfitPrice) {
+          throw new Error('At least one of limitPrice, stopLossPrice or takeProfitPrice must be set')
+        }
+
         let updateMarketTx
         let limitOrderTx
         let takeProfitTx
