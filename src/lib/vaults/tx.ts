@@ -13,7 +13,7 @@ import { VaultSnapshot, VaultSnapshots, fetchVaultSnapshots } from './chain'
 type BaseVaultUpdateTxArgs = {
   chainId: SupportedChainId
   publicClient: PublicClient
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   vaultAddress: Address
   address?: Address
   marketOracles?: MarketOracles

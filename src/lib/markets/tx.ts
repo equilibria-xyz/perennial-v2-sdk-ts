@@ -28,7 +28,7 @@ export type BuildUpdateMarketTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -140,7 +140,7 @@ export async function buildUpdateMarketTx({
 
 export type BuildSubmitVaaTxArgs = {
   chainId: SupportedChainId
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   marketAddress: Address
   marketOracles: MarketOracles
 }

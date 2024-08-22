@@ -1,22 +1,18 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
-import { BackupPythClient, SupportedChainId } from '../constants/network'
+import { SupportedChainId } from '../constants/network'
 import { notEmpty, unique } from './arrayUtils'
 import { Big6Math } from './big6Utils'
 
 const DefaultPythOptions = { encoding: 'hex', parsed: true } as const
 
 export const getRecentVaa = async ({
-  pyth,
+  pyth: pyth_,
   feeds,
-  useBackupOnError = true,
-  backupPythClient = BackupPythClient,
 }: {
-  pyth: HermesClient
+  pyth: HermesClient | HermesClient[]
   feeds: { underlyingId: string; minValidTime: bigint }[]
-  useBackupOnError?: boolean
-  backupPythClient?: HermesClient | null
 }): Promise<
   {
     feedId: string
@@ -25,6 +21,9 @@ export const getRecentVaa = async ({
     version: bigint
   }[]
 > => {
+  const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_
+  if (!pyth) throw new Error('No Pyth client provided')
+
   try {
     const uniqueFeeds = unique(feeds.map((f) => f.underlyingId))
     const priceFeeds = await pyth.getLatestPriceUpdates(uniqueFeeds, DefaultPythOptions)
@@ -36,6 +35,9 @@ export const getRecentVaa = async ({
         const priceFeedUpdate = parsedData.find((p) => priceFeed.underlyingId === `0x${p.id}`.toLowerCase())
         if (!priceFeedUpdate) return null
         const publishTime = priceFeedUpdate?.price.publish_time
+
+        // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes
+
         return {
           feedId: priceFeed.underlyingId,
           vaa: `0x${priceFeeds.binary.data}`,
@@ -45,11 +47,11 @@ export const getRecentVaa = async ({
       })
       .filter(notEmpty)
   } catch (err: any) {
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
-    // Only use backup if we are on mainnet
-    if (useBackupOnError && backupPythClient) {
-      return getRecentVaa({ pyth: backupPythClient, feeds, useBackupOnError: false, backupPythClient: null })
-    }
+    const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
+    const useBackup = nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
+
+    if (useBackup) return getRecentVaa({ pyth: nextPyth, feeds })
 
     throw err
   }
@@ -57,19 +59,15 @@ export const getRecentVaa = async ({
 
 export const buildCommitmentsForOracles = async ({
   chainId,
-  pyth,
+  pyth: pyth_,
   publicClient,
-  useBackupOnError = true,
-  backupPythClient = BackupPythClient,
   marketOracles,
   onError,
   onSuccess,
 }: {
   chainId: SupportedChainId
-  pyth: HermesClient
+  pyth: HermesClient | HermesClient[]
   publicClient: PublicClient
-  useBackupOnError?: boolean
-  backupPythClient?: HermesClient | null
   marketOracles: {
     providerAddress: Address
     providerFactoryAddress: Address
@@ -88,6 +86,9 @@ export const buildCommitmentsForOracles = async ({
     updateData: Address
   }[]
 > => {
+  const pyth = Array.isArray(pyth_) ? pyth_.at(0) : pyth_
+  if (!pyth) throw new Error('No Pyth client provided')
+
   try {
     const feedIds = marketOracles.map(({ underlyingId, minValidTime }) => ({
       underlyingId,
@@ -98,6 +99,8 @@ export const buildCommitmentsForOracles = async ({
     const priceFeedUpdateData = await pyth.getLatestPriceUpdates(uniqueFeeds)
     if (!priceFeedUpdateData || !priceFeedUpdateData.parsed) throw new Error('No price feed update data found')
 
+    // TODO: Throw an error if price is stale and the market is open. We need to wait until Pyth returns market open status in Hermes
+
     const publishTimeMap = priceFeedUpdateData.parsed.reduce(
       (acc, p) => {
         if (!acc[p.price.publish_time]) acc[p.price.publish_time] = []
@@ -106,6 +109,7 @@ export const buildCommitmentsForOracles = async ({
 
         // We can't commit two oracles with the same underlying ID at once
         // So if there is multiple oracles with the same underlying ID, split them into separate commitments
+        // TODO: Change this once submitting for multiple oracles with the same underlying ID is supported in v2.3
         oracles.forEach((o, i) => {
           if (!acc[p.price.publish_time][i]) acc[p.price.publish_time][i] = []
           acc[p.price.publish_time][i].push(o)
@@ -128,15 +132,16 @@ export const buildCommitmentsForOracles = async ({
       })
       .flat()
   } catch (err: any) {
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackupOnError}`, err)
-    if (useBackupOnError && backupPythClient) {
+    const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
+    const useBackup = nextPyth.length > 0
+    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup}`, err)
+
+    if (useBackup) {
       return buildCommitmentsForOracles({
         chainId,
-        pyth: backupPythClient,
+        pyth: nextPyth,
         marketOracles,
         publicClient,
-        backupPythClient: null,
-        useBackupOnError: false,
       })
     }
     if (onError) {

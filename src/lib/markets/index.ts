@@ -1,6 +1,6 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
+import { Address, Hash, PublicClient, TransactionReceipt, WalletClient, zeroAddress } from 'viem'
 
 import {
   InterfaceFee,
@@ -17,6 +17,7 @@ import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
+import { waitForOrderSettlement } from '../../utils/positionUtils'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
@@ -55,7 +56,7 @@ export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: HermesClient
+  pythClient: HermesClient | HermesClient[]
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -105,7 +106,7 @@ type MarketsModuleConfig = {
   chainId: SupportedChainId
   graphClient?: GraphQLClient
   publicClient: PublicClient
-  pythClient: HermesClient
+  pythClient: HermesClient[]
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets: SupportedMarket[]
@@ -337,6 +338,19 @@ export class MarketsModule {
           ...args,
         })
       },
+      /**
+       * Waits for a perennial transaction to settle and invokes an optional callback
+       * @param txHash Transaction hash
+       * @param onSettlement Optional callback to invoke on settlement
+       */
+      waitForOrderSettlement: async (txHash: Hash, onSettlement?: (txReceipt?: TransactionReceipt) => void) => {
+        return waitForOrderSettlement({
+          publicClient: this.config.publicClient,
+          txHash,
+          onSettlement,
+          timeoutMs: 30000,
+        })
+      },
     }
   }
 
@@ -566,6 +580,10 @@ export class MarketsModule {
       placeOrder: async (args: OmitBound<BuildPlaceOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
         throwIfZeroAddress(address)
+
+        if (!args.limitPrice && !args.stopLossPrice && !args.takeProfitPrice) {
+          console.warn('PlaceOrder: No order type specified. Please provide a limit, stop loss or take profit price.')
+        }
 
         let updateMarketTx
         let limitOrderTx

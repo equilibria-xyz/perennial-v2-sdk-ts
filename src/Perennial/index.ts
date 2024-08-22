@@ -3,7 +3,7 @@ import { GraphQLClient } from 'graphql-request'
 import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
 
 import { ChainMarkets, SupportedChainId, SupportedMarket } from '..'
-import { DefaultChain, chainIdToChainMap } from '../constants/network'
+import { BackupPythClient, DefaultChain, chainIdToChainMap } from '../constants/network'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { OperatorModule } from '../lib/operators'
@@ -13,7 +13,7 @@ export type SDKConfig = {
   rpcUrl: string
   chainId: SupportedChainId
   graphUrl?: string
-  pythUrl: string
+  pythUrl: string | string[]
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets?: SupportedMarket[]
@@ -40,7 +40,7 @@ export default class PerennialSDK {
   private _currentChainId: SupportedChainId = DefaultChain.id
   private _publicClient: PublicClient<Transport<'http'>, Chain>
   private _walletClient?: WalletClient
-  private _pythClient: HermesClient
+  private _pythClient: HermesClient[]
   private _graphClient: GraphQLClient | undefined
   public contracts: ContractsModule
   public markets: MarketsModule
@@ -62,9 +62,7 @@ export default class PerennialSDK {
         multicall: true,
       },
     })
-    this._pythClient = new HermesClient(config.pythUrl, {
-      timeout: 30000,
-    })
+    this._pythClient = this.buildPythClients(config.pythUrl)
     this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({
       chainId: config.chainId,
@@ -122,5 +120,19 @@ export default class PerennialSDK {
 
   get pythClient() {
     return this._pythClient
+  }
+
+  private buildPythClients(urls_: string | string[]) {
+    const urls = Array.isArray(urls_) ? urls_ : [urls_]
+
+    return [
+      ...urls.map(
+        (url) =>
+          new HermesClient(url, {
+            timeout: 30000,
+          }),
+      ),
+      BackupPythClient,
+    ]
   }
 }

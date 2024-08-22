@@ -35,6 +35,7 @@ export enum SupportedMarket {
   mog = 'mog',
   jpy = 'jpy',
   mkr = 'mkr',
+  doge = 'doge',
 
   unknown = 'unknown',
 }
@@ -230,6 +231,15 @@ export const MarketMetadata: MarketMetadataType = {
     transform: linearTransform,
     untransform: linearUntransform,
   },
+  [SupportedMarket.doge]: {
+    symbol: 'DOGE-USD',
+    name: 'Dogecoin',
+    baseCurrency: SupportedMarket.doge,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xdcef50dd0a4cd2dcc17e45df1676dcb336a11a61c69df7a0299b0150c672d25c',
+    transform: decimalTransform(1n),
+    untransform: decimalUntransform(1n),
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -267,6 +277,7 @@ export const ChainMarkets: {
     [SupportedMarket.mog]: getAddress('0xc8b73eCFdb775cB9899A0d22fFc8d11228Ac35CB'),
     [SupportedMarket.jpy]: getAddress('0xB7558189c794239ef9453208f2e58Fa049E1035c'),
     [SupportedMarket.mkr]: getAddress('0xe8BF156034b64A7266AcD28046F67f3fa7Ecc53a'),
+    [SupportedMarket.doge]: getAddress('0x5bef017aC7Ea4f6f59946f27d50A137D4362F6A4'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
