@@ -77,6 +77,7 @@ export {
   MarketFactoryAddresses,
   VaultFactoryAddresses,
   PythFactoryAddresses,
+  CryptexFactoryAddresses,
   OracleFactoryAddresses,
   DSUAddresses,
   USDCAddresses,
@@ -160,8 +161,11 @@ export { VaultAbi } from './abi/Vault.abi'
 export { VaultFactoryAbi } from './abi/VaultFactory.abi'
 export { VaultLensAbi } from './abi/VaultLens.abi'
 export { KeeperOracleAbi } from './abi/KeeperOracle.abi'
-export { KeeperFactoryAbi as PythFactoryAbi } from './abi/KeeperFactoryAbi'
+export { KeeperFactoryAbi, KeeperFactoryAbi as PythFactoryAbi } from './abi/KeeperFactory.abi'
 export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
+export { FactoryAbi } from './abi/Factory.abi'
+export { OracleFactoryAbi } from './abi/OracleFactory.abi'
+export { PayoffAbi } from './abi/Payoff.abi'
 
 /* #################### Types #################### */
 
@@ -175,7 +179,7 @@ export * from './types/gql'
 export * as utils from './utils'
 
 // Array Utils
-export { notEmpty, sum, unique, equal, range } from './utils/arrayUtils'
+export { chunk, notEmpty, sum, unique, equal, range } from './utils/arrayUtils'
 
 // Accumulator Utils
 export {
@@ -261,17 +265,20 @@ export {
 
 // Oracle Utils
 export {
-  type OracleProvider,
+  type OracleProviderType as OracleProvider,
   type OracleClients,
   type UpdateDataRequest,
   type UpdateDataResponse,
-  oracleProviderForFactoryAddress,
+  oracleProviderTypeForFactoryAddress as oracleProviderForFactoryAddress,
   oracleCommitmentsLatest,
+  oracleCommitmentsTimestamp,
   marketOraclesToUpdateDataRequest,
 } from './lib/oracle'
 
 // Pyth Utils
-export { buildCommitmentsForOracles, pythPriceToBig18 } from './lib/oracle/pyth'
+export { buildCommitmentsForOracles, pythMarketOpen, pythPriceToBig18 } from './lib/oracle/pyth'
+// Cryptex Utils
+export { fetchPrices } from './lib/oracle/cryptex'
 
 // Time Utils
 export {

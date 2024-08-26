@@ -7,7 +7,7 @@ import { BackupPythClient, DefaultChain, chainIdToChainMap } from '../constants/
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { OperatorModule } from '../lib/operators'
-import { OracleClients } from '../lib/oracle'
+import { OracleClients, OraclesModule } from '../lib/oracle'
 import { VaultsModule } from '../lib/vaults'
 
 export type SDKConfig = {
@@ -15,6 +15,7 @@ export type SDKConfig = {
   chainId: SupportedChainId
   graphUrl?: string
   pythUrl: string | string[]
+  cryptexUrl?: string
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets?: SupportedMarket[]
@@ -47,6 +48,7 @@ export default class PerennialSDK {
   public markets: MarketsModule
   public vaults: VaultsModule
   public operator: OperatorModule
+  public oracles: OraclesModule
 
   constructor(config: SDKConfig) {
     this.config = {
@@ -65,6 +67,7 @@ export default class PerennialSDK {
     })
     this._oracleClients = {
       pyth: this.buildPythClients(config.pythUrl),
+      cryptex: config.cryptexUrl,
     }
     this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({
@@ -94,6 +97,11 @@ export default class PerennialSDK {
       publicClient: this._publicClient,
       walletClient: config.walletClient,
       operatingFor: this.config.operatingFor,
+    })
+    this.oracles = new OraclesModule({
+      chainId: config.chainId,
+      publicClient: this._publicClient,
+      oracleClients: this._oracleClients,
     })
 
     this._walletClient = config.walletClient

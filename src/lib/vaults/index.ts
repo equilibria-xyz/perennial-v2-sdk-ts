@@ -48,7 +48,7 @@ export const fetchVaultCommitments = async ({
     .filter(notEmpty)
   const commitments = await oracleCommitmentsLatest({
     chainId,
-    clients: oracleClients,
+    oracleClients: oracleClients,
     publicClient,
     requests: marketOraclesToUpdateDataRequest(Object.values(oracles)),
   })

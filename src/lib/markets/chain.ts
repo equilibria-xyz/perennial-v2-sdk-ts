@@ -307,7 +307,7 @@ async function fetchMarketSnapshotsAfterSettle({
 
   const priceCommitments = await oracleCommitmentsLatest({
     chainId,
-    clients: oracleClients,
+    oracleClients: oracleClients,
     publicClient,
     requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
     onError: onOracleError,

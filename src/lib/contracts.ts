@@ -2,7 +2,7 @@ import { Address, GetContractReturnType, PublicClient, WalletClient, getContract
 
 import { DefaultChain, EmptysetReserveAbi, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
-import { KeeperFactoryAbi } from '../abi/KeeperFactoryAbi'
+import { KeeperFactoryAbi } from '../abi/KeeperFactory.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'

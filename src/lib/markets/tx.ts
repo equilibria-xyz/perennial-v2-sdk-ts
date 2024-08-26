@@ -107,7 +107,7 @@ export async function buildUpdateMarketTx({
   if (isPriceStale) {
     const [{ version, ids, value, updateData }] = await oracleCommitmentsLatest({
       chainId,
-      clients: oracleClients,
+      oracleClients: oracleClients,
       publicClient,
       requests: marketOraclesToUpdateDataRequest([oracleInfo]),
       // onError: onCommitmentError, TODO: Handle error callback
