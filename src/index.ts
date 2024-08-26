@@ -77,6 +77,7 @@ export {
   MarketFactoryAddresses,
   VaultFactoryAddresses,
   PythFactoryAddresses,
+  ChainlinkFactoryAddresses,
   CryptexFactoryAddresses,
   OracleFactoryAddresses,
   DSUAddresses,
