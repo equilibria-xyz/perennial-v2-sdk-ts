@@ -49,3 +49,8 @@ export const CryptexFactoryAddresses: AddressMapping = {
   [arbitrum.id]: zeroAddress,
   [arbitrumSepolia.id]: getAddress('0x161Ef7447eC2B3F9425edc405830A111F4033Cb6'),
 }
+
+export const ChainlinkFactoryAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x5250115dde6ce8d11e619003E0B2d816Dcb4546e'),
+}

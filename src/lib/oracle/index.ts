@@ -1,7 +1,13 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient } from 'viem'
 
-import { PythFactoryAddresses, SupportedChainId, SupportedMarket } from '../../constants'
+import {
+  ChainlinkFactoryAddresses,
+  CryptexFactoryAddresses,
+  PythFactoryAddresses,
+  SupportedChainId,
+  SupportedMarket,
+} from '../../constants'
 import { MarketOracles } from '../markets/chain'
 import { fetchPrices } from './cryptex'
 import { buildCommitmentsForOracles as pythBuildCommitmentsForOracles } from './pyth'
@@ -20,6 +26,8 @@ export function oracleProviderTypeForFactoryAddress({
   factory: Address
 }): OracleProviderType {
   if (PythFactoryAddresses[chainId] === factory) return 'pyth'
+  if (CryptexFactoryAddresses[chainId] === factory) return 'cryptex'
+  if (ChainlinkFactoryAddresses[chainId] === factory) return 'chainlink'
 
   return 'unknown'
 }
