@@ -99,7 +99,7 @@ export const buildCommitmentsForOracles = async ({
   } catch (err: any) {
     const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
     const useBackup = nextPyth.length > 0
-    console.error('Pyth Recent VAA Error', `Use backup: ${useBackup} (${nextPyth.length} remaining)`, err)
+    console.warn('Pyth Recent VAA Error', `Use backup: ${useBackup} (${nextPyth.length} remaining)`, err)
 
     if (useBackup) {
       return buildCommitmentsForOracles({
