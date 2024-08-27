@@ -50,6 +50,7 @@ export async function buildUpdateMarketTx({
   collateralDelta,
   interfaceFee,
   referralFee,
+  onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
   const multiInvoker = getMultiInvokerContract(chainId, publicClient)
   const market = addressToMarket(chainId, marketAddress)
@@ -110,7 +111,7 @@ export async function buildUpdateMarketTx({
       oracleClients: oracleClients,
       publicClient,
       requests: marketOraclesToUpdateDataRequest([oracleInfo]),
-      // onError: onCommitmentError, TODO: Handle error callback
+      onError: onCommitmentError,
     })
     const commitAction = buildCommitPrice({
       keeperFactory: oracleInfo.providerFactoryAddress,
