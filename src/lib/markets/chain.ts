@@ -35,7 +35,10 @@ export async function fetchMarketOracles(
   const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
     const metadata = MarketMetadata[market]
     const marketContract = getMarketContract(marketAddress, publicClient)
-    const oracleAddress = await marketContract.read.oracle()
+    const [riskParameter, oracleAddress] = await Promise.all([
+      marketContract.read.riskParameter(),
+      marketContract.read.oracle(),
+    ])
     // Fetch oracle data
     const oracle = getOracleContract(oracleAddress, publicClient)
     const global = await oracle.read.global()
@@ -59,6 +62,7 @@ export async function fetchMarketOracles(
       providerId,
       underlyingId,
       minValidTime: validFrom,
+      staleAfter: riskParameter.staleAfter,
     }
   }
 

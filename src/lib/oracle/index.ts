@@ -8,7 +8,7 @@ import {
   SupportedChainId,
   SupportedMarket,
 } from '../../constants'
-import { MarketOracles } from '../markets/chain'
+import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { fetchPrices } from './cryptex'
 import { buildCommitmentsForOracles as pythBuildCommitmentsForOracles } from './pyth'
 
@@ -209,6 +209,7 @@ export function marketOraclesToUpdateDataRequest(marketOracles: MarketOracles[Su
     id: marketOracle.providerId,
     underlyingId: marketOracle.underlyingId,
     minValidTime: marketOracle.minValidTime,
+    staleAfter: marketOracle.staleAfter,
   }))
 }
 
@@ -216,27 +217,55 @@ type OracleConfig = {
   chainId: SupportedChainId
   publicClient: PublicClient
   oracleClients: OracleClients
+  supportedMarkets: SupportedMarket[]
 }
-type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'oracleClients'>
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'oracleClients' | 'requests'>
+type OptionalRequests = { requests?: UpdateDataRequest[]; markets?: SupportedMarket[] }
 export class OraclesModule {
   constructor(private config: OracleConfig) {}
 
   get read() {
     return {
-      oracleCommitmentsLatest: async (args: OmitBound<Parameters<typeof oracleCommitmentsLatest>[0]>) => {
+      oracleCommitmentsLatest: async (
+        args: OmitBound<Parameters<typeof oracleCommitmentsLatest>[0]> & OptionalRequests = {},
+      ) => {
         return oracleCommitmentsLatest({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           oracleClients: this.config.oracleClients,
+          requests:
+            args.requests ??
+            marketOraclesToUpdateDataRequest(
+              Object.values(
+                await fetchMarketOracles(
+                  this.config.chainId,
+                  this.config.publicClient,
+                  args.markets ?? this.config.supportedMarkets,
+                ),
+              ),
+            ),
           ...args,
         })
       },
 
-      oracleCommitmentsTimestamp: async (args: OmitBound<Parameters<typeof oracleCommitmentsTimestamp>[0]>) => {
+      oracleCommitmentsTimestamp: async (
+        args: OmitBound<Parameters<typeof oracleCommitmentsTimestamp>[0]> & OptionalRequests,
+      ) => {
         return oracleCommitmentsTimestamp({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           oracleClients: this.config.oracleClients,
+          requests:
+            args.requests ??
+            marketOraclesToUpdateDataRequest(
+              Object.values(
+                await fetchMarketOracles(
+                  this.config.chainId,
+                  this.config.publicClient,
+                  args.markets ?? this.config.supportedMarkets,
+                ),
+              ),
+            ),
           ...args,
         })
       },

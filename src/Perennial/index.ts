@@ -102,6 +102,7 @@ export default class PerennialSDK {
       chainId: config.chainId,
       publicClient: this._publicClient,
       oracleClients: this._oracleClients,
+      supportedMarkets: this.config.supportedMarkets,
     })
 
     this._walletClient = config.walletClient
