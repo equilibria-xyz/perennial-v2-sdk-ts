@@ -36,6 +36,8 @@ export enum SupportedMarket {
   jpy = 'jpy',
   mkr = 'mkr',
   doge = 'doge',
+  eur = 'eur',
+  gbp = 'gbp',
 
   unknown = 'unknown',
 }
@@ -240,6 +242,24 @@ export const MarketMetadata: MarketMetadataType = {
     transform: decimalTransform(1n),
     untransform: decimalUntransform(1n),
   },
+  [SupportedMarket.eur]: {
+    symbol: 'EUR-USD',
+    name: 'Euro',
+    baseCurrency: SupportedMarket.eur,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xa995d00bb36a63cef7fd2c287dc105fc8f3d93779f062f09551b0af3e81ec30b',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
+  [SupportedMarket.gbp]: {
+    symbol: 'GBP-USD',
+    name: 'British Pound',
+    baseCurrency: SupportedMarket.gbp,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x84c2dde9633d93d1bcad84e7dc41c9d56578b7ec52fabedc1f335d673df0a7c1',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -278,6 +298,8 @@ export const ChainMarkets: {
     [SupportedMarket.jpy]: getAddress('0xB7558189c794239ef9453208f2e58Fa049E1035c'),
     [SupportedMarket.mkr]: getAddress('0xe8BF156034b64A7266AcD28046F67f3fa7Ecc53a'),
     [SupportedMarket.doge]: getAddress('0x5bef017aC7Ea4f6f59946f27d50A137D4362F6A4'),
+    [SupportedMarket.eur]: getAddress('0xb8df4bea28B1F0748D386E8A69ea1bD46B70922d'),
+    [SupportedMarket.gbp]: getAddress('0xe588d7d041e18E754e95eF51D77f6e0fC6334EfD'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
