@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 
@@ -11,16 +10,17 @@ import {
   buildDepositTx,
   buildRedeemSharesTx,
 } from '..'
-import { buildCommitPrice, buildCommitmentsForOracles, notEmpty } from '../..'
+import { buildCommitPrice, notEmpty } from '../..'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from './chain'
 
 /**
  * Fetches the vault commitments for a given chain.
  * @param chainId - The chain ID.
- * @param pythClient - The Pyth client.
+ * @param oracleClients - {@link OracleClients}
  * @param preMarketSnapshots - The pre-market snapshots.
  * @param marketOracles - The market oracles.
  * @param publicClient - The public client.
@@ -28,13 +28,13 @@ import { VaultSnapshot, fetchVaultPositionHistory, fetchVaultSnapshots } from '.
  */
 export const fetchVaultCommitments = async ({
   chainId,
-  pythClient,
+  oracleClients,
   preMarketSnapshots,
   marketOracles,
   publicClient,
 }: {
   chainId: SupportedChainId
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   preMarketSnapshots: VaultSnapshot['pre']['marketSnapshots']
   marketOracles: MarketOracles
   publicClient: PublicClient
@@ -46,11 +46,11 @@ export const fetchVaultCommitments = async ({
       return oracle
     })
     .filter(notEmpty)
-  const commitments = await buildCommitmentsForOracles({
+  const commitments = await oracleCommitmentsLatest({
     chainId,
-    pyth: pythClient,
+    oracleClients: oracleClients,
     publicClient,
-    marketOracles: oracles,
+    requests: marketOraclesToUpdateDataRequest(Object.values(oracles)),
   })
   return commitments.map((c) => ({
     value: c.value,
@@ -65,13 +65,13 @@ export const fetchVaultCommitments = async ({
   }))
 }
 
-type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'graphClient' | 'address'>
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'oracleClients' | 'graphClient' | 'address'>
 
 type VaultConfig = {
   chainId: SupportedChainId
   publicClient: PublicClient
   graphClient?: GraphQLClient
-  pythClient: HermesClient[]
+  oracleClients: OracleClients
   walletClient?: WalletClient
   operatingFor?: Address
 }
@@ -111,7 +111,7 @@ export class VaultsModule {
         return fetchVaultSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           address: this.defaultAddress,
           ...args,
         })
@@ -126,7 +126,7 @@ export class VaultsModule {
         return fetchVaultCommitments({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           ...args,
         })
       },
@@ -164,7 +164,7 @@ export class VaultsModule {
         return buildDepositTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           ...args,
           address,
         })
@@ -186,7 +186,7 @@ export class VaultsModule {
         return buildRedeemSharesTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           ...args,
           address,
         })
@@ -206,7 +206,7 @@ export class VaultsModule {
         return buildClaimTx({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           ...args,
           address,
         })
