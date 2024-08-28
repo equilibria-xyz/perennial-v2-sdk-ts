@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, Hash, PublicClient, TransactionReceipt, WalletClient, zeroAddress } from 'viem'
 
@@ -18,6 +17,7 @@ import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { waitForOrderSettlement } from '../../utils/positionUtils'
+import { OracleClients } from '../oracle'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import {
   fetchActivePositionHistory,
@@ -34,7 +34,6 @@ import {
   BuildClaimFeeTxArgs,
   BuildLimitOrderTxArgs,
   BuildStopLossTxArgs,
-  BuildSubmitVaaTxArgs,
   BuildTakeProfitTxArgs,
   BuildTriggerOrderBaseArgs,
   BuildUpdateMarketTxArgs,
@@ -44,19 +43,17 @@ import {
   buildClaimFeeTx,
   buildLimitOrderTx,
   buildStopLossTx,
-  buildSubmitVaaTx,
   buildTakeProfitTx,
   buildUpdateMarketTx,
 } from './tx'
 
-type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'pythClient' | 'address' | 'markets'>
+type OmitBound<T> = Omit<T, 'chainId' | 'graphClient' | 'publicClient' | 'oracleClients' | 'address' | 'markets'>
 type OptionalMarkets = { markets?: SupportedMarket[] }
 
 export type BuildModifyPositionTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: HermesClient | HermesClient[]
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -106,7 +103,7 @@ type MarketsModuleConfig = {
   chainId: SupportedChainId
   graphClient?: GraphQLClient
   publicClient: PublicClient
-  pythClient: HermesClient[]
+  oracleClients: OracleClients
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets: SupportedMarket[]
@@ -118,7 +115,7 @@ type MarketsModuleConfig = {
  * @param config.chainId {@link SupportedChainId}
  * @param config.publicClient Public Client
  * @param config.graphClient GraphQL Client
- * @param config.pythClient Pyth Client
+ * @param config.oracleClients Oracle Clients {@link OracleClients}
  * @param config.walletClient Wallet Client
  * @param config.operatingFor If set, the module will read data and send multi-invoker transactions on behalf of this address.
  * @param config.supportedMarkets Subset of availalbe markets to support.
@@ -156,7 +153,7 @@ export class MarketsModule {
         return fetchMarketSnapshots({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           address: this.defaultAddress,
           markets: this.config.supportedMarkets,
           ...args,
@@ -179,7 +176,7 @@ export class MarketsModule {
         return fetchActivePositionsPnl({
           chainId: this.config.chainId,
           publicClient: this.config.publicClient,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
           markets: this.config.supportedMarkets,
@@ -385,7 +382,7 @@ export class MarketsModule {
 
         const updateMarketTx = await buildUpdateMarketTx({
           chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           publicClient: this.config.publicClient,
           ...args,
           side: args.positionSide,
@@ -441,7 +438,6 @@ export class MarketsModule {
        * @param marketAddress Market Address
        * @param marketSnapshots {@link MarketSnapshots}
        * @param marketOracles {@link MarketOracles}
-       * @param pythClient Pyth Client
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
@@ -459,7 +455,7 @@ export class MarketsModule {
 
         return buildUpdateMarketTx({
           chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
+          oracleClients: this.config.oracleClients,
           publicClient: this.config.publicClient,
           ...args,
           address,
@@ -541,21 +537,6 @@ export class MarketsModule {
         })
       },
       /**
-       * Build a submit VAA transaction
-       * @param marketAddress Market Address
-       * @param marketSnapshots {@link MarketSnapshots}
-       * @param marketOracles {@link MarketOracles}
-       * @returns Submit VAA transaction data.
-       */
-      submitVaa: ({ marketAddress, marketOracles }: OmitBound<BuildSubmitVaaTxArgs>) => {
-        return buildSubmitVaaTx({
-          chainId: this.config.chainId,
-          pythClient: this.config.pythClient,
-          marketAddress,
-          marketOracles,
-        })
-      },
-      /**
        * Build a place order transaction. Can be used to set combined limit, stop loss and
        * take profit orders.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
@@ -594,7 +575,7 @@ export class MarketsModule {
         if (args.collateralDelta) {
           updateMarketTx = await buildUpdateMarketTx({
             chainId: this.config.chainId,
-            pythClient: this.config.pythClient,
+            oracleClients: this.config.oracleClients,
             publicClient: this.config.publicClient,
             address,
             marketAddress: args.marketAddress,
@@ -731,7 +712,6 @@ export class MarketsModule {
        * @param marketAddress Market Address
        * @param marketSnapshots {@link MarketSnapshots}
        * @param marketOracles {@link MarketOracles}
-       * @param pythClient Pyth Client
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
@@ -748,18 +728,6 @@ export class MarketsModule {
         return hash
       },
       /**
-       * Send a submit VAA transaction
-       * @param marketAddress Market Address
-       * @param marketSnapshots {@link MarketSnapshots}
-       * @param marketOracles {@link MarketOracles}
-       * @returns Transaction Hash.
-       */
-      submitVaa: async (...args: Parameters<typeof this.build.submitVaa>) => {
-        const tx = await this.build.submitVaa(...args)
-        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
-        return hash
-      },
-      /**
        * Send a limit order transaction
        * @param chainId Chain ID
        * @param publicClient Public Client
@@ -770,7 +738,6 @@ export class MarketsModule {
        * @param selectedLimitComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
-       * @param pythClient Pyth Client
        * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
        * @returns Transaction hash.

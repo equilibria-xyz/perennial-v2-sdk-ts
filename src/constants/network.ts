@@ -13,6 +13,7 @@ export type SupportedChainId = (typeof SupportedChainIds)[number]
 export const BackupPythClient = new HermesClient('https://hermes.pyth.network', {
   timeout: 30000,
 })
+export const pythBenchmarksURL = 'https://benchmarks.pyth.network'
 
 export const chains: { [chainId in SupportedChainId]: Chain } = {
   [arbitrum.id]: arbitrum,

@@ -1,7 +1,6 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
-import { Address, Hex, PublicClient, encodeFunctionData, getAddress } from 'viem'
+import { Address, PublicClient, encodeFunctionData, getAddress } from 'viem'
 
-import { MarketAbi, MultiInvokerAbi, PythFactoryAbi } from '../..'
+import { MarketAbi, MultiInvokerAbi } from '../..'
 import {
   OrderExecutionDeposit,
   PositionSide,
@@ -10,12 +9,12 @@ import {
   addressToMarket,
 } from '../../constants'
 import { InterfaceFee } from '../../constants'
-import { MultiInvokerAddresses, PythFactoryAddresses } from '../../constants/contracts'
+import { MultiInvokerAddresses } from '../../constants/contracts'
 import { MultiInvokerAction } from '../../types/perennial'
 import { BigOrZero, nowSeconds } from '../../utils'
 import { buildCancelOrder, buildCommitPrice, buildPlaceTriggerOrder, buildUpdateMarket } from '../../utils/multiinvoker'
-import { buildCommitmentsForOracles, getRecentVaa } from '../../utils/pythUtils'
 import { getMultiInvokerContract, getOracleContract } from '../contracts'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OpenOrder } from './graph'
 
@@ -28,7 +27,7 @@ export type BuildUpdateMarketTxArgs = {
   marketAddress: Address
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   address: Address
   collateralDelta?: bigint
   positionAbs?: bigint
@@ -44,7 +43,7 @@ export async function buildUpdateMarketTx({
   marketAddress,
   marketSnapshots,
   marketOracles,
-  pythClient,
+  oracleClients,
   address,
   side,
   positionAbs,
@@ -66,7 +65,7 @@ export async function buildUpdateMarketTx({
       chainId,
       address,
       marketOracles,
-      pythClient,
+      oracleClients,
       markets: [market],
     })
   }
@@ -107,11 +106,11 @@ export async function buildUpdateMarketTx({
 
   // Only add the price commit if the price is stale
   if (isPriceStale) {
-    const [{ version, ids, value, updateData }] = await buildCommitmentsForOracles({
+    const [{ version, ids, value, updateData }] = await oracleCommitmentsLatest({
       chainId,
-      pyth: pythClient,
+      oracleClients: oracleClients,
       publicClient,
-      marketOracles: [oracleInfo],
+      requests: marketOraclesToUpdateDataRequest([oracleInfo]),
       onError: onCommitmentError,
     })
     const commitAction = buildCommitPrice({
@@ -134,34 +133,6 @@ export async function buildUpdateMarketTx({
   return {
     data,
     to: multiInvoker.address,
-    value: 1n,
-  }
-}
-
-export type BuildSubmitVaaTxArgs = {
-  chainId: SupportedChainId
-  pythClient: HermesClient | HermesClient[]
-  marketAddress: Address
-  marketOracles: MarketOracles
-}
-
-export async function buildSubmitVaaTx({ chainId, marketAddress, marketOracles, pythClient }: BuildSubmitVaaTxArgs) {
-  const oracleInfo = Object.values(marketOracles).find((o) => o.marketAddress === marketAddress)
-  if (!oracleInfo) return
-
-  const [{ version, vaa }] = await getRecentVaa({
-    pyth: pythClient,
-    feeds: [oracleInfo],
-  })
-
-  const data = encodeFunctionData({
-    functionName: 'commit',
-    abi: PythFactoryAbi,
-    args: [[oracleInfo.providerId], version, vaa as Hex],
-  })
-  return {
-    data,
-    to: PythFactoryAddresses[chainId],
     value: 1n,
   }
 }

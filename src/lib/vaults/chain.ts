@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import {
   Address,
   PublicClient,
@@ -25,8 +24,8 @@ import { PerennialVaultType, chainVaultsWithAddress } from '../../constants/vaul
 import { notEmpty, sum } from '../../utils/arrayUtils'
 import { Big6Math } from '../../utils/big6Utils'
 import { Big18Math } from '../../utils/big18Utils'
-import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type VaultSnapshots = NonNullable<Awaited<ReturnType<typeof fetchVaultSnapshots>>>
 export type VaultSnapshot = ChainVaultSnapshot & {
@@ -42,7 +41,7 @@ export async function fetchVaultSnapshots({
   publicClient,
   address = zeroAddress,
   marketOracles,
-  pythClient,
+  oracleClients,
   onError,
   onSuccess,
 }: {
@@ -50,7 +49,7 @@ export async function fetchVaultSnapshots({
   address: Address
   marketOracles?: MarketOracles
   publicClient: PublicClient
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   onError?: () => void
   onSuccess?: () => void
 }) {
@@ -68,9 +67,9 @@ export async function fetchVaultSnapshots({
     address,
     marketOracles,
     publicClient,
-    pyth: Array.isArray(pythClient) ? pythClient : [pythClient],
-    onPythError: onError,
-    resetPythError: onSuccess,
+    oracleClients: oracleClients,
+    onOracleError: onError,
+    resetOracleError: onSuccess,
   })
 
   const vaultSnapshots = snapshotData.vault.reduce(
@@ -115,29 +114,29 @@ const fetchVaultSnapshotsAfterSettle = async ({
   address,
   marketOracles,
   publicClient,
-  pyth,
-  onPythError,
-  resetPythError,
+  oracleClients,
+  onOracleError,
+  resetOracleError,
 }: {
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: HermesClient[]
-  onPythError?: () => void
-  resetPythError?: () => void
+  oracleClients: OracleClients
+  onOracleError?: () => void
+  resetOracleError?: () => void
 }) => {
   const vaults = chainVaultsWithAddress(chainId)
   const vaultLensAddress = getContractAddress({ from: address, nonce: MaxUint256 - 1n })
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
 
-  const priceCommitments = await buildCommitmentsForOracles({
+  const priceCommitments = await oracleCommitmentsLatest({
     chainId,
-    marketOracles: Object.values(marketOracles),
-    pyth,
+    oracleClients: oracleClients,
     publicClient,
-    onError: onPythError,
-    onSuccess: resetPythError,
+    requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
+    onError: onOracleError,
+    onSuccess: resetOracleError,
   })
 
   const vaultAddresses = vaults.map(({ vaultAddress }) => vaultAddress)

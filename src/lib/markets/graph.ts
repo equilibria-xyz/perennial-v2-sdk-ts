@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
 import { Address, PublicClient, getAddress } from 'viem'
 
@@ -39,6 +38,7 @@ import {
   orderSize,
   side as positionSide,
 } from '../../utils/positionUtils'
+import { OracleClients } from '../oracle'
 import { MarketSnapshots, fetchMarketSnapshots } from './chain'
 
 /**
@@ -49,7 +49,7 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
  * @param address Wallet Address
  * @param markToMarket [true] Whether to include latest market accumulations in the PNL calculations
  * @param publicClient Viem Public Client
- * @param pythClient PythClient
+ * @param oracleClients {@link OracleClients}
  * @param graphClient GraphQLClient
  * @returns User's PnL for an active position.
  */
@@ -59,7 +59,7 @@ export async function fetchActivePositionsPnl({
   chainId,
   address,
   markToMarket = true,
-  pythClient,
+  oracleClients,
   publicClient,
   graphClient,
 }: {
@@ -68,7 +68,7 @@ export async function fetchActivePositionsPnl({
   marketSnapshots?: MarketSnapshots
   markToMarket?: boolean
   chainId: SupportedChainId
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   publicClient: PublicClient
   graphClient: GraphQLClient
 }): Promise<
@@ -86,7 +86,7 @@ export async function fetchActivePositionsPnl({
     marketSnapshots = await fetchMarketSnapshots({
       chainId,
       address,
-      pythClient,
+      oracleClients,
       publicClient,
       markets,
     })

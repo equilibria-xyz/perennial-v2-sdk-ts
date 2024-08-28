@@ -1,4 +1,4 @@
-import { Address, getAddress } from 'viem'
+import { Address, getAddress, zeroAddress } from 'viem'
 import { arbitrum, arbitrumSepolia } from 'viem/chains'
 
 import { SupportedChainId } from './network'
@@ -43,4 +43,14 @@ export const USDCAddresses: AddressMapping = {
 export const PythFactoryAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x663B38A93FdC2164D45F35051B0F905211d1C9E4'),
   [arbitrumSepolia.id]: getAddress('0xC3bE5FcBfDD38f5c6eb5d8cDdE712eb1d54A1Aa1'),
+}
+
+export const CryptexFactoryAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x161Ef7447eC2B3F9425edc405830A111F4033Cb6'),
+}
+
+export const ChainlinkFactoryAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x5250115dde6ce8d11e619003E0B2d816Dcb4546e'),
 }

@@ -1,4 +1,3 @@
-import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
 
 import {
@@ -16,8 +15,8 @@ import {
 } from '../..'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
-import { buildCommitmentsForOracles } from '../../utils/pythUtils'
 import { getKeeperFactoryContract, getKeeperOracleContract, getMarketContract, getOracleContract } from '../contracts'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -36,7 +35,10 @@ export async function fetchMarketOracles(
   const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
     const metadata = MarketMetadata[market]
     const marketContract = getMarketContract(marketAddress, publicClient)
-    const oracleAddress = await marketContract.read.oracle()
+    const [riskParameter, oracleAddress] = await Promise.all([
+      marketContract.read.riskParameter(),
+      marketContract.read.oracle(),
+    ])
     // Fetch oracle data
     const oracle = getOracleContract(oracleAddress, publicClient)
     const global = await oracle.read.global()
@@ -60,6 +62,7 @@ export async function fetchMarketOracles(
       providerId,
       underlyingId,
       minValidTime: validFrom,
+      staleAfter: riskParameter.staleAfter,
     }
   }
 
@@ -121,7 +124,7 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
 /**
  * Fetches market snapshots for a given address
  * @param publicClient Public Client
- * @param pythClient Pyth Client
+ * @param oracleClients Oracle Clients {@link OracleClients}
  * @param chainId Chain ID {@link SupportedChainId}
  * @param address Wallet Address
  * @param marketOracles {@link MarketOracles}
@@ -131,7 +134,7 @@ export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketS
  */
 export async function fetchMarketSnapshots({
   publicClient,
-  pythClient,
+  oracleClients,
   chainId,
   address,
   marketOracles,
@@ -140,7 +143,7 @@ export async function fetchMarketSnapshots({
   onSuccess,
 }: {
   publicClient: PublicClient
-  pythClient: HermesClient | HermesClient[]
+  oracleClients: OracleClients
   chainId: SupportedChainId
   address: Address
   marketOracles?: MarketOracles
@@ -156,9 +159,9 @@ export async function fetchMarketSnapshots({
     address,
     marketOracles,
     publicClient,
-    pyth: Array.isArray(pythClient) ? pythClient : [pythClient],
-    onPythError: onError,
-    resetPythError: onSuccess,
+    oracleClients,
+    onOracleError: onError,
+    resetOracleError: onSuccess,
   })
   if (snapshotData.commitments.some((commitment) => commitment !== '0x')) {
     const commitmentError = snapshotData.commitments.find((commitment) => commitment !== '0x')
@@ -292,26 +295,27 @@ async function fetchMarketSnapshotsAfterSettle({
   address,
   marketOracles,
   publicClient,
-  pyth,
-  onPythError,
-  resetPythError,
+  oracleClients,
+  onOracleError,
+  resetOracleError,
 }: {
   chainId: SupportedChainId
   address: Address
   marketOracles: MarketOracles
   publicClient: PublicClient
-  pyth: HermesClient[]
-  onPythError?: () => void
-  resetPythError?: () => void
+  oracleClients: OracleClients
+  onOracleError?: () => void
+  resetOracleError?: () => void
 }) {
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
-  const priceCommitments = await buildCommitmentsForOracles({
+
+  const priceCommitments = await oracleCommitmentsLatest({
     chainId,
-    marketOracles: Object.values(marketOracles),
-    pyth,
-    onError: onPythError,
-    onSuccess: resetPythError,
+    oracleClients: oracleClients,
     publicClient,
+    requests: marketOraclesToUpdateDataRequest(Object.values(marketOracles)),
+    onError: onOracleError,
+    onSuccess: resetOracleError,
   })
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)

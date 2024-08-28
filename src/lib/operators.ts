@@ -292,7 +292,7 @@ export async function checkMultiInvokerOperatorApproval({
   return isOperatorApproved
 }
 
-type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'pythClient' | 'address'>
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'address'>
 
 /**
  * Operator module class
