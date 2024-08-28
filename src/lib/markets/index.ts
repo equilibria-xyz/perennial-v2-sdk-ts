@@ -438,7 +438,6 @@ export class MarketsModule {
        * @param marketAddress Market Address
        * @param marketSnapshots {@link MarketSnapshots}
        * @param marketOracles {@link MarketOracles}
-       * @param pythClient Pyth Client
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
@@ -713,7 +712,6 @@ export class MarketsModule {
        * @param marketAddress Market Address
        * @param marketSnapshots {@link MarketSnapshots}
        * @param marketOracles {@link MarketOracles}
-       * @param pythClient Pyth Client
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @param collateralDelta BigInt - Collateral delta
        * @param positionAbs BigInt - Absolute size of desired position
@@ -740,7 +738,6 @@ export class MarketsModule {
        * @param selectedLimitComparison Trigger comparison for order execution. See {@link TriggerComparison}
        * @param interfaceFee {@link InterfaceFee}
        * @param referralFee {@link InterfaceFee}
-       * @param pythClient Pyth Client
        * @param onCommitmentError Callback for commitment error
        * @param limitPrice BigInt - Limit price
        * @returns Transaction hash.

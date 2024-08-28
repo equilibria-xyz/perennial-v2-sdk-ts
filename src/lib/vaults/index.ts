@@ -82,7 +82,7 @@ type VaultConfig = {
  * @param config.chainId {@link SupportedChainId}
  * @param config.publicClient Public Client
  * @param config.graphClient GraphQl Client
- * @param config.pythClient Pyth Client
+ * @param config.oracleClients Oracle Clients
  * @param config.walletClient Wallet Client
  * @param config.operatingFor If set, the module will read data and send multi-invoker transactions on behalf of this address.
  *
