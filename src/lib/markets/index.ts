@@ -1,5 +1,5 @@
 import { GraphQLClient } from 'graphql-request'
-import { Address, Hash, PublicClient, TransactionReceipt, WalletClient, zeroAddress } from 'viem'
+import { Address, Hash, Hex, PublicClient, TransactionReceipt, WalletClient, zeroAddress } from 'viem'
 
 import {
   InterfaceFee,
@@ -71,6 +71,7 @@ export type BuildModifyPositionTxArgs = {
     interfaceFee?: InterfaceFee
     referralFee?: InterfaceFee
   }
+  optionalOrders?: { data: Hex; to: Address; value: bigint }[]
   onCommitmentError?: () => any
 } & WithChainIdAndPublicClient
 
@@ -370,6 +371,7 @@ export class MarketsModule {
        * @param referralFee {@link InterfaceFee}
        * @param stopLossFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
        * @param takeProfitFees Object consisting of { interfaceFee: {@link InterfaceFee}, referralFee: {@link InterfaceFee} }
+       * @param optionalOrders List of optional Orders to include in the transaction
        * @returns Modify position transaction data.
        */
       modifyPosition: async (args: OmitBound<BuildModifyPositionTxArgs> & OptionalAddress) => {
@@ -428,7 +430,13 @@ export class MarketsModule {
           })
         }
 
-        const multiInvokerTxs = [updateMarketTx, takeProfitTx, stopLossTx, cancelOrderTx].filter(notEmpty)
+        const multiInvokerTxs = [
+          updateMarketTx,
+          takeProfitTx,
+          stopLossTx,
+          cancelOrderTx,
+          ...(args.optionalOrders ?? []),
+        ].filter(notEmpty)
 
         return mergeMultiInvokerTxs(multiInvokerTxs)
       },
