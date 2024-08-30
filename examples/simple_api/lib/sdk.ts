@@ -1,4 +1,4 @@
-import PerennialSDK from '@perennial/sdk'
+import PerennialSDK, { SupportedChainId } from '@perennial/sdk'
 import { createWalletClient, http, zeroAddress } from 'viem'
 import { arbitrum } from 'viem/chains' // Required for BigInt serialization
 
@@ -6,7 +6,7 @@ import { arbitrum } from 'viem/chains' // Required for BigInt serialization
   return this.toString()
 }
 
-const setupSDK = (wallet?: `0x${string}`) => {
+const setupSDK = (wallet?: `0x${string}`, chainId?: SupportedChainId) => {
   if (wallet) {
     const walletClient = createWalletClient({
       account: (wallet as `0x${string}`) || zeroAddress,
@@ -15,7 +15,7 @@ const setupSDK = (wallet?: `0x${string}`) => {
     })
     // Initalize the SDK
     const sdk = new PerennialSDK.default({
-      chainId: 42161,
+      chainId: chainId ?? 42161,
       rpcUrl: process.env.RPC_URL_ARBITRUM!,
       graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
       pythUrl: process.env.PYTH_URL!,
@@ -27,7 +27,7 @@ const setupSDK = (wallet?: `0x${string}`) => {
   } else {
     // Initalize the SDK
     const sdk = new PerennialSDK.default({
-      chainId: 42161,
+      chainId: chainId ?? 42161,
       rpcUrl: process.env.RPC_URL_ARBITRUM!,
       graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
       pythUrl: process.env.PYTH_URL!,
