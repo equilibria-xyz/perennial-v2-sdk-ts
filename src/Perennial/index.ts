@@ -134,6 +134,10 @@ export default class PerennialSDK {
     return this._oracleClients
   }
 
+  get supportedMarkets() {
+    return this.config.supportedMarkets
+  }
+
   private buildPythClients(urls_: string | string[]) {
     const urls = Array.isArray(urls_) ? urls_ : [urls_]
 

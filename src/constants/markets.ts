@@ -38,6 +38,7 @@ export enum SupportedMarket {
   doge = 'doge',
   eur = 'eur',
   gbp = 'gbp',
+  meem = 'meem',
 
   unknown = 'unknown',
 }
@@ -260,6 +261,15 @@ export const MarketMetadata: MarketMetadataType = {
     transform: linearTransform,
     untransform: linearUntransform,
   },
+  [SupportedMarket.meem]: {
+    symbol: 'MEEM-USD',
+    name: 'MEEM',
+    baseCurrency: SupportedMarket.meem,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xa217ab749c14596d69a6206c34bda27188dcfaf9d38dfcd9b76a0b348e78be44',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -305,6 +315,7 @@ export const ChainMarkets: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
     [SupportedMarket.cmsqETH]: getAddress('0xfC51de1f1a4ddeE5AD50df492f0A642cF1894E73'),
     [SupportedMarket.xau]: getAddress('0x122b781CF4fCa219aDB9704132D7fa11460D4fBa'),
+    [SupportedMarket.meem]: getAddress('0x7A2fE407C4F459eD62ea75fEeBB27188e4F9E6aD'),
   },
 }
 

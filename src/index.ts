@@ -270,7 +270,7 @@ export {
   type OracleClients,
   type UpdateDataRequest,
   type UpdateDataResponse,
-  oracleProviderTypeForFactoryAddress as oracleProviderForFactoryAddress,
+  oracleProviderTypeForFactoryAddress,
   oracleCommitmentsLatest,
   oracleCommitmentsTimestamp,
   marketOraclesToUpdateDataRequest,

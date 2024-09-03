@@ -19,6 +19,7 @@ const setupSDK = (wallet?: `0x${string}`) => {
       rpcUrl: process.env.RPC_URL_ARBITRUM!,
       graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
       pythUrl: process.env.PYTH_URL!,
+      cryptexUrl: process.env.CRYPTEX_URL!,
       // @ts-ignore
       walletClient,
     })
