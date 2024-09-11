@@ -117,7 +117,7 @@ export const MarketMetadata: MarketMetadataType = {
     untransform: linearUntransform,
   },
   [SupportedMarket.pol]: {
-    symbol: 'MATIC-USD',
+    symbol: 'POL-USD',
     name: 'Polygon Ecosystem Token',
     baseCurrency: SupportedMarket.pol,
     quoteCurrency: QuoteCurrency.usd,
