@@ -25,6 +25,11 @@ export const OracleFactoryAddresses: AddressMapping = {
   [arbitrumSepolia.id]: getAddress('0x9d2CaE012AAe0aE00f4d8F42CD287a6923612456'),
 }
 
+export const VerifierAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x6FaabfA2fDb093A027Ed16F291ADc7F07780014A'),
+}
+
 export const DSUAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x52C64b8998eB7C80b6F526E99E29ABdcC86B841b'),
   [arbitrumSepolia.id]: getAddress('0x5FA881826AD000D010977645450292701bc2f56D'),
@@ -41,13 +46,13 @@ export const USDCAddresses: AddressMapping = {
 }
 
 export const PythFactoryAddresses: AddressMapping = {
-  [arbitrum.id]: getAddress('0x663B38A93FdC2164D45F35051B0F905211d1C9E4'),
-  [arbitrumSepolia.id]: getAddress('0xC3bE5FcBfDD38f5c6eb5d8cDdE712eb1d54A1Aa1'),
+  [arbitrum.id]: getAddress('0x5b6167000A778135B072cF42c1AE37b5bE175c43'),
+  [arbitrumSepolia.id]: getAddress('0xC2782aaA8aEd48056f0E2D9877681267B0bcC065'),
 }
 
 export const CryptexFactoryAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x8bF8a44A6b2f4a174404854ec14c05204cF31dA9'),
-  [arbitrumSepolia.id]: getAddress('0x161Ef7447eC2B3F9425edc405830A111F4033Cb6'),
+  [arbitrumSepolia.id]: getAddress('0x4c71662764748375545fD2613d19F21c9C8A04FE'),
 }
 
 export const ChainlinkFactoryAddresses: AddressMapping = {

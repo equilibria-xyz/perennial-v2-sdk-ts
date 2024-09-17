@@ -401,3 +401,5 @@ export const OrderExecutionDeposit = Big6Math.fromFloatString('20')
  * @description When passed to trigger orders, this value will fully close the position.
  */
 export const TriggerOrderFullCloseMagicValue = 0n
+
+export type SupportedMarketMapping<V> = Record<SupportedMarket, V>

@@ -339,7 +339,7 @@ export const calcTradeFee = ({
     pre: {
       position: { long: preLong, short: preShort },
     },
-    parameter: { positionFee },
+    parameter: { makerFee: marketMakerFee, takerFee: marketTakerFee },
     global: { latestPrice },
     makerTotal,
     takerTotal,
@@ -347,6 +347,7 @@ export const calcTradeFee = ({
 
   const notional = calcNotional(positionDelta, latestPrice)
 
+  // TODO: v2.3- Update this for new market fee calculations
   if (isMaker) {
     const adjustedMakerTotal = makerTotal + Big6Math.abs(positionDelta)
     const makerProportionalFeeRate = Big6Math.div(
@@ -358,9 +359,11 @@ export const calcTradeFee = ({
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
     const tradeFee = makerLinearFee + makerProportionalFee
     const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
+    const subtractiveFee = Big6Math.mul(makerLinearFee, referralFee)
+    const marketFee = Big6Math.mul(makerLinearFee - subtractiveFee, marketMakerFee)
 
     tradeFeeInfo = {
-      tradeFee,
+      tradeFee: tradeFee + marketFee,
       tradeImpact: 0n,
       feeBasisPoints,
       proportionalFee: makerProportionalFee,
@@ -388,7 +391,7 @@ export const calcTradeFee = ({
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
 
-  const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, positionFee)
+  const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, marketTakerFee)
   const tradeFee = subtractiveFee + marketFee
   const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
   const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee - tradeFee
@@ -504,6 +507,7 @@ export function calcTotalPositionChangeFee({
   direction,
   referrerInterfaceFeeDiscount,
   interfaceFeeBps,
+  settlementFee,
 }: {
   chainId: SupportedChainId
   positionDelta: bigint
@@ -512,6 +516,7 @@ export function calcTotalPositionChangeFee({
   positionStatus?: PositionStatus
   referrerInterfaceFeeDiscount: bigint
   interfaceFeeBps?: bigint
+  settlementFee: bigint
 }) {
   const tradeFee = calcTradeFee({
     positionDelta,
@@ -529,8 +534,6 @@ export function calcTotalPositionChangeFee({
     referrerInterfaceFeeShare: 0n,
     interfaceFeeBps,
   })
-
-  const settlementFee = positionDelta !== 0n && marketSnapshot ? marketSnapshot.parameter.settlementFee : 0n
 
   return {
     total: tradeFee.tradeFee + tradeFee.tradeImpact + interfaceFee.interfaceFee + settlementFee,

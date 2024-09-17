@@ -1,5 +1,16 @@
 export const MarketAbi = [
   {
+    inputs: [
+      {
+        internalType: 'contract IVerifier',
+        name: 'verifier_',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'constructor',
+  },
+  {
     inputs: [],
     name: 'Adiabatic6ZeroScaleError',
     type: 'error',
@@ -18,6 +29,11 @@ export const MarketAbi = [
   {
     inputs: [],
     name: 'GlobalStorageInvalidError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'GuaranteeStorageInvalidError',
     type: 'error',
   },
   {
@@ -114,6 +130,11 @@ export const MarketAbi = [
     type: 'error',
   },
   {
+    inputs: [],
+    name: 'MarketInvalidIntentFeeError',
+    type: 'error',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',
@@ -158,6 +179,11 @@ export const MarketAbi = [
   {
     inputs: [],
     name: 'MarketNotCoordinatorError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'MarketNotOperatorError',
     type: 'error',
   },
   {
@@ -323,17 +349,17 @@ export const MarketAbi = [
           },
           {
             internalType: 'Fixed6',
-            name: 'linearFee',
+            name: 'priceOverride',
             type: 'int256',
           },
           {
-            internalType: 'Fixed6',
-            name: 'proportionalFee',
-            type: 'int256',
+            internalType: 'UFixed6',
+            name: 'tradeFee',
+            type: 'uint256',
           },
           {
             internalType: 'Fixed6',
-            name: 'adiabaticFee',
+            name: 'offset',
             type: 'int256',
           },
           {
@@ -349,6 +375,11 @@ export const MarketAbi = [
           {
             internalType: 'UFixed6',
             name: 'subtractiveFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'solverFee',
             type: 'uint256',
           },
         ],
@@ -416,6 +447,12 @@ export const MarketAbi = [
         type: 'address',
       },
       {
+        indexed: true,
+        internalType: 'address',
+        name: 'receiver',
+        type: 'address',
+      },
+      {
         indexed: false,
         internalType: 'UFixed6',
         name: 'amount',
@@ -436,19 +473,6 @@ export const MarketAbi = [
       },
     ],
     name: 'Initialized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'contract IOracleProvider',
-        name: 'newOracle',
-        type: 'address',
-      },
-    ],
-    name: 'OracleUpdated',
     type: 'event',
   },
   {
@@ -528,6 +552,62 @@ export const MarketAbi = [
         name: 'order',
         type: 'tuple',
       },
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'orders',
+            type: 'uint256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'notional',
+            type: 'int256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'referral',
+            type: 'uint256',
+          },
+        ],
+        indexed: false,
+        internalType: 'struct Guarantee',
+        name: 'guarantee',
+        type: 'tuple',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'liquidator',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'orderReferrer',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'guaranteeReferrer',
+        type: 'address',
+      },
     ],
     name: 'OrderCreated',
     type: 'event',
@@ -549,12 +629,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'positionFee',
+            name: 'makerFee',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'oracleFee',
+            name: 'takerFee',
             type: 'uint256',
           },
           {
@@ -571,21 +651,6 @@ export const MarketAbi = [
             internalType: 'uint256',
             name: 'maxPendingLocal',
             type: 'uint256',
-          },
-          {
-            internalType: 'UFixed6',
-            name: 'settlementFee',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bool',
-            name: 'takerCloseAlways',
-            type: 'bool',
-          },
-          {
-            internalType: 'bool',
-            name: 'makerCloseAlways',
-            type: 'bool',
           },
           {
             internalType: 'bool',
@@ -688,42 +753,42 @@ export const MarketAbi = [
         components: [
           {
             internalType: 'UFixed6',
-            name: 'positionFee',
+            name: 'tradeFee',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'positionFeeMaker',
+            name: 'subtractiveFee',
             type: 'uint256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'tradeOffset',
+            type: 'int256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'tradeOffsetMaker',
+            type: 'int256',
           },
           {
             internalType: 'UFixed6',
-            name: 'positionFeeProtocol',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed6',
-            name: 'positionFeeSubtractive',
+            name: 'tradeOffsetMarket',
             type: 'uint256',
           },
           {
             internalType: 'Fixed6',
-            name: 'positionFeeExposure',
+            name: 'adiabaticExposure',
             type: 'int256',
           },
           {
             internalType: 'Fixed6',
-            name: 'positionFeeExposureMaker',
+            name: 'adiabaticExposureMaker',
             type: 'int256',
           },
           {
             internalType: 'Fixed6',
-            name: 'positionFeeExposureProtocol',
-            type: 'int256',
-          },
-          {
-            internalType: 'Fixed6',
-            name: 'positionFeeImpact',
+            name: 'adiabaticExposureMarket',
             type: 'int256',
           },
           {
@@ -857,16 +922,11 @@ export const MarketAbi = [
               },
               {
                 internalType: 'UFixed6',
-                name: 'adiabaticFee',
-                type: 'uint256',
-              },
-              {
-                internalType: 'UFixed6',
                 name: 'scale',
                 type: 'uint256',
               },
             ],
-            internalType: 'struct InverseAdiabatic6',
+            internalType: 'struct NoopAdiabatic6',
             name: 'makerFee',
             type: 'tuple',
           },
@@ -1026,6 +1086,19 @@ export const MarketAbi = [
     type: 'event',
   },
   {
+    inputs: [],
+    name: 'beneficiary',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -1079,10 +1152,35 @@ export const MarketAbi = [
     type: 'function',
   },
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+    ],
     name: 'claimFee',
-    outputs: [],
+    outputs: [
+      {
+        internalType: 'UFixed6',
+        name: 'feeReceived',
+        type: 'uint256',
+      },
+    ],
     stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'coordinator',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -1130,11 +1228,6 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
-            internalType: 'UFixed6',
-            name: 'donation',
-            type: 'uint256',
-          },
-          {
             internalType: 'Fixed6',
             name: 'latestPrice',
             type: 'int256',
@@ -1163,6 +1256,137 @@ export const MarketAbi = [
           },
         ],
         internalType: 'struct Global',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'guarantee',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'orders',
+            type: 'uint256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'notional',
+            type: 'int256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'referral',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct Guarantee',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    name: 'guaranteeReferrers',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'guarantees',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'orders',
+            type: 'uint256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'notional',
+            type: 'int256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'takerFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'referral',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct Guarantee',
         name: '',
         type: 'tuple',
       },
@@ -1262,10 +1486,41 @@ export const MarketAbi = [
   },
   {
     inputs: [],
+    name: 'migrate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'oracle',
     outputs: [
       {
         internalType: 'contract IOracleProvider',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    name: 'orderReferrers',
+    outputs: [
+      {
+        internalType: 'address',
         name: '',
         type: 'address',
       },
@@ -1291,12 +1546,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'positionFee',
+            name: 'makerFee',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'oracleFee',
+            name: 'takerFee',
             type: 'uint256',
           },
           {
@@ -1315,21 +1570,6 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
-            internalType: 'UFixed6',
-            name: 'settlementFee',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bool',
-            name: 'takerCloseAlways',
-            type: 'bool',
-          },
-          {
-            internalType: 'bool',
-            name: 'makerCloseAlways',
-            type: 'bool',
-          },
-          {
             internalType: 'bool',
             name: 'closed',
             type: 'bool',
@@ -1346,19 +1586,6 @@ export const MarketAbi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'payoff',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'pure',
     type: 'function',
   },
   {
@@ -1761,30 +1988,6 @@ export const MarketAbi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    name: 'referrers',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
     inputs: [],
     name: 'riskParameter',
     outputs: [
@@ -1841,16 +2044,11 @@ export const MarketAbi = [
               },
               {
                 internalType: 'UFixed6',
-                name: 'adiabaticFee',
-                type: 'uint256',
-              },
-              {
-                internalType: 'UFixed6',
                 name: 'scale',
                 type: 'uint256',
               },
             ],
-            internalType: 'struct InverseAdiabatic6',
+            internalType: 'struct NoopAdiabatic6',
             name: 'makerFee',
             type: 'tuple',
           },
@@ -1981,6 +2179,126 @@ export const MarketAbi = [
         type: 'address',
       },
       {
+        internalType: 'Fixed6',
+        name: 'amount',
+        type: 'int256',
+      },
+      {
+        internalType: 'Fixed6',
+        name: 'collateral',
+        type: 'int256',
+      },
+      {
+        internalType: 'address',
+        name: 'referrer',
+        type: 'address',
+      },
+    ],
+    name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        components: [
+          {
+            internalType: 'Fixed6',
+            name: 'amount',
+            type: 'int256',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'price',
+            type: 'int256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'fee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'originator',
+            type: 'address',
+          },
+          {
+            internalType: 'address',
+            name: 'solver',
+            type: 'address',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'collateralization',
+            type: 'uint256',
+          },
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'signer',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'domain',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nonce',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'group',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'expiry',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct Common',
+            name: 'common',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct Intent',
+        name: 'intent',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'signature',
+        type: 'bytes',
+      },
+    ],
+    name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
         internalType: 'UFixed6',
         name: 'newMaker',
         type: 'uint256',
@@ -2057,12 +2375,12 @@ export const MarketAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IOracleProvider',
-        name: 'newOracle',
+        internalType: 'address',
+        name: 'newBeneficiary',
         type: 'address',
       },
     ],
-    name: 'updateOracle',
+    name: 'updateBeneficiary',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -2071,14 +2389,17 @@ export const MarketAbi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'newBeneficiary',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
         name: 'newCoordinator',
         type: 'address',
       },
+    ],
+    name: 'updateCoordinator',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
       {
         components: [
           {
@@ -2093,12 +2414,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'positionFee',
+            name: 'makerFee',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'oracleFee',
+            name: 'takerFee',
             type: 'uint256',
           },
           {
@@ -2115,21 +2436,6 @@ export const MarketAbi = [
             internalType: 'uint256',
             name: 'maxPendingLocal',
             type: 'uint256',
-          },
-          {
-            internalType: 'UFixed6',
-            name: 'settlementFee',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bool',
-            name: 'takerCloseAlways',
-            type: 'bool',
-          },
-          {
-            internalType: 'bool',
-            name: 'makerCloseAlways',
-            type: 'bool',
           },
           {
             internalType: 'bool',
@@ -2207,16 +2513,11 @@ export const MarketAbi = [
               },
               {
                 internalType: 'UFixed6',
-                name: 'adiabaticFee',
-                type: 'uint256',
-              },
-              {
-                internalType: 'UFixed6',
                 name: 'scale',
                 type: 'uint256',
               },
             ],
-            internalType: 'struct InverseAdiabatic6',
+            internalType: 'struct NoopAdiabatic6',
             name: 'makerFee',
             type: 'tuple',
           },
@@ -2309,15 +2610,23 @@ export const MarketAbi = [
         name: 'newRiskParameter',
         type: 'tuple',
       },
-      {
-        internalType: 'bool',
-        name: 'isMigration',
-        type: 'bool',
-      },
     ],
     name: 'updateRiskParameter',
     outputs: [],
     stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'verifier',
+    outputs: [
+      {
+        internalType: 'contract IVerifier',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -2336,6 +2645,11 @@ export const MarketAbi = [
             internalType: 'bool',
             name: 'valid',
             type: 'bool',
+          },
+          {
+            internalType: 'Fixed6',
+            name: 'price',
+            type: 'int256',
           },
           {
             components: [
@@ -2382,7 +2696,7 @@ export const MarketAbi = [
               },
             ],
             internalType: 'struct Accumulator6',
-            name: 'makerLinearFee',
+            name: 'makerFee',
             type: 'tuple',
           },
           {
@@ -2394,7 +2708,7 @@ export const MarketAbi = [
               },
             ],
             internalType: 'struct Accumulator6',
-            name: 'makerProportionalFee',
+            name: 'takerFee',
             type: 'tuple',
           },
           {
@@ -2406,7 +2720,7 @@ export const MarketAbi = [
               },
             ],
             internalType: 'struct Accumulator6',
-            name: 'takerLinearFee',
+            name: 'makerOffset',
             type: 'tuple',
           },
           {
@@ -2418,7 +2732,7 @@ export const MarketAbi = [
               },
             ],
             internalType: 'struct Accumulator6',
-            name: 'takerProportionalFee',
+            name: 'takerPosOffset',
             type: 'tuple',
           },
           {
@@ -2430,43 +2744,7 @@ export const MarketAbi = [
               },
             ],
             internalType: 'struct Accumulator6',
-            name: 'makerPosFee',
-            type: 'tuple',
-          },
-          {
-            components: [
-              {
-                internalType: 'Fixed6',
-                name: '_value',
-                type: 'int256',
-              },
-            ],
-            internalType: 'struct Accumulator6',
-            name: 'makerNegFee',
-            type: 'tuple',
-          },
-          {
-            components: [
-              {
-                internalType: 'Fixed6',
-                name: '_value',
-                type: 'int256',
-              },
-            ],
-            internalType: 'struct Accumulator6',
-            name: 'takerPosFee',
-            type: 'tuple',
-          },
-          {
-            components: [
-              {
-                internalType: 'Fixed6',
-                name: '_value',
-                type: 'int256',
-              },
-            ],
-            internalType: 'struct Accumulator6',
-            name: 'takerNegFee',
+            name: 'takerNegOffset',
             type: 'tuple',
           },
           {

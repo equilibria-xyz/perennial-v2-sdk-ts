@@ -1,8 +1,11 @@
 import { Address, Hex, decodeFunctionData, encodeAbiParameters, encodeFunctionData, zeroAddress } from 'viem'
 
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
+import { MultiInvokerAddresses } from '../constants'
 import { PositionSide } from '../constants/markets'
-import { MultiInvokerAction } from '../types/perennial'
+import { SupportedChainId } from '../constants/network'
+import { EIP712_Common } from '../types/eip712'
+import { Intent, MultiInvokerAction } from '../types/perennial'
 import { UpdateNoOp } from './positionUtils'
 
 export const buildNoop = (): MultiInvokerAction => ({
@@ -290,11 +293,101 @@ export const buildApproveTarget = ({ target }: { target: Address }): MultiInvoke
   ),
 })
 
+const UpdateIntentInputs = [
+  {
+    type: 'address',
+  },
+  {
+    type: 'tuple',
+    components: [
+      {
+        name: 'amount',
+        type: 'int256',
+      },
+      {
+        name: 'price',
+        type: 'int256',
+      },
+      {
+        name: 'fee',
+        type: 'uint256',
+      },
+      {
+        name: 'originator',
+        type: 'address',
+      },
+      {
+        name: 'solver',
+        type: 'address',
+      },
+      {
+        name: 'collateralization',
+        type: 'uint256',
+      },
+      {
+        name: 'common',
+        type: 'tuple',
+        components: EIP712_Common,
+      },
+    ],
+  },
+  {
+    type: 'bytes',
+  },
+]
+export const buildUpdateIntent = ({
+  market,
+  intent,
+  signature,
+}: {
+  market: Address
+  intent: Intent
+  signature: Hex
+}): MultiInvokerAction => ({
+  action: 9,
+  args: encodeAbiParameters(UpdateIntentInputs, [market, intent, signature]),
+})
+
+export const buildClaimFee = ({ market, unwrap }: { market: Address; unwrap: boolean }): MultiInvokerAction => ({
+  action: 10,
+  args: encodeAbiParameters([{ type: 'address' }, { type: 'bool' }], [market, unwrap]),
+})
+
 export const EmptyInterfaceFee: {
   amount: bigint
   receiver: Address
   unwrap: boolean
 } = { amount: 0n, receiver: zeroAddress, unwrap: false }
+
+/**
+ * Encodes a MultiInvoker invoke transaction
+ * @param chainId - Chain ID
+ * @param actions - MultiInvoker actions
+ * @param address - Address to invoke from
+ * @returns Transaction data object - { data: Hex, value: bigint, to: Address }
+ */
+export const encodeInvoke = ({
+  chainId,
+  actions,
+  address,
+  value,
+}: {
+  chainId: SupportedChainId
+  actions: MultiInvokerAction[]
+  address: Address
+  value: bigint
+}): { to: Address; data: Hex; value: bigint } => {
+  const data = encodeFunctionData({
+    functionName: 'invoke',
+    abi: MultiInvokerAbi,
+    args: [address, actions],
+  })
+  return {
+    to: MultiInvokerAddresses[chainId],
+    data,
+    value,
+  }
+}
 
 /**
  * Combines the transaction data from multiple MultiInvoker transactions into a single transaction

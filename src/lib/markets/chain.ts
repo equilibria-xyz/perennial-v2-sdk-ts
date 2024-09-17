@@ -2,8 +2,8 @@ import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zero
 
 import {
   Big6Math,
+  Big18Math,
   DefaultChain,
-  MarketMetadata,
   MaxUint256,
   PositionSide,
   PositionStatus,
@@ -13,9 +13,17 @@ import {
   calculateFundingAndInterestForSides,
   chainMarketsWithAddress,
 } from '../..'
+import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
+import { SupportedMarketMapping } from '../../constants'
 import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
-import { getKeeperFactoryContract, getKeeperOracleContract, getMarketContract, getOracleContract } from '../contracts'
+import {
+  getKeeperFactoryContract,
+  getKeeperOracleContract,
+  getMarketContract,
+  getOracleContract,
+  getOracleFactoryContract,
+} from '../contracts'
 import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
@@ -31,9 +39,9 @@ export async function fetchMarketOracles(
   publicClient: PublicClient,
   markets?: SupportedMarket[],
 ) {
+  // TODO: Convert this to a Lens call?
   const marketsWithAddress = chainMarketsWithAddress(chainId, markets)
   const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
-    const metadata = MarketMetadata[market]
     const marketContract = getMarketContract(marketAddress, publicClient)
     const [riskParameter, oracleAddress] = await Promise.all([
       marketContract.read.riskParameter(),
@@ -41,28 +49,38 @@ export async function fetchMarketOracles(
     ])
     // Fetch oracle data
     const oracle = getOracleContract(oracleAddress, publicClient)
-    const global = await oracle.read.global()
+    const [global, oracleName] = await Promise.all([oracle.read.global(), oracle.read.name()])
     const [keeperOracle] = await oracle.read.oracles([global[0]])
     const keeperOracleContract = getKeeperOracleContract(keeperOracle, publicClient)
-    const factory = getKeeperFactoryContract(await keeperOracleContract.read.factory(), publicClient)
+    const subOracleFactory = getKeeperFactoryContract(await keeperOracleContract.read.factory(), publicClient)
 
-    // TODO(arjun): Pull these from the factory in v2.3+
-    const providerId = metadata.providerId
-    const [validFrom, underlyingId] = await Promise.all([
-      factory.read.validFrom(),
-      factory.read.toUnderlyingId([providerId]),
-    ])
+    const oracleFactory = getOracleFactoryContract(chainId, publicClient)
+    const id = await oracleFactory.read.ids([oracleAddress])
+    const [parameter, underlyingId, subOracleFactoryType, commitmentGasOracle, settlementGasOracle] = await Promise.all(
+      [
+        subOracleFactory.read.parameter(),
+        subOracleFactory.read.toUnderlyingId([id]),
+        subOracleFactory.read.factoryType(),
+        subOracleFactory.read.commitmentGasOracle(),
+        subOracleFactory.read.settlementGasOracle(),
+      ],
+    )
 
     return {
       market,
       marketAddress,
-      address: oracleAddress,
-      providerFactoryAddress: factory.address,
-      providerAddress: keeperOracle,
-      providerId,
+      oracleName,
+      oracleFactoryAddress: oracleFactory.address,
+      oracleAddress,
+      subOracleFactoryAddress: subOracleFactory.address,
+      subOracleAddress: keeperOracle,
+      subOracleFactoryType,
+      id,
       underlyingId,
-      minValidTime: validFrom,
+      minValidTime: parameter.validFrom,
       staleAfter: riskParameter.staleAfter,
+      commitmentGasOracle,
+      settlementGasOracle,
     }
   }
 
@@ -77,7 +95,7 @@ export async function fetchMarketOracles(
       acc[market.market] = market
       return acc
     },
-    {} as Record<SupportedMarket, Awaited<ReturnType<typeof fetchMarketOracles>>>,
+    {} as SupportedMarketMapping<Awaited<ReturnType<typeof fetchMarketOracles>>>,
   )
 }
 
@@ -212,72 +230,69 @@ export async function fetchMarketSnapshots({
     },
     {} as { [key in SupportedMarket]?: MarketSnapshot },
   )
-  const userSnapshots = snapshotData.user.reduce(
-    (acc, snapshot) => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const pre = snapshotData.userPre.find((pre) => pre.market === snapshot.market)!
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const marketSnapshot = marketSnapshots[snapshot.market]!
-      const marketPrice = marketSnapshot.global.latestPrice ?? 0n
-      const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
-      const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
-      const side = getSideFromPosition(latestPosition)
-      const nextSide = getSideFromPosition(nextPosition)
-      const magnitude = side === PositionSide.none ? 0n : latestPosition[side]
-      const nextMagnitude = nextSide === PositionSide.none ? 0n : nextPosition?.[nextSide] ?? 0n
-      const priceUpdate = snapshot?.priceUpdate
-      if (priceUpdate !== '0x') {
-        console.error('Sync error', snapshot.market, priceUpdate, address)
-      }
-      const hasVersionError =
-        !snapshot.versions[0].valid &&
-        (pre.nextPosition.timestamp < marketSnapshot.pre.latestOracleVersion.timestamp ||
-          pre.nextPosition.timestamp + 60n < BigInt(Math.floor(Date.now() / 1000)))
+  const userSnapshots = snapshotData.user.reduce((acc, snapshot) => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const pre = snapshotData.userPre.find((pre) => pre.market === snapshot.market)!
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const marketSnapshot = marketSnapshots[snapshot.market]!
+    const marketPrice = marketSnapshot.global.latestPrice ?? 0n
+    const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
+    const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
+    const side = getSideFromPosition(latestPosition)
+    const nextSide = getSideFromPosition(nextPosition)
+    const magnitude = side === PositionSide.none ? 0n : latestPosition[side]
+    const nextMagnitude = nextSide === PositionSide.none ? 0n : nextPosition?.[nextSide] ?? 0n
+    const priceUpdate = snapshot?.priceUpdate
+    if (priceUpdate !== '0x') {
+      console.error('Sync error', snapshot.market, priceUpdate, address)
+    }
+    const hasVersionError =
+      !snapshot.versions[0].valid &&
+      (pre.nextPosition.timestamp < marketSnapshot.pre.latestOracleVersion.timestamp ||
+        pre.nextPosition.timestamp + 60n < BigInt(Math.floor(Date.now() / 1000)))
 
-      if (hasVersionError && (magnitude !== 0n || nextMagnitude !== 0n) && magnitude !== nextMagnitude) {
-        console.error('Version error', snapshot.market, address)
-      }
-      acc[snapshot.market] = {
-        ...snapshot,
-        pre,
-        side,
-        nextSide,
-        status: getStatusForSnapshot(magnitude, nextMagnitude, snapshot.local.collateral, hasVersionError, priceUpdate),
-        magnitude,
-        nextMagnitude,
-        maintenance: !Big6Math.isZero(magnitude)
-          ? Big6Math.max(
-              marketSnapshot.riskParameter.minMaintenance,
-              Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(magnitude, marketPrice)),
-            )
-          : 0n,
-        nextMaintenance: !Big6Math.isZero(nextMagnitude)
-          ? Big6Math.max(
-              marketSnapshot.riskParameter.minMaintenance,
-              Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(nextMagnitude, marketPrice)),
-            )
-          : 0n,
-        margin: !Big6Math.isZero(magnitude)
-          ? Big6Math.max(
-              marketSnapshot.riskParameter.minMargin,
-              Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(magnitude, marketPrice)),
-            )
-          : 0n,
-        nextMargin: !Big6Math.isZero(nextMagnitude)
-          ? Big6Math.max(
-              marketSnapshot.riskParameter.minMargin,
-              Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(nextMagnitude, marketPrice)),
-            )
-          : 0n,
-        leverage: calcLeverage(marketPrice, magnitude, snapshot.local.collateral),
-        nextLeverage: calcLeverage(marketPrice, nextMagnitude, snapshot.local.collateral),
-        notional: calcNotional(magnitude, marketPrice),
-        nextNotional: calcNotional(nextMagnitude, marketPrice),
-      }
-      return acc
-    },
-    {} as Record<SupportedMarket, UserMarketSnapshot>,
-  )
+    if (hasVersionError && (magnitude !== 0n || nextMagnitude !== 0n) && magnitude !== nextMagnitude) {
+      console.error('Version error', snapshot.market, address)
+    }
+    acc[snapshot.market] = {
+      ...snapshot,
+      pre,
+      side,
+      nextSide,
+      status: getStatusForSnapshot(magnitude, nextMagnitude, snapshot.local.collateral, hasVersionError, priceUpdate),
+      magnitude,
+      nextMagnitude,
+      maintenance: !Big6Math.isZero(magnitude)
+        ? Big6Math.max(
+            marketSnapshot.riskParameter.minMaintenance,
+            Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(magnitude, marketPrice)),
+          )
+        : 0n,
+      nextMaintenance: !Big6Math.isZero(nextMagnitude)
+        ? Big6Math.max(
+            marketSnapshot.riskParameter.minMaintenance,
+            Big6Math.mul(marketSnapshot.riskParameter.maintenance, calcNotional(nextMagnitude, marketPrice)),
+          )
+        : 0n,
+      margin: !Big6Math.isZero(magnitude)
+        ? Big6Math.max(
+            marketSnapshot.riskParameter.minMargin,
+            Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(magnitude, marketPrice)),
+          )
+        : 0n,
+      nextMargin: !Big6Math.isZero(nextMagnitude)
+        ? Big6Math.max(
+            marketSnapshot.riskParameter.minMargin,
+            Big6Math.mul(marketSnapshot.riskParameter.margin, calcNotional(nextMagnitude, marketPrice)),
+          )
+        : 0n,
+      leverage: calcLeverage(marketPrice, magnitude, snapshot.local.collateral),
+      nextLeverage: calcLeverage(marketPrice, nextMagnitude, snapshot.local.collateral),
+      notional: calcNotional(magnitude, marketPrice),
+      nextNotional: calcNotional(nextMagnitude, marketPrice),
+    }
+    return acc
+  }, {} as SupportedMarketMapping<UserMarketSnapshot>)
 
   return {
     user: address === zeroAddress ? undefined : userSnapshots,
@@ -367,4 +382,73 @@ async function fetchMarketSnapshotsAfterSettle({
       }
     }),
   }
+}
+
+export async function fetchMarketSettlementFees({
+  chainId,
+  markets,
+  marketOracles,
+  publicClient,
+}: {
+  chainId: SupportedChainId
+  markets: SupportedMarket[]
+  marketOracles?: MarketOracles
+  publicClient: PublicClient
+}) {
+  if (!marketOracles) marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
+
+  const gasPrice = await publicClient.getGasPrice()
+  const commitmentCostCache = new Map<Address, bigint>()
+  const settlementCostCache = new Map<Address, bigint>()
+  const gasCosts = {} as SupportedMarketMapping<{ commitmentCost: bigint; settlementCost: bigint }>
+
+  const costWithGasPrice = async (oracle: Address, value: bigint, publicClient: PublicClient) => {
+    const { result } = await publicClient.simulateContract({
+      address: oracle,
+      abi: GasOracleAbi,
+      functionName: 'cost',
+      args: [value],
+      maxFeePerGas: gasPrice,
+    })
+
+    // The gas oracle returns a 18 decimal value, so we need to convert it to 6 decimal places
+    return Big18Math.toDecimals(result, Big6Math.FIXED_DECIMALS)
+  }
+
+  for (const market of markets) {
+    const commitmentOracle = marketOracles[market].commitmentGasOracle
+    const settlementOracle = marketOracles[market].settlementGasOracle
+
+    // TODO: Make "value" dynamic
+    const commitmentCost =
+      commitmentCostCache.get(commitmentOracle) ?? (await costWithGasPrice(commitmentOracle, 1n, publicClient))
+    const settlementCost =
+      settlementCostCache.get(settlementOracle) ?? (await costWithGasPrice(settlementOracle, 0n, publicClient))
+
+    if (commitmentOracle) commitmentCostCache.set(commitmentOracle, commitmentCost)
+    if (settlementOracle) settlementCostCache.set(settlementOracle, settlementCost)
+
+    gasCosts[market] = {
+      commitmentCost: commitmentCost,
+      settlementCost: settlementCost,
+    }
+  }
+
+  return markets.reduce(
+    (acc, market) => {
+      const commitmentCost = commitmentCostCache.get(marketOracles[market].commitmentGasOracle) ?? 0n
+      const settlementCost = settlementCostCache.get(marketOracles[market].settlementGasOracle) ?? 0n
+      acc[market] = {
+        commitmentCost,
+        settlementCost,
+        totalCost: commitmentCost + settlementCost,
+      }
+      return acc
+    },
+    {} as SupportedMarketMapping<{
+      commitmentCost: bigint
+      settlementCost: bigint
+      totalCost: bigint
+    }>,
+  )
 }

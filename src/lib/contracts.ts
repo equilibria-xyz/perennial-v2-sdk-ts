@@ -1,7 +1,17 @@
 import { Address, GetContractReturnType, PublicClient, WalletClient, getContract } from 'viem'
 
-import { DefaultChain, EmptysetReserveAbi, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
+import {
+  DefaultChain,
+  EmptysetReserveAbi,
+  KeeperOracleAbi,
+  MarketAbi,
+  OracleAbi,
+  OracleFactoryAbi,
+  SupportedChainId,
+  VaultAbi,
+} from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
+import { GasOracleAbi } from '../abi/GasOracle.abi'
 import { KeeperFactoryAbi } from '../abi/KeeperFactory.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
@@ -11,6 +21,7 @@ import {
   EmptysetReserveAddresses,
   MarketFactoryAddresses,
   MultiInvokerAddresses,
+  OracleFactoryAddresses,
   PythFactoryAddresses,
   USDCAddresses,
   VaultFactoryAddresses,
@@ -79,7 +90,10 @@ export const getMultiInvokerContract = (chainId: SupportedChainId = DefaultChain
  * @param publicClient {@link PublicClient}
  * @returns The MarketFactory contract instance.
  */
-export const getMarketFactoryContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
+export const getMarketFactoryContract = (
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient }, Address> => {
   const contract = getContract({
     address: MarketFactoryAddresses[chainId],
     abi: MarketFactoryAbi,
@@ -103,6 +117,42 @@ export const getKeeperFactoryContract = (
   const contract = getContract({
     address: keeperFactoryAddress,
     abi: KeeperFactoryAbi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+
+/**
+ * Returns the OracleFactory contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The OracleFactory contract instance.
+ */
+export const getOracleFactoryContract = (
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof OracleFactoryAbi, { public: PublicClient }, Address> => {
+  const contract = getContract({
+    address: OracleFactoryAddresses[chainId],
+    abi: OracleFactoryAbi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+
+/**
+ * Returns the GasOracle contract instance.
+ * @param gasOracleAddress {@link Address}
+ * @param publicClient {@link PublicClient}
+ * @returns The GasOracle contract instance.
+ */
+export const getGasOracleContract = (
+  gasOracleAddress: Address,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof GasOracleAbi, { public: PublicClient }, Address> => {
+  const contract = getContract({
+    address: gasOracleAddress,
+    abi: GasOracleAbi,
     client: { public: publicClient },
   })
   return contract
@@ -237,8 +287,26 @@ export class ContractsModule {
    * Returns the MarketFactory contract instance.
    * @returns The MarketFactory contract instance.
    */
-  public getMarketFactoryContract() {
+  public getMarketFactoryContract(): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient }, Address> {
     return getMarketFactoryContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the OracleFactory contract instance.
+   * @returns The OracleFactory contract instance.
+   */
+  public getOracleFactoryContract(): GetContractReturnType<typeof OracleFactoryAbi, { public: PublicClient }, Address> {
+    return getOracleFactoryContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the GasOracle contract instance.
+   * @returns The GasOracle contract instance.
+   */
+  public getGasOracleContract(
+    gasOracleAddress: Address,
+  ): GetContractReturnType<typeof GasOracleAbi, { public: PublicClient }, Address> {
+    return getGasOracleContract(gasOracleAddress, this.config.publicClient)
   }
 
   // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'

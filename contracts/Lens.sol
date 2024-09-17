@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import '@equilibria/perennial-v2/contracts/interfaces/IMarket.sol';
-import * as Vault from '@equilibria/perennial-v2-vault/contracts/interfaces/IVault.sol';
-import '@equilibria/perennial-v2-vault/contracts/interfaces/IVaultFactory.sol';
-
-interface IKeeperFactory {
-      function commit(bytes32[] memory ids, uint256 version, bytes calldata data) external payable;
-}
+import '@perennial/perennial-v2/contracts/interfaces/IMarket.sol';
+import '@perennial/perennial-v2-oracle/contracts/interfaces/IOracle.sol';
+import '@perennial/perennial-v2-oracle/contracts/interfaces/IKeeperFactory.sol';
+import * as Vault from '@perennial/perennial-v2-vault/contracts/interfaces/IVault.sol';
+import '@perennial/perennial-v2-vault/contracts/interfaces/IVaultFactory.sol';
 
 struct PriceCommitData {
   IKeeperFactory keeperFactory;
@@ -25,7 +23,7 @@ contract Lens {
     MarketParameter parameter;
     RiskParameter riskParameter;
     Global global;
-    address oracle;
+    IOracle oracle;
     Order pendingOrder;
     Position position;
     Position nextPosition;
@@ -46,7 +44,8 @@ contract Lens {
     Checkpoint checkpoint;
     Position[] pendingPositions;
     Version[] versions;
-    Fixed6[] prices;
+    OracleVersion[] oracleVersions;
+    OracleReceipt[] oracleReceipts;
   }
 
   struct SnapshotResult {
@@ -109,7 +108,7 @@ contract Lens {
     marketSnapshot.pendingOrder = market.pending();
     marketSnapshot.pendingPositions = new Position[](marketSnapshot.global.currentId - marketSnapshot.global.latestId + 1);
     marketSnapshot.versions = new Version[](marketSnapshot.pendingPositions.length);
-    marketSnapshot.oracle = address(market.oracle());
+    marketSnapshot.oracle = IOracle(address(market.oracle()));
     for (uint j = 0; j < marketSnapshot.pendingPositions.length; j++) {
       marketSnapshot.pendingPositions[j] = (j == 0 ? marketSnapshot.position : marketSnapshot.pendingPositions[j - 1]).clone();
       if (j > 0) marketSnapshot.pendingPositions[j].update(market.pendingOrder(marketSnapshot.global.latestId + j));
@@ -130,18 +129,19 @@ contract Lens {
     marketAccountSnapshot.pendingPositions = new Position[](marketAccountSnapshot.local.currentId - marketAccountSnapshot.local.latestId + 1);
     marketAccountSnapshot.checkpoint = market.checkpoints(account, marketAccountSnapshot.position.timestamp);
     marketAccountSnapshot.versions = new Version[](marketAccountSnapshot.pendingPositions.length);
-    marketAccountSnapshot.prices = new Fixed6[](marketAccountSnapshot.pendingPositions.length);
+    marketAccountSnapshot.oracleVersions = new OracleVersion[](marketAccountSnapshot.pendingPositions.length);
+    marketAccountSnapshot.oracleReceipts = new OracleReceipt[](marketAccountSnapshot.pendingPositions.length);
     IOracleProvider oracle = market.oracle();
     for (uint j = 0; j < marketAccountSnapshot.pendingPositions.length; j++) {
       marketAccountSnapshot.pendingPositions[j] = (j == 0 ? marketAccountSnapshot.position : marketAccountSnapshot.pendingPositions[j - 1]).clone();
       if (j > 0) marketAccountSnapshot.pendingPositions[j].update(market.pendingOrders(account, marketAccountSnapshot.local.latestId + j));
       marketAccountSnapshot.versions[j] = market.versions(marketAccountSnapshot.pendingPositions[j].timestamp);
-      Fixed6 price = oracle.at(marketAccountSnapshot.pendingPositions[j].timestamp).price;
-      marketAccountSnapshot.prices[j] = price;
+      (marketAccountSnapshot.oracleVersions[j], marketAccountSnapshot.oracleReceipts[j]) = oracle.at(marketAccountSnapshot.pendingPositions[j].timestamp);
     }
     marketAccountSnapshot.nextPosition = marketAccountSnapshot.pendingPositions[marketAccountSnapshot.pendingPositions.length - 1];
   }
 
+  // TODO: Can we make the commitment ignore any requested values, or figure out if we can commit for the requested version?
   function commit(IKeeperFactory keeperFactory, uint256 value, bytes32[] memory ids, uint256 version, bytes memory updateData) public returns (bytes memory) {
     try keeperFactory.commit{value: value}(ids, version, updateData) {
       return bytes('');
@@ -264,12 +264,12 @@ contract VaultLens {
       vaultSnapshot.registrations[i] = vault.registrations(i);
       vaultSnapshot.marketSnapshots[i] = marketLens.snapshotMarket(vaultSnapshot.registrations[i].market);
       vaultSnapshot.marketVaultSnapshots[i] = marketLens.snapshotMarketAccount(vaultSnapshot.registrations[i].market, address(vault));
-      vaultSnapshot.vaultMinimum = vaultSnapshot.vaultMinimum.add(vaultSnapshot.marketSnapshots[i].parameter.settlementFee);
+      vaultSnapshot.vaultMinimum = vaultSnapshot.vaultMinimum.add(vaultSnapshot.parameter.minDeposit);
       vaultSnapshot.totalMarketCollateral = vaultSnapshot.totalMarketCollateral.add(vaultSnapshot.marketVaultSnapshots[i].local.collateral);
 
       // Add settlement fee if the market weight is non-zero or the market collateral is non-zero
       if (!vaultSnapshot.registrations[i].weight.isZero() || !vaultSnapshot.marketVaultSnapshots[i].local.collateral.isZero()) {
-        vaultSnapshot.totalSettlementFee = vaultSnapshot.totalSettlementFee.add(vaultSnapshot.marketSnapshots[i].parameter.settlementFee);
+        vaultSnapshot.totalSettlementFee = vaultSnapshot.totalSettlementFee.add(vaultSnapshot.parameter.minDeposit);
       }
     }
 

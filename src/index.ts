@@ -42,6 +42,18 @@ export {
   type BuildUpdateMarketTxArgs,
 } from './lib/markets/tx'
 
+// Market - Intents
+export {
+  buildIntentSigningPayload,
+  buildSignerUpdateSigningPayload,
+  buildOperatorUpdateSigningPayload,
+  buildCancelNonceSigningPayload,
+  type BuildIntentSigningPayloadArgs,
+  type BuildSignerUpdateSigningPayloadArgs,
+  type BuildOperatorUpdateSigningPayloadArgs,
+  type BuildCancelNonceSigningPayloadArgs,
+} from './lib/markets/intent'
+
 // Vault - Chain
 export {
   type VaultSnapshot,
@@ -83,6 +95,7 @@ export {
   DSUAddresses,
   USDCAddresses,
   EmptysetReserveAddresses,
+  VerifierAddresses,
 } from './constants/contracts'
 
 export {
@@ -97,6 +110,9 @@ export {
   getVaultContract,
   getOracleContract,
   getKeeperOracleContract,
+  getKeeperFactoryContract,
+  getOracleFactoryContract,
+  getGasOracleContract,
 } from './lib/contracts'
 
 // Vaults
@@ -170,7 +186,7 @@ export { PayoffAbi } from './abi/Payoff.abi'
 
 /* #################### Types #################### */
 
-export { type JumpRateUtilizationCurve, type MultiInvokerAction } from './types/perennial'
+export { type JumpRateUtilizationCurve, type MultiInvokerAction, type Intent, type Common } from './types/perennial'
 
 // Graph Types
 export * from './types/gql'
@@ -199,6 +215,9 @@ export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from 
 // Contract Utils
 export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
 
+// Address Utils
+export { throwIfZeroAddress, addressForMarket } from './utils/addressUtils'
+
 // Funding and Interest Rate Utils
 export {
   computeInterestRate,
@@ -219,6 +238,8 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
+  buildUpdateIntent,
+  buildClaimFee,
   mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
@@ -266,14 +287,16 @@ export {
 
 // Oracle Utils
 export {
-  type OracleProviderType as OracleProvider,
+  type OracleProviderType,
   type OracleClients,
   type UpdateDataRequest,
   type UpdateDataResponse,
+  type BuildCommitPriceTxArgs,
   oracleProviderTypeForFactoryAddress,
   oracleCommitmentsLatest,
   oracleCommitmentsTimestamp,
   marketOraclesToUpdateDataRequest,
+  buildCommitPriceTx,
 } from './lib/oracle'
 
 // Pyth Utils
@@ -294,6 +317,16 @@ export {
   last7dBounds,
   formatDateRelative,
 } from './utils/timeUtils'
+
+// Signed Message Types
+export {
+  EIP712_Domain,
+  EIP712_Intent,
+  EIP712_Common,
+  EIP712_SignerUpdate,
+  EIP712_OperatorUpdate,
+  EIP712_AccessUpdate,
+} from './types/eip712'
 
 // Graph Types
 export { Bucket as AccumulationBucket } from './types/gql/graphql'
