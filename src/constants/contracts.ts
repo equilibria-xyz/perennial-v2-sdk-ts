@@ -46,7 +46,7 @@ export const PythFactoryAddresses: AddressMapping = {
 }
 
 export const CryptexFactoryAddresses: AddressMapping = {
-  [arbitrum.id]: zeroAddress,
+  [arbitrum.id]: getAddress('0x8bF8a44A6b2f4a174404854ec14c05204cF31dA9'),
   [arbitrumSepolia.id]: getAddress('0x161Ef7447eC2B3F9425edc405830A111F4033Cb6'),
 }
 

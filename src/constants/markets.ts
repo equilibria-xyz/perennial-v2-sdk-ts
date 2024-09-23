@@ -310,6 +310,7 @@ export const ChainMarkets: {
     [SupportedMarket.doge]: getAddress('0x5bef017aC7Ea4f6f59946f27d50A137D4362F6A4'),
     [SupportedMarket.eur]: getAddress('0xb8df4bea28B1F0748D386E8A69ea1bD46B70922d'),
     [SupportedMarket.gbp]: getAddress('0xe588d7d041e18E754e95eF51D77f6e0fC6334EfD'),
+    [SupportedMarket.meem]: getAddress('0xbc96A6E57000ADE8755A896DfBd0552FE90141dD'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),
