@@ -615,7 +615,7 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
     version: BigInt(order.oracleVersion.timestamp),
     valid: order.oracleVersion.valid,
     delta,
-    magnitude: magnitude(order.maker, order.long, order.short),
+    magnitude: magnitude(order.newMaker, order.newLong, order.newShort),
     executionPrice: BigInt(order.executionPrice),
     executionPriceWithOffset: priceWithImpact,
     startCollateral: BigInt(order.startCollateral),
