@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@perennial/sdk": "../../",
+    "@perennial/sdk": "file:../../",
     "fuzzysort": "^2.0.4",
     "viem": "2.9.12"
   },
