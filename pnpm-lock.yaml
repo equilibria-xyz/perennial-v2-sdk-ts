@@ -968,8 +968,8 @@ packages:
     resolution: {integrity: sha512-1LMtXj1puAxyFusBgUIy5pZk3073cNXYnXUpuNKFghHbIit/xZgbk0AokpUADbNm3gyD6bFWl3LRFh3dhVdREg==}
     engines: {node: '>= 12'}
 
-  '@openzeppelin/contracts-upgradeable@4.9.3':
-    resolution: {integrity: sha512-jjaHAVRMrE4UuZNfDwjlLGDxTHWIOwTJS2ldnc278a0gevfXfPr8hxKEVBGFBE96kl2G3VHDZhUimw/+G3TG2A==}
+  '@openzeppelin/contracts-upgradeable@4.9.6':
+    resolution: {integrity: sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==}
 
   '@openzeppelin/contracts@3.4.2':
     resolution: {integrity: sha512-z0zMCjyhhp4y7XKAcDAi3Vgms4T2PstwBdahiO0+9NaGICQKjynK3wduSRplTgk4LXmoO1yfDGO5RbjKYxtuxA==}
@@ -3891,7 +3891,7 @@ snapshots:
     dependencies:
       '@eth-optimism/contracts': 0.5.40(ethers@5.7.2)
       '@openzeppelin/contracts': 4.3.3
-      '@openzeppelin/contracts-upgradeable': 4.9.3
+      '@openzeppelin/contracts-upgradeable': 4.9.6
       '@openzeppelin/contracts-v0.7': '@openzeppelin/contracts@3.4.2'
     transitivePeerDependencies:
       - bufferutil
@@ -4827,7 +4827,7 @@ snapshots:
       '@nomicfoundation/solidity-analyzer-win32-ia32-msvc': 0.1.1
       '@nomicfoundation/solidity-analyzer-win32-x64-msvc': 0.1.1
 
-  '@openzeppelin/contracts-upgradeable@4.9.3': {}
+  '@openzeppelin/contracts-upgradeable@4.9.6': {}
 
   '@openzeppelin/contracts@3.4.2': {}
 

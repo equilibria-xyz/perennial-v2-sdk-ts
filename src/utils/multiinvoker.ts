@@ -374,13 +374,13 @@ export const encodeInvoke = ({
 }: {
   chainId: SupportedChainId
   actions: MultiInvokerAction[]
-  address: Address
+  address?: Address
   value: bigint
 }): { to: Address; data: Hex; value: bigint } => {
   const data = encodeFunctionData({
     functionName: 'invoke',
     abi: MultiInvokerAbi,
-    args: [address, actions],
+    args: address && address !== zeroAddress ? [address, actions] : [actions],
   })
   return {
     to: MultiInvokerAddresses[chainId],

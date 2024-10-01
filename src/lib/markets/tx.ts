@@ -1,7 +1,6 @@
-import { Address, Hex, PublicClient, getAddress, isAddress } from 'viem'
+import { Address, Hex, PublicClient, getAddress } from 'viem'
 
 import {
-  ChainMarkets,
   OrderExecutionDeposit,
   PositionSide,
   SupportedChainId,
@@ -12,6 +11,7 @@ import {
 import { InterfaceFee } from '../../constants'
 import { Intent, MultiInvokerAction } from '../../types/perennial'
 import { BigOrZero, nowSeconds } from '../../utils'
+import { addressForMarket } from '../../utils/addressUtils'
 import {
   buildCancelOrder,
   buildClaimFee,
@@ -325,8 +325,7 @@ export type BuildUpdateIntentTxArgs = {
   signature: Hex
 }
 export function buildUpdateIntentTx({ chainId, address, market, intent, signature }: BuildUpdateIntentTxArgs) {
-  const marketAddress = isAddress(market, { strict: false }) ? market : ChainMarkets[chainId][market]
-  if (!marketAddress) throw new Error('Invalid market')
+  const marketAddress = addressForMarket(chainId, market)
 
   const actions: MultiInvokerAction[] = [buildUpdateIntent({ market: marketAddress, intent, signature })]
   const txData = encodeInvoke({

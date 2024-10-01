@@ -474,7 +474,6 @@ export class MarketsModule {
        */
       update: (args: OmitBound<BuildUpdateMarketTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildUpdateMarketTx({
           chainId: this.config.chainId,
@@ -500,7 +499,6 @@ export class MarketsModule {
        */
       limitOrder: (args: OmitBound<BuildLimitOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildLimitOrderTx({
           chainId: this.config.chainId,
@@ -525,7 +523,6 @@ export class MarketsModule {
        */
       stopLoss: (args: OmitBound<BuildStopLossTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildStopLossTx({
           chainId: this.config.chainId,
@@ -550,7 +547,6 @@ export class MarketsModule {
        */
       takeProfit: (args: OmitBound<BuildTakeProfitTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildTakeProfitTx({
           chainId: this.config.chainId,
@@ -675,7 +671,6 @@ export class MarketsModule {
        */
       cancelOrder: (args: OmitBound<BuildCancelOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildCancelOrderTx({
           chainId: this.config.chainId,
@@ -691,7 +686,6 @@ export class MarketsModule {
        */
       claimFee: (args: OmitBound<BuildClaimFeeTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildClaimFeeTx({ chainId: this.config.chainId, ...args, address })
       },
@@ -704,7 +698,6 @@ export class MarketsModule {
        */
       updateIntent: (args: OmitBound<BuildUpdateIntentTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildUpdateIntentTx({ chainId: this.config.chainId, ...args, address })
       },

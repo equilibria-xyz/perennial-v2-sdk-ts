@@ -3,7 +3,6 @@ import { Address, Hex, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import { SupportedChainId, SupportedMarket, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
-import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { buildCommitPrice, encodeInvoke } from '../../utils/multiinvoker'
 import { getKeeperFactoryContract } from '../contracts'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
@@ -319,7 +318,6 @@ export class OraclesModule {
     return {
       commitPrice: (args: OmitBound<Parameters<typeof buildCommitPriceTx>[0]> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildCommitPriceTx({
           chainId: this.config.chainId,
