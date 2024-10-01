@@ -5,7 +5,7 @@ dotenvConfig({ path: './.env.local' }) // point to root of project for now
 
 const config: CodegenConfig = {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  schema: [process.env.GRAPH_URL_ARBITRUM_NEW!],
+  schema: [process.env.GRAPH_URL_ARBITRUM_NEW!, process.env.GRAPH_URL_ARBITRUM_SEPOLIA!],
   documents: ['src/graphQueries/**/*.{ts,tsx}'],
   generates: {
     './src/types/gql/': {
