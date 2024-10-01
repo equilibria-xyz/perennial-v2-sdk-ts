@@ -28,5 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
   const txData = mergeMultiInvokerTxs([commitPriceAction, updateAction])
 
-  return res.status(200).json(txData)
+  return res.status(200).json({
+    data: txData.data,
+    value: String(txData.value),
+    to: txData.to,
+  })
 }
