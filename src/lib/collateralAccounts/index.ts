@@ -18,7 +18,7 @@ import {
 import {
   BuildRelayedGroupCancellationSigningPayloadArgs,
   buildRelayedGroupCancellationSigningPayload,
-} from './intent/buildRelayedGroupCancellation'
+} from './intent/buildRelayedGroupCancellationSigningPayload'
 import {
   BuildRelayedNonceCancellationSigningPayloadArgs,
   buildRelayedNonceCancellationSigningPayload,
@@ -35,6 +35,7 @@ import {
   BuildWithdrawalSigningPayloadArgs,
   buildWithdrawalSigningPayload,
 } from './intent/buildWithdrawalSigningPayload'
+import { ReadCollateralAccountAddressArgs, readCollateralAccountAddress } from './read/collateralAccountAddress'
 
 type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'address'>
 export class CollateralAccountModule {
@@ -57,7 +58,19 @@ export class CollateralAccountModule {
   }
 
   get read() {
-    return {}
+    return {
+      collateralAccountAddress: (args: OmitBound<ReadCollateralAccountAddressArgs> & OptionalAddress = {}) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
+        return readCollateralAccountAddress({
+          chainId: this.config.chainId,
+          publicClient: this.config.publicClient,
+          ...args,
+          address,
+        })
+      },
+    }
   }
 
   get build() {

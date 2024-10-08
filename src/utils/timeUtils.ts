@@ -6,8 +6,17 @@ export const Hour = Minute * 60n
 export const Day = Hour * 24n
 export const Year = Day * 365n
 
-export const nowSeconds = () => Math.floor(Date.now() / 1000)
-export const timeToSeconds = (time: number | Date) => Math.floor(new Date(time).getTime() / 1000)
+export const nowSeconds = <T extends boolean | undefined>(asBigInt?: T): T extends true ? bigint : number => {
+  const seconds = Math.floor(Date.now() / 1000)
+  return (Boolean(asBigInt) ? BigInt(seconds) : seconds) as any
+}
+export const timeToSeconds = <T extends boolean | undefined>(
+  time: number | Date,
+  asBigInt?: T,
+): T extends true ? bigint : number => {
+  const seconds = Math.floor(new Date(time).getTime() / 1000)
+  return (Boolean(asBigInt) ? BigInt(seconds) : seconds) as any
+}
 
 export const last24hrBounds = () => {
   const now = new Date()

@@ -70,6 +70,12 @@ export {
 // Operator - Transaction
 export { buildApproveUSDCTx, buildApproveMarketFactoryTx, buildApproveVaultFactoryTx } from './lib/operators'
 
+// Collateral Account - Intents
+export * from './lib/collateralAccounts/intent'
+
+// Collateral Account - Read
+export * from './lib/collateralAccounts/read'
+
 /* #################### Constants #################### */
 
 export * as constants from './constants'
