@@ -1,4 +1,6 @@
-import { EIP712_Common } from '.'
+import { SignTypedDataParameters } from 'viem'
+
+import { EIP712_Common } from '../shared'
 
 export const EIP712_AccessUpdate = [
   {
@@ -10,6 +12,15 @@ export const EIP712_AccessUpdate = [
     type: 'bool',
   },
 ] as const
+
+export const AccessUpdateSigningTypes = {
+  AccessUpdate: EIP712_AccessUpdate,
+} as const
+
+export type AccessUpdateSigningPayload = Omit<
+  SignTypedDataParameters<typeof AccessUpdateSigningTypes, 'AccessUpdate'>,
+  'account'
+>
 
 export const EIP712_AccessUpdateBatch = [
   {
@@ -26,7 +37,7 @@ export const EIP712_AccessUpdateBatch = [
   },
 ] as const
 
-export const AccessUpdateSigningTypes = {
+export const AccessUpdateBatchSigningTypes = {
   AccessUpdateBatch: EIP712_AccessUpdateBatch,
   AccessUpdate: EIP712_AccessUpdate,
   Common: EIP712_Common,

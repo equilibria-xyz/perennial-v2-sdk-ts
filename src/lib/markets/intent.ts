@@ -1,25 +1,11 @@
-import { Address, SignTypedDataParameters } from 'viem'
+import { Address } from 'viem'
 
-import { MarketFactoryAddresses, SupportedChainId, SupportedMarket, VerifierAddresses } from '../../constants'
-import {
-  CommonSigningTypes,
-  EIP712_Domain,
-  IntentSigningTypes,
-  OperatorUpdateSigningTypes,
-  SignerUpdateSigningTypes,
-} from '../../types/eip712'
+import { SupportedChainId, SupportedMarket } from '../../constants'
+import { EIP712_Domain, IntentSigningPayload, IntentSigningTypes } from '../../constants/eip712'
 import { Intent } from '../../types/perennial'
+import { CommonOverrides, CommonRequired } from '../../types/shared'
 import { addressForMarket } from '../../utils/addressUtils'
-
-type CommonRequired = {
-  address: Address
-  expiry: bigint
-}
-type CommonOverrides = {
-  signer?: Address
-  group?: bigint
-  nonce?: bigint
-}
+import { generateNonce } from '../../utils/intentUtils'
 
 export type BuildIntentSigningPayloadArgs = CommonRequired & {
   chainId: SupportedChainId
@@ -27,7 +13,6 @@ export type BuildIntentSigningPayloadArgs = CommonRequired & {
   market: SupportedMarket | Address
   overrides?: CommonOverrides
 }
-export type IntentSigningPayload = Omit<SignTypedDataParameters<typeof IntentSigningTypes, 'Intent'>, 'account'>
 export function buildIntentSigningPayload({
   chainId,
   intent,
@@ -51,7 +36,7 @@ export function buildIntentSigningPayload({
     },
   }
   const payload: IntentSigningPayload = {
-    domain: EIP712_Domain(chainId),
+    domain: EIP712_Domain(chainId, 'core'),
     types: IntentSigningTypes,
     primaryType: 'Intent',
     message,
@@ -60,50 +45,7 @@ export function buildIntentSigningPayload({
   return payload
 }
 
-export type BuildSignerUpdateSigningPayloadArgs = CommonRequired & {
-  chainId: SupportedChainId
-  newSigner: Address
-  approved: boolean
-  overrides?: CommonOverrides
-}
-export type SignerUpdateSigningPayload = Omit<
-  SignTypedDataParameters<typeof SignerUpdateSigningTypes, 'SignerUpdate'>,
-  'account'
->
-export function buildSignerUpdateSigningPayload({
-  chainId,
-  address: account,
-  newSigner,
-  approved,
-  overrides,
-  expiry,
-}: BuildSignerUpdateSigningPayloadArgs): SignerUpdateSigningPayload {
-  const nonce = overrides?.nonce ?? generateNonce()
-
-  const message = {
-    access: {
-      accessor: newSigner,
-      approved,
-    },
-    common: {
-      nonce,
-      group: overrides?.group ?? nonce,
-      account,
-      signer: overrides?.signer ?? account,
-      domain: MarketFactoryAddresses[chainId],
-      expiry,
-    },
-  }
-
-  const payload: SignerUpdateSigningPayload = {
-    domain: EIP712_Domain(chainId),
-    types: SignerUpdateSigningTypes,
-    primaryType: 'SignerUpdate',
-    message,
-  }
-
-  return payload
-}
+/*
 export type BuildOperatorUpdateSigningPayloadArgs = CommonRequired & {
   chainId: SupportedChainId
   newOperator: Address
@@ -183,7 +125,4 @@ export function buildCancelNonceSigningPayload({
   return payload
 }
 // TODO: Cancel Group
-
-function generateNonce() {
-  return BigInt(Date.now())
-}
+ */

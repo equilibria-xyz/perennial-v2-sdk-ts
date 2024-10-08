@@ -1,5 +1,3 @@
-import { SupportedChainId, VerifierAddresses } from '../../constants'
-
 export const EIP712_Common = [
   {
     name: 'account',
@@ -26,13 +24,6 @@ export const EIP712_Common = [
     type: 'uint256',
   },
 ] as const
-
-export const EIP712_Domain = (chainId: SupportedChainId) => ({
-  name: 'Perennial',
-  version: '1.0.0',
-  chainId,
-  verifyingContract: VerifierAddresses[chainId],
-})
 
 export const CommonSigningTypes = {
   Common: EIP712_Common,

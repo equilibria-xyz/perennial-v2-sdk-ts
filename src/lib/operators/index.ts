@@ -20,8 +20,10 @@ import {
   getMultiInvokerContract,
   getUSDCContract,
   getVaultFactoryContract,
-} from '..'
-import { OptionalAddress } from '../types/shared'
+  throwIfZeroAddress,
+} from '../..'
+import { OptionalAddress } from '../../types/shared'
+import { BuildRelayedSignerUpdateSigningPayloadArgs, buildRelayedSignerUpdateSigningPayload } from './intent'
 
 /**
  * Builds a transaction to approve USDC for the MultiInvoker contract.
@@ -440,6 +442,13 @@ export class OperatorModule {
        * @returns Transaction calldata, destination address and transaction value
        */
       unwrapDSU: ({ amount }: { amount: bigint }) => buildUnwrapDSUTx({ chainId: this.config.chainId, amount }),
+
+      signedRelayedSignerUpdate: (args: OmitBound<BuildRelayedSignerUpdateSigningPayloadArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
+        return buildRelayedSignerUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
+      },
     }
   }
 
@@ -521,6 +530,18 @@ export class OperatorModule {
         const tx = await this.build.unwrapDSU(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
+      },
+
+      signedRelayedSignerUpdate: async (...args: Parameters<typeof this.build.signedRelayedSignerUpdate>) => {
+        const { signerUpdate, relayedSignerUpdate } = this.build.signedRelayedSignerUpdate(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedSignerUpdate, ...txOpts })
+        const innerSignature = await walletClient.signTypedData({ ...signerUpdate, ...txOpts })
+        return {
+          outerSignature,
+          innerSignature,
+          signerUpdate: signerUpdate.message,
+          relayedSignerUpdate: relayedSignerUpdate.message,
+        }
       },
     }
   }

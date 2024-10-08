@@ -30,6 +30,26 @@ export const VerifierAddresses: AddressMapping = {
   [arbitrumSepolia.id]: getAddress('0x6FaabfA2fDb093A027Ed16F291ADc7F07780014A'),
 }
 
+export const ControllerAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x80f5b854971B1B302FE9f94E9B19ef0C41c544Fb'),
+}
+
+export const ManagerAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x1D5DB9e0832E23C9A771b59c81aAF82A2D30a1Bb'),
+}
+
+export const AccountVerifierAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x4d556433d056f6e749b90CbBFFfbe590b0CA017e'),
+}
+
+export const OrderVerifierAddresses: AddressMapping = {
+  [arbitrum.id]: zeroAddress,
+  [arbitrumSepolia.id]: getAddress('0x04e570a5Ef49b3Dc79a01A9552B803110a3F5e6b'),
+}
+
 export const DSUAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x52C64b8998eB7C80b6F526E99E29ABdcC86B841b'),
   [arbitrumSepolia.id]: getAddress('0x5FA881826AD000D010977645450292701bc2f56D'),

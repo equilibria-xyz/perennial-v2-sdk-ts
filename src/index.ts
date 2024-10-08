@@ -43,16 +43,7 @@ export {
 } from './lib/markets/tx'
 
 // Market - Intents
-export {
-  buildIntentSigningPayload,
-  buildSignerUpdateSigningPayload,
-  buildOperatorUpdateSigningPayload,
-  buildCancelNonceSigningPayload,
-  type BuildIntentSigningPayloadArgs,
-  type BuildSignerUpdateSigningPayloadArgs,
-  type BuildOperatorUpdateSigningPayloadArgs,
-  type BuildCancelNonceSigningPayloadArgs,
-} from './lib/markets/intent'
+export { buildIntentSigningPayload, type BuildIntentSigningPayloadArgs } from './lib/markets/intent'
 
 // Vault - Chain
 export {
@@ -96,6 +87,10 @@ export {
   USDCAddresses,
   EmptysetReserveAddresses,
   VerifierAddresses,
+  ControllerAddresses,
+  ManagerAddresses,
+  AccountVerifierAddresses,
+  OrderVerifierAddresses,
 } from './constants/contracts'
 
 export {
@@ -183,6 +178,8 @@ export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
 export { FactoryAbi } from './abi/Factory.abi'
 export { OracleFactoryAbi } from './abi/OracleFactory.abi'
 export { PayoffAbi } from './abi/Payoff.abi'
+export { ManagerAbi } from './abi/Manager.abi'
+export { ControllerAbi } from './abi/Controller.abi'
 
 /* #################### Types #################### */
 
@@ -319,14 +316,7 @@ export {
 } from './utils/timeUtils'
 
 // Signed Message Types
-export {
-  EIP712_Domain,
-  EIP712_Intent,
-  EIP712_Common,
-  EIP712_SignerUpdate,
-  EIP712_OperatorUpdate,
-  EIP712_AccessUpdate,
-} from './types/eip712'
+export * as eip712 from './constants/eip712'
 
 // Graph Types
 export { Bucket as AccumulationBucket } from './types/gql/graphql'

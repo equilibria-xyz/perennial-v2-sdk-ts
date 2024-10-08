@@ -2,9 +2,9 @@ import { Address, Hex, decodeFunctionData, encodeAbiParameters, encodeFunctionDa
 
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { MultiInvokerAddresses } from '../constants'
+import { EIP712_Common } from '../constants/eip712'
 import { PositionSide } from '../constants/markets'
 import { SupportedChainId } from '../constants/network'
-import { EIP712_Common } from '../types/eip712'
 import { Intent, MultiInvokerAction } from '../types/perennial'
 import { UpdateNoOp } from './positionUtils'
 
