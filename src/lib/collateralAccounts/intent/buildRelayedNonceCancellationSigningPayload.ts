@@ -1,4 +1,4 @@
-import { MarketFactoryAddresses } from '../../../constants'
+import { VerifierAddresses } from '../../../constants'
 import {
   CommonSigningPayload,
   CommonSigningTypes,
@@ -31,7 +31,7 @@ export function buildRelayedNonceCancellationSigningPayload({
     nonceCancellation: {
       ...action.common,
       nonce: nonceToCancel,
-      domain: MarketFactoryAddresses[chainId],
+      domain: VerifierAddresses[chainId],
     },
     action,
   }

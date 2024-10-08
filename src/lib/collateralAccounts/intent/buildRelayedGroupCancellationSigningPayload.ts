@@ -1,4 +1,4 @@
-import { MarketFactoryAddresses } from '../../../constants'
+import { VerifierAddresses } from '../../../constants'
 import {
   EIP712_Domain,
   GroupCancellationSigningPayload,
@@ -32,7 +32,7 @@ export function buildRelayedGroupCancellationSigningPayload({
       group: groupToCancel,
       common: {
         ...action.common,
-        domain: MarketFactoryAddresses[chainId],
+        domain: VerifierAddresses[chainId],
       },
     },
     action,
