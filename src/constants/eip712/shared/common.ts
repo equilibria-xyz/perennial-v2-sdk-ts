@@ -1,3 +1,5 @@
+import { SignTypedDataParameters } from 'viem'
+
 export const EIP712_Common = [
   {
     name: 'account',
@@ -28,3 +30,5 @@ export const EIP712_Common = [
 export const CommonSigningTypes = {
   Common: EIP712_Common,
 } as const
+
+export type CommonSigningPayload = Omit<SignTypedDataParameters<typeof CommonSigningTypes, 'Common'>, 'account'>
