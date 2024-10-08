@@ -5,6 +5,7 @@ import {
   DefaultChain,
   EmptysetReserveAbi,
   KeeperOracleAbi,
+  ManagerAbi,
   MarketAbi,
   OracleAbi,
   OracleFactoryAbi,
@@ -21,6 +22,7 @@ import {
   ControllerAddresses,
   DSUAddresses,
   EmptysetReserveAddresses,
+  ManagerAddresses,
   MarketFactoryAddresses,
   MultiInvokerAddresses,
   OracleFactoryAddresses,
@@ -252,6 +254,15 @@ export function getControllerContract(
 }
 
 /**
+ * Returns the Manager contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The Manager contract instance.
+ */
+export function getManagerContract(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+  return getContract({ abi: ManagerAbi, address: ManagerAddresses[chainId], client: { public: publicClient } })
+}
+/**
  * Contracts module class
  * @param config SDK configuration
  * @param config.chainId {@link SupportedChainId}
@@ -398,5 +409,13 @@ export class ContractsModule {
    */
   public getControllerContract(): GetContractReturnType<typeof ControllerAbi, { public: PublicClient }, Address> {
     return getControllerContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the Manager contract instance.
+   * @returns The Manager contract instance.
+   */
+  public getManagerContract(): GetContractReturnType<typeof ManagerAbi, { public: PublicClient }, Address> {
+    return getManagerContract(this.config.chainId, this.config.publicClient)
   }
 }

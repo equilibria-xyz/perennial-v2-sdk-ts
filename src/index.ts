@@ -114,6 +114,8 @@ export {
   getKeeperFactoryContract,
   getOracleFactoryContract,
   getGasOracleContract,
+  getControllerContract,
+  getManagerContract,
 } from './lib/contracts'
 
 // Vaults
