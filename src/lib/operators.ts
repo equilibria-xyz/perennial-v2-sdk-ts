@@ -235,11 +235,12 @@ export async function checkMarketFactoryApproval({
   publicClient: PublicClient
   address: Address
 }) {
-  const isMarketFactoryApproved = await getMarketFactoryContract(chainId, publicClient).read.operators([
-    address,
-    MultiInvokerAddresses[chainId],
+  const marketFactory = getMarketFactoryContract(chainId, publicClient)
+  const [operatorApproved, extensionApproved] = await Promise.all([
+    marketFactory.read.operators([address, MultiInvokerAddresses[chainId]]),
+    marketFactory.read.extensions([MultiInvokerAddresses[chainId]]),
   ])
-  return isMarketFactoryApproved
+  return operatorApproved || extensionApproved
 }
 
 /**
