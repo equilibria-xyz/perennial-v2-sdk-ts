@@ -154,7 +154,7 @@ export class CollateralAccountModule {
         const signature = await walletClient.signTypedData({ ...deployAccount, ...txOpts })
         return {
           signature,
-          deployAccount: deployAccount.message,
+          deployAccount,
         }
       },
 
@@ -163,7 +163,7 @@ export class CollateralAccountModule {
         const signature = await walletClient.signTypedData({ ...withdrawal, ...txOpts })
         return {
           signature,
-          withdrawal: withdrawal.message,
+          withdrawal,
         }
       },
 
@@ -172,7 +172,7 @@ export class CollateralAccountModule {
         const signature = await walletClient.signTypedData({ ...marketTransfer, ...txOpts })
         return {
           signature,
-          marketTransfer: marketTransfer.message,
+          marketTransfer,
         }
       },
 
@@ -181,7 +181,7 @@ export class CollateralAccountModule {
         const signature = await walletClient.signTypedData({ ...rebalanceConfigChange, ...txOpts })
         return {
           signature,
-          rebalanceConfigChange: rebalanceConfigChange.message,
+          rebalanceConfigChange,
         }
       },
 
@@ -192,8 +192,8 @@ export class CollateralAccountModule {
         return {
           outerSignature,
           innerSignature,
-          signerUpdate: signerUpdate.message,
-          relayedSignerUpdate: relayedSignerUpdate.message,
+          signerUpdate,
+          relayedSignerUpdate,
         }
       },
 
@@ -204,8 +204,8 @@ export class CollateralAccountModule {
         return {
           outerSignature,
           innerSignature,
-          operatorUpdate: operatorUpdate.message,
-          relayedOperatorUpdate: relayedOperatorUpdate.message,
+          operatorUpdate,
+          relayedOperatorUpdate,
         }
       },
 
@@ -216,8 +216,8 @@ export class CollateralAccountModule {
         return {
           outerSignature,
           innerSignature,
-          groupCancellation: groupCancellation.message,
-          relayedGroupCancellation: relayedGroupCancellation.message,
+          groupCancellation,
+          relayedGroupCancellation,
         }
       },
 
@@ -228,8 +228,8 @@ export class CollateralAccountModule {
         return {
           outerSignature,
           innerSignature,
-          nonceCancellation: nonceCancellation.message,
-          relayedNonceCancellation: relayedNonceCancellation.message,
+          nonceCancellation,
+          relayedNonceCancellation,
         }
       },
     }
