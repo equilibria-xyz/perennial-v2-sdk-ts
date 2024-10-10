@@ -1,7 +1,14 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { Address, Hex, PublicClient, WalletClient, zeroAddress } from 'viem'
 
-import { SupportedChainId, SupportedMarket, chainIdToChainMap } from '../../constants'
+import {
+  ChainlinkFactoryAddresses,
+  CryptexFactoryAddresses,
+  PythFactoryAddresses,
+  SupportedChainId,
+  SupportedMarket,
+  chainIdToChainMap,
+} from '../../constants'
 import { OptionalAddress } from '../../types/shared'
 import { buildCommitPrice, encodeInvoke } from '../../utils/multiinvoker'
 import { getKeeperFactoryContract } from '../contracts'
@@ -16,12 +23,20 @@ export type OracleClients = {
 }
 
 export async function oracleProviderTypeForFactoryAddress({
+  chainId,
   publicClient,
   factory,
 }: {
+  chainId: SupportedChainId
   publicClient: PublicClient
   factory: Address
 }): Promise<OracleProviderType> {
+  // Check hardcoded addresses first
+  if (factory === PythFactoryAddresses[chainId]) return 'PythFactory'
+  if (factory === ChainlinkFactoryAddresses[chainId]) return 'ChainlinkFactory'
+  if (factory === CryptexFactoryAddresses[chainId]) return 'CryptexFactory'
+
+  // Otherwise, try to read from the contract
   try {
     const oracleFactory = getKeeperFactoryContract(factory, publicClient)
     const type = await oracleFactory.read.factoryType()
@@ -83,7 +98,7 @@ export async function oracleCommitmentsLatest({
     // Generate commitment(s) gor each factory grouping
     const commitmentPromises = Array.from(groupedRequests.entries()).map(
       async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
-        const providerType = await oracleProviderTypeForFactoryAddress({ publicClient, factory })
+        const providerType = await oracleProviderTypeForFactoryAddress({ chainId, publicClient, factory })
         if (providerType === 'PythFactory') {
           const pythResponse = await pythBuildCommitmentsForOracles({
             chainId,
@@ -157,7 +172,7 @@ export async function oracleCommitmentsTimestamp({
     // Generate commitment(s) gor each factory grouping
     const commitmentPromises = Array.from(groupedRequests.entries()).map(
       async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
-        const providerType = await oracleProviderTypeForFactoryAddress({ publicClient, factory })
+        const providerType = await oracleProviderTypeForFactoryAddress({ chainId, publicClient, factory })
         if (providerType === 'PythFactory') {
           const pythResponse = await pythBuildCommitmentsForOracles({
             chainId,
@@ -307,6 +322,7 @@ export class OraclesModule {
 
       oracleProviderForFactoryAddress: (args: OmitBound<Parameters<typeof oracleProviderTypeForFactoryAddress>[0]>) => {
         return oracleProviderTypeForFactoryAddress({
+          chainId: this.config.chainId,
           publicClient: this.config.publicClient,
           ...args,
         })
