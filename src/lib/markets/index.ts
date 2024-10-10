@@ -900,7 +900,7 @@ export class MarketsModule {
         const hash = await walletClient.signTypedData({ ...payload, ...txOpts })
         return {
           signature: hash,
-          intent: payload.message,
+          intent: payload,
         }
       },
     }
