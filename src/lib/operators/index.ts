@@ -20,8 +20,8 @@ import {
   getMultiInvokerContract,
   getUSDCContract,
   getVaultFactoryContract,
-} from '..'
-import { OptionalAddress } from '../types/shared'
+} from '../..'
+import { OptionalAddress } from '../../types/shared'
 
 /**
  * Builds a transaction to approve USDC for the MultiInvoker contract.
@@ -444,11 +444,11 @@ export class OperatorModule {
     }
   }
 
+  /**
+   * Operator module write methods
+   * @throws Error if wallet client is not provided
+   */
   get write() {
-    /**
-     * Operator module write methods
-     * @throws Error if wallet client is not provided
-     */
     const walletClient = this.config.walletClient
     if (!walletClient || !walletClient.account) {
       throw new Error('Wallet client required for write methods.')

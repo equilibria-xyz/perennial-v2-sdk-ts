@@ -39,6 +39,8 @@ export enum SupportedMarket {
   eur = 'eur',
   gbp = 'gbp',
   meem = 'meem',
+  aero = 'aero',
+  popcat = 'popcat',
 
   unknown = 'unknown',
 }
@@ -270,6 +272,24 @@ export const MarketMetadata: MarketMetadataType = {
     transform: linearTransform,
     untransform: linearUntransform,
   },
+  [SupportedMarket.aero]: {
+    symbol: 'AERO-USD',
+    name: 'Aerodrome Finance',
+    baseCurrency: SupportedMarket.aero,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0x9db37f4d5654aad3e37e2e14ffd8d53265fb3026d1d8f91146539eebaa2ef45f',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
+  [SupportedMarket.popcat]: {
+    symbol: 'POPCAT-USD',
+    name: 'Popcat',
+    baseCurrency: SupportedMarket.popcat,
+    quoteCurrency: QuoteCurrency.usd,
+    providerId: '0xb9312a7ee50e189ef045aa3c7842e099b061bd9bdc99ac645956c3b660dc8cce',
+    transform: linearTransform,
+    untransform: linearUntransform,
+  },
   [SupportedMarket.unknown]: {
     symbol: 'UNKNOWN',
     name: 'UNKNOWN',
@@ -311,6 +331,8 @@ export const ChainMarkets: {
     [SupportedMarket.eur]: getAddress('0xb8df4bea28B1F0748D386E8A69ea1bD46B70922d'),
     [SupportedMarket.gbp]: getAddress('0xe588d7d041e18E754e95eF51D77f6e0fC6334EfD'),
     [SupportedMarket.meem]: getAddress('0xbc96A6E57000ADE8755A896DfBd0552FE90141dD'),
+    [SupportedMarket.aero]: getAddress('0x24a305EE9BFeBeA7dC26380a96723D6Fb6066C2C'),
+    [SupportedMarket.popcat]: getAddress('0xd1551be8c92b35212033B41dBb21efA86389768D'),
   },
   [arbitrumSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7'),

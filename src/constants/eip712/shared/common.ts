@@ -1,4 +1,4 @@
-import { SupportedChainId, VerifierAddresses } from '../../constants'
+import { SignTypedDataParameters } from 'viem'
 
 export const EIP712_Common = [
   {
@@ -27,13 +27,8 @@ export const EIP712_Common = [
   },
 ] as const
 
-export const EIP712_Domain = (chainId: SupportedChainId) => ({
-  name: 'Perennial',
-  version: '1.0.0',
-  chainId,
-  verifyingContract: VerifierAddresses[chainId],
-})
-
 export const CommonSigningTypes = {
   Common: EIP712_Common,
 } as const
+
+export type CommonSigningPayload = Omit<SignTypedDataParameters<typeof CommonSigningTypes, 'Common'>, 'account'>

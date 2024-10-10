@@ -1,4 +1,6 @@
-import { EIP712_Common } from './common'
+import { SignTypedDataParameters } from 'viem'
+
+import { EIP712_Common } from '../shared'
 
 export const EIP712_Intent = [
   {
@@ -35,3 +37,5 @@ export const IntentSigningTypes = {
   Intent: EIP712_Intent,
   Common: EIP712_Common,
 } as const
+
+export type IntentSigningPayload = Omit<SignTypedDataParameters<typeof IntentSigningTypes, 'Intent'>, 'account'>

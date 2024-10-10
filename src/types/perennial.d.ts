@@ -2,7 +2,7 @@ import { AbiParametersToPrimitiveTypes, ExtractAbiFunction, TypedDataToPrimitive
 
 import { MarketAbi } from '../abi/Market.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
-import { IntentSigningTypes } from './eip712/intent'
+import { IntentSigningTypes } from '../constants/eip712/core/intent'
 
 export type JumpRateUtilizationCurve = AbiParametersToPrimitiveTypes<
   ExtractAbiFunction<typeof MarketAbi, 'riskParameter'>['outputs']

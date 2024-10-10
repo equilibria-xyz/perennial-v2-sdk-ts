@@ -1,4 +1,7 @@
-import { EIP712_AccessUpdate, EIP712_Common } from './'
+import { SignTypedDataParameters } from 'viem'
+
+import { EIP712_AccessUpdate } from '../core'
+import { EIP712_Common } from '../shared'
 
 export const EIP712_SignerUpdate = [
   {
@@ -16,3 +19,8 @@ export const SignerUpdateSigningTypes = {
   AccessUpdate: EIP712_AccessUpdate,
   Common: EIP712_Common,
 } as const
+
+export type SignerUpdateSigningPayload = Omit<
+  SignTypedDataParameters<typeof SignerUpdateSigningTypes, 'SignerUpdate'>,
+  'account'
+>

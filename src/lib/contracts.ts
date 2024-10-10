@@ -1,9 +1,11 @@
 import { Address, GetContractReturnType, PublicClient, WalletClient, getContract } from 'viem'
 
 import {
+  ControllerAbi,
   DefaultChain,
   EmptysetReserveAbi,
   KeeperOracleAbi,
+  ManagerAbi,
   MarketAbi,
   OracleAbi,
   OracleFactoryAbi,
@@ -17,8 +19,10 @@ import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'
 import {
+  ControllerAddresses,
   DSUAddresses,
   EmptysetReserveAddresses,
+  ManagerAddresses,
   MarketFactoryAddresses,
   MultiInvokerAddresses,
   OracleFactoryAddresses,
@@ -237,6 +241,28 @@ export function getKeeperOracleContract(keeperOracleAddress: Address, publicClie
 }
 
 /**
+ * Returns the Collateral Account Controller contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The Collateral Account Controller contract instance.
+ */
+export function getControllerContract(
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof ControllerAbi, { public: PublicClient }, Address> {
+  return getContract({ abi: ControllerAbi, address: ControllerAddresses[chainId], client: { public: publicClient } })
+}
+
+/**
+ * Returns the Manager contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The Manager contract instance.
+ */
+export function getManagerContract(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+  return getContract({ abi: ManagerAbi, address: ManagerAddresses[chainId], client: { public: publicClient } })
+}
+/**
  * Contracts module class
  * @param config SDK configuration
  * @param config.chainId {@link SupportedChainId}
@@ -375,5 +401,21 @@ export class ContractsModule {
    */
   public getKeeperOracleContract(keeperOracleAddress: Address) {
     return getKeeperOracleContract(keeperOracleAddress, this.config.publicClient)
+  }
+
+  /**
+   * Returns the Collateral Account Controller contract instance.
+   * @returns The Collateral Account Controller contract instance.
+   */
+  public getControllerContract(): GetContractReturnType<typeof ControllerAbi, { public: PublicClient }, Address> {
+    return getControllerContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the Manager contract instance.
+   * @returns The Manager contract instance.
+   */
+  public getManagerContract(): GetContractReturnType<typeof ManagerAbi, { public: PublicClient }, Address> {
+    return getManagerContract(this.config.chainId, this.config.publicClient)
   }
 }
