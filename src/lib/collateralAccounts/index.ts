@@ -75,64 +75,66 @@ export class CollateralAccountModule {
 
   get build() {
     return {
-      deployAccount: (args: OmitBound<BuildDeployAccountSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+      signed: {
+        deployAccount: (args: OmitBound<BuildDeployAccountSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildDeployAccountSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildDeployAccountSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      withdrawal: (args: OmitBound<BuildWithdrawalSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        withdrawal: (args: OmitBound<BuildWithdrawalSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildWithdrawalSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildWithdrawalSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      marketTransfer: (args: OmitBound<BuildMarketTransferSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        marketTransfer: (args: OmitBound<BuildMarketTransferSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildMarketTransferSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildMarketTransferSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      rebalanceConfigChange: (args: OmitBound<BuildRebalanceConfigChangeSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        rebalanceConfigChange: (args: OmitBound<BuildRebalanceConfigChangeSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildRebalanceConfigChangeSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildRebalanceConfigChangeSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      relayedSignerUpdate: (args: OmitBound<BuildRelayedSignerUpdateSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        relayedSignerUpdate: (args: OmitBound<BuildRelayedSignerUpdateSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildRelayedSignerUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildRelayedSignerUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      relayedOperatorUpdate: (args: OmitBound<BuildRelayedOperatorUpdateSigningPayloadArgs> & OptionalAddress) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        relayedOperatorUpdate: (args: OmitBound<BuildRelayedOperatorUpdateSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildRelayedOperatorUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildRelayedOperatorUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      relayedGroupCancellation: (
-        args: OmitBound<BuildRelayedGroupCancellationSigningPayloadArgs> & OptionalAddress,
-      ) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        relayedGroupCancellation: (
+          args: OmitBound<BuildRelayedGroupCancellationSigningPayloadArgs> & OptionalAddress,
+        ) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildRelayedGroupCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
-      },
+          return buildRelayedGroupCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
 
-      relayedNonceCancellation: (
-        args: OmitBound<BuildRelayedNonceCancellationSigningPayloadArgs> & OptionalAddress,
-      ) => {
-        const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
+        relayedNonceCancellation: (
+          args: OmitBound<BuildRelayedNonceCancellationSigningPayloadArgs> & OptionalAddress,
+        ) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
 
-        return buildRelayedNonceCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
+          return buildRelayedNonceCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
       },
     }
   }
@@ -146,49 +148,64 @@ export class CollateralAccountModule {
     const { chainId } = this.config
     const address = walletClient.account
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
 
+    return {}
+  }
+
+  get sign() {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
+
+    const { chainId } = this.config
+    const address = walletClient.account
+
+    const signOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
+
     return {
-      deployAccount: async (...args: Parameters<typeof this.build.deployAccount>) => {
-        const { deployAccount } = this.build.deployAccount(...args)
-        const signature = await walletClient.signTypedData({ ...deployAccount, ...txOpts })
+      deployAccount: async (...args: Parameters<typeof this.build.signed.deployAccount>) => {
+        const { deployAccount } = this.build.signed.deployAccount(...args)
+        const signature = await walletClient.signTypedData({ ...deployAccount, ...signOpts })
         return {
           signature,
           deployAccount,
         }
       },
 
-      withdrawal: async (...args: Parameters<typeof this.build.withdrawal>) => {
-        const { withdrawal } = this.build.withdrawal(...args)
-        const signature = await walletClient.signTypedData({ ...withdrawal, ...txOpts })
+      withdrawal: async (...args: Parameters<typeof this.build.signed.withdrawal>) => {
+        const { withdrawal } = this.build.signed.withdrawal(...args)
+        const signature = await walletClient.signTypedData({ ...withdrawal, ...signOpts })
         return {
           signature,
           withdrawal,
         }
       },
 
-      marketTransfer: async (...args: Parameters<typeof this.build.marketTransfer>) => {
-        const { marketTransfer } = this.build.marketTransfer(...args)
-        const signature = await walletClient.signTypedData({ ...marketTransfer, ...txOpts })
+      marketTransfer: async (...args: Parameters<typeof this.build.signed.marketTransfer>) => {
+        const { marketTransfer } = this.build.signed.marketTransfer(...args)
+        const signature = await walletClient.signTypedData({ ...marketTransfer, ...signOpts })
         return {
           signature,
           marketTransfer,
         }
       },
 
-      rebalanceConfigChange: async (...args: Parameters<typeof this.build.rebalanceConfigChange>) => {
-        const { rebalanceConfigChange } = this.build.rebalanceConfigChange(...args)
-        const signature = await walletClient.signTypedData({ ...rebalanceConfigChange, ...txOpts })
+      rebalanceConfigChange: async (...args: Parameters<typeof this.build.signed.rebalanceConfigChange>) => {
+        const { rebalanceConfigChange } = this.build.signed.rebalanceConfigChange(...args)
+        const signature = await walletClient.signTypedData({ ...rebalanceConfigChange, ...signOpts })
         return {
           signature,
           rebalanceConfigChange,
         }
       },
 
-      relayedSignerUpdate: async (...args: Parameters<typeof this.build.relayedSignerUpdate>) => {
-        const { signerUpdate, relayedSignerUpdate } = this.build.relayedSignerUpdate(...args)
-        const outerSignature = await walletClient.signTypedData({ ...relayedSignerUpdate, ...txOpts })
-        const innerSignature = await walletClient.signTypedData({ ...signerUpdate, ...txOpts })
+      relayedSignerUpdate: async (...args: Parameters<typeof this.build.signed.relayedSignerUpdate>) => {
+        const { signerUpdate, relayedSignerUpdate } = this.build.signed.relayedSignerUpdate(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedSignerUpdate, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...signerUpdate, ...signOpts })
         return {
           outerSignature,
           innerSignature,
@@ -197,10 +214,10 @@ export class CollateralAccountModule {
         }
       },
 
-      relayedOperatorUpdate: async (...args: Parameters<typeof this.build.relayedOperatorUpdate>) => {
-        const { operatorUpdate, relayedOperatorUpdate } = this.build.relayedOperatorUpdate(...args)
-        const outerSignature = await walletClient.signTypedData({ ...relayedOperatorUpdate, ...txOpts })
-        const innerSignature = await walletClient.signTypedData({ ...operatorUpdate, ...txOpts })
+      relayedOperatorUpdate: async (...args: Parameters<typeof this.build.signed.relayedOperatorUpdate>) => {
+        const { operatorUpdate, relayedOperatorUpdate } = this.build.signed.relayedOperatorUpdate(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedOperatorUpdate, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...operatorUpdate, ...signOpts })
         return {
           outerSignature,
           innerSignature,
@@ -209,10 +226,10 @@ export class CollateralAccountModule {
         }
       },
 
-      relayedGroupCancellation: async (...args: Parameters<typeof this.build.relayedGroupCancellation>) => {
-        const { groupCancellation, relayedGroupCancellation } = this.build.relayedGroupCancellation(...args)
-        const outerSignature = await walletClient.signTypedData({ ...relayedGroupCancellation, ...txOpts })
-        const innerSignature = await walletClient.signTypedData({ ...groupCancellation, ...txOpts })
+      relayedGroupCancellation: async (...args: Parameters<typeof this.build.signed.relayedGroupCancellation>) => {
+        const { groupCancellation, relayedGroupCancellation } = this.build.signed.relayedGroupCancellation(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedGroupCancellation, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...groupCancellation, ...signOpts })
         return {
           outerSignature,
           innerSignature,
@@ -221,10 +238,10 @@ export class CollateralAccountModule {
         }
       },
 
-      relayedNonceCancellation: async (...args: Parameters<typeof this.build.relayedNonceCancellation>) => {
-        const { nonceCancellation, relayedNonceCancellation } = this.build.relayedNonceCancellation(...args)
-        const outerSignature = await walletClient.signTypedData({ ...relayedNonceCancellation, ...txOpts })
-        const innerSignature = await walletClient.signTypedData({ ...nonceCancellation, ...txOpts })
+      relayedNonceCancellation: async (...args: Parameters<typeof this.build.signed.relayedNonceCancellation>) => {
+        const { nonceCancellation, relayedNonceCancellation } = this.build.signed.relayedNonceCancellation(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedNonceCancellation, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...nonceCancellation, ...signOpts })
         return {
           outerSignature,
           innerSignature,
