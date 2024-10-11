@@ -14,7 +14,7 @@ export const DeployAccountSigningTypes = {
   DeployAccount: EIP712_DeployAccount,
   Action: EIP712_CollateralAccountAction,
   Common: EIP712_Common,
-}
+} as const
 
 export type DeployAccountSigningPayload = Omit<
   SignTypedDataParameters<typeof DeployAccountSigningTypes, 'DeployAccount'>,

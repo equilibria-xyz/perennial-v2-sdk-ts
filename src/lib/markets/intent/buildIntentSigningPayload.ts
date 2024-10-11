@@ -1,11 +1,11 @@
 import { Address } from 'viem'
 
-import { SupportedMarket } from '../../constants'
-import { EIP712_Domain, IntentSigningPayload, IntentSigningTypes } from '../../constants/eip712'
-import { Intent } from '../../types/perennial'
-import { CommonOverrides, CommonRequired } from '../../types/shared'
-import { addressForMarket } from '../../utils/addressUtils'
-import { generateNonce } from '../../utils/intentUtils'
+import { SupportedMarket } from '../../../constants'
+import { EIP712_Domain, IntentSigningPayload, IntentSigningTypes } from '../../../constants/eip712'
+import { Intent } from '../../../types/perennial'
+import { CommonOverrides, CommonRequired } from '../../../types/shared'
+import { addressForMarket } from '../../../utils/addressUtils'
+import { generateNonce } from '../../../utils/intentUtils'
 
 export type BuildIntentSigningPayloadArgs = CommonRequired &
   CommonOverrides & {
@@ -19,7 +19,7 @@ export function buildIntentSigningPayload({
   market,
   expiry,
   overrides,
-}: BuildIntentSigningPayloadArgs): IntentSigningPayload {
+}: BuildIntentSigningPayloadArgs): { intent: IntentSigningPayload } {
   const nonce = overrides?.nonce ?? generateNonce()
   const marketAddress = addressForMarket(chainId, market)
 
@@ -41,5 +41,5 @@ export function buildIntentSigningPayload({
     message,
   }
 
-  return payload
+  return { intent: payload }
 }

@@ -35,7 +35,13 @@ import {
   fetchSubPositions,
   fetchTradeHistory,
 } from './graph'
-import { BuildIntentSigningPayloadArgs, buildIntentSigningPayload } from './intent'
+import {
+  BuildCancelOrderSigningPayloadArgs,
+  BuildPlaceOrderSigningPayloadArgs,
+  buildCancelOrderSigningPayload,
+  buildPlaceOrderSigningPayload,
+} from './intent'
+import { BuildIntentSigningPayloadArgs, buildIntentSigningPayload } from './intent/buildIntentSigningPayload'
 import {
   BuildCancelOrderTxArgs,
   BuildClaimFeeTxArgs,
@@ -714,6 +720,20 @@ export class MarketsModule {
 
         return buildIntentSigningPayload({ chainId: this.config.chainId, ...args, address })
       },
+
+      relayedPlaceOrder: (args: OmitBound<BuildPlaceOrderSigningPayloadArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
+        return buildPlaceOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
+      },
+
+      relayedCancelOrder: (args: OmitBound<BuildCancelOrderSigningPayloadArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+        throwIfZeroAddress(address)
+
+        return buildCancelOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
+      },
     }
   }
 
@@ -896,11 +916,29 @@ export class MarketsModule {
        * @param signature Signature of the intent
        */
       signedIntent: async (...args: Parameters<typeof this.build.signedIntent>) => {
-        const payload = this.build.signedIntent(...args)
-        const hash = await walletClient.signTypedData({ ...payload, ...txOpts })
+        const { intent } = this.build.signedIntent(...args)
+        const signature = await walletClient.signTypedData({ ...intent, ...txOpts })
         return {
-          signature: hash,
-          intent: payload,
+          signature,
+          intent,
+        }
+      },
+
+      relayedPlaceOrder: async (...args: Parameters<typeof this.build.relayedPlaceOrder>) => {
+        const { placeOrder } = this.build.relayedPlaceOrder(...args)
+        const signature = await walletClient.signTypedData({ ...placeOrder, ...txOpts })
+        return {
+          signature,
+          placeOrder,
+        }
+      },
+
+      relayedCancelOrder: async (...args: Parameters<typeof this.build.relayedCancelOrder>) => {
+        const { cancelOrder } = this.build.relayedCancelOrder(...args)
+        const signature = await walletClient.signTypedData({ ...cancelOrder, ...txOpts })
+        return {
+          signature,
+          cancelOrder,
         }
       },
     }
