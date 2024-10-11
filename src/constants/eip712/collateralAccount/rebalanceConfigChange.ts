@@ -12,7 +12,7 @@ export const EIP712_RebalanceConfig = [
     name: 'threshold',
     type: 'uint256',
   },
-]
+] as const
 
 export const EIP712_RebalanceConfigChange = [
   {
@@ -35,14 +35,14 @@ export const EIP712_RebalanceConfigChange = [
     name: 'action',
     type: 'Action',
   },
-]
+] as const
 
 export const RebalanceConfigChangeSigningTypes = {
   RebalanceConfigChange: EIP712_RebalanceConfigChange,
   Action: EIP712_CollateralAccountAction,
   Common: EIP712_Common,
   RebalanceConfig: EIP712_RebalanceConfig,
-}
+} as const
 
 export type RebalanceConfigChangeSigningPayload = Omit<
   SignTypedDataParameters<typeof RebalanceConfigChangeSigningTypes, 'RebalanceConfigChange'>,

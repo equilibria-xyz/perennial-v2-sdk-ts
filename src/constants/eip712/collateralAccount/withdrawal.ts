@@ -22,7 +22,7 @@ export const WithdrawalSigningTypes = {
   Withdrawal: EIP712_Withdrawal,
   Action: EIP712_CollateralAccountAction,
   Common: EIP712_Common,
-}
+} as const
 
 export type WithdrawalSigningPayload = Omit<
   SignTypedDataParameters<typeof WithdrawalSigningTypes, 'Withdrawal'>,

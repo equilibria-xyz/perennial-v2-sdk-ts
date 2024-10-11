@@ -20,7 +20,7 @@ export const EIP712_InterfaceFee = [
     name: 'unwrap',
     type: 'bool',
   },
-]
+] as const
 
 export const EIP712_TriggerOrder = [
   {
@@ -55,7 +55,7 @@ export const EIP712_TriggerOrder = [
     name: 'interfaceFee',
     type: 'InterfaceFee',
   },
-]
+] as const
 
 export const EIP712_PlaceOrderAction = [
   {
@@ -66,7 +66,7 @@ export const EIP712_PlaceOrderAction = [
     name: 'action',
     type: 'Action',
   },
-]
+] as const
 
 export const PlaceOrderSigningTypes = {
   PlaceOrderAction: EIP712_PlaceOrderAction,
@@ -74,7 +74,7 @@ export const PlaceOrderSigningTypes = {
   Common: EIP712_Common,
   InterfaceFee: EIP712_InterfaceFee,
   TriggerOrder: EIP712_TriggerOrder,
-}
+} as const
 
 export type PlaceOrderSigningPayload = Omit<
   SignTypedDataParameters<typeof PlaceOrderSigningTypes, 'PlaceOrderAction'>,

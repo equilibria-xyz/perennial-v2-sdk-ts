@@ -16,7 +16,7 @@ export const EIP712_GroupCancellation = [
 export const GroupCancellationSigningTypes = {
   GroupCancellation: EIP712_GroupCancellation,
   Common: EIP712_Common,
-}
+} as const
 
 export type GroupCancellationSigningPayload = Omit<
   SignTypedDataParameters<typeof GroupCancellationSigningTypes, 'GroupCancellation'>,

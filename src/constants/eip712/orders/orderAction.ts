@@ -15,4 +15,4 @@ export const EIP712_OrderAction = [
     name: 'common',
     type: 'Common',
   },
-]
+] as const

@@ -43,7 +43,7 @@ export {
 } from './lib/markets/tx'
 
 // Market - Intents
-export { buildIntentSigningPayload, type BuildIntentSigningPayloadArgs } from './lib/markets/intent'
+export * from './lib/markets/intent'
 
 // Vault - Chain
 export {
