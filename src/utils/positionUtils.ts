@@ -297,6 +297,9 @@ export type TradeFeeInfo = {
   proportionalFee: bigint
   linearFee: bigint
   adiabaticFee: bigint
+  solverFee: bigint
+  oracleFee: bigint
+  protocolFee: bigint
 }
 
 /**
@@ -315,6 +318,8 @@ export const calcTradeFee = ({
   direction,
   referralFee = 0n,
   usePreGlobalPosition = false,
+  intentFeeRate = 0n,
+  oracleFeeRate = 0n,
 }: {
   positionDelta: bigint
   marketSnapshot: MarketSnapshot
@@ -322,6 +327,8 @@ export const calcTradeFee = ({
   direction: PositionSide
   referralFee?: bigint
   usePreGlobalPosition?: boolean
+  intentFeeRate?: bigint
+  oracleFeeRate?: bigint
 }): TradeFeeInfo => {
   let tradeFeeInfo = {
     tradeFee: 0n,
@@ -330,6 +337,9 @@ export const calcTradeFee = ({
     proportionalFee: 0n,
     linearFee: 0n,
     adiabaticFee: 0n,
+    solverFee: 0n,
+    oracleFee: 0n,
+    protocolFee: 0n,
   }
   if (!marketSnapshot || !positionDelta) return tradeFeeInfo
 
@@ -339,7 +349,7 @@ export const calcTradeFee = ({
     pre: {
       position: { long: preLong, short: preShort },
     },
-    parameter: { makerFee: marketMakerFee, takerFee: marketTakerFee },
+    parameter: { makerFee: marketMakerFee, takerFee: marketTakerFee, riskFee: riskFeeRate },
     global: { latestPrice },
     makerTotal,
     takerTotal,
@@ -354,13 +364,18 @@ export const calcTradeFee = ({
       Big6Math.mul(makerFee.proportionalFee, adjustedMakerTotal),
       makerFee.scale,
     )
-
     const makerProportionalFee = Big6Math.mul(notional, makerProportionalFeeRate)
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
-    const tradeFee = makerLinearFee + makerProportionalFee
+    const notionalMakerFee = Big6Math.mul(marketMakerFee, notional)
+    // TODO: check tradeFee. Document calls for takerFee + makerFee
+    const tradeFee = notionalMakerFee + makerProportionalFee
     const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
-    const subtractiveFee = Big6Math.mul(makerLinearFee, referralFee)
-    const marketFee = Big6Math.mul(makerLinearFee - subtractiveFee, marketMakerFee)
+    const subtractiveFee = Big6Math.mul(tradeFee, referralFee)
+    const solverFee = Big6Math.mul(subtractiveFee, intentFeeRate)
+    const marketFee = tradeFee - subtractiveFee
+    const riskFee = Big6Math.mul(marketFee, riskFeeRate)
+    const oracleFee = Big6Math.mul(marketFee - riskFee, oracleFeeRate)
+    const protocolFee = marketFee - riskFee - oracleFee
 
     tradeFeeInfo = {
       tradeFee: tradeFee + marketFee,
@@ -369,6 +384,9 @@ export const calcTradeFee = ({
       proportionalFee: makerProportionalFee,
       linearFee: makerLinearFee,
       adiabaticFee: 0n,
+      solverFee,
+      oracleFee,
+      protocolFee,
     }
 
     return tradeFeeInfo
@@ -389,20 +407,32 @@ export const calcTradeFee = ({
   const takerProportionalFee = Big6Math.div(Big6Math.mul(notional, takerProportionalFeeNumerator), takerFee.scale)
 
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
-  const subtractiveFee = Big6Math.mul(takerLinearFee, referralFee)
+  const notionalTakerFee = Big6Math.mul(marketTakerFee, notional)
+  // TODO: check tradeFee. Document calls for takerFee + makerFee
+  const tradeFee = notionalTakerFee + takerProportionalFee
+  const subtractiveFee = Big6Math.mul(tradeFee, referralFee)
+  const solverFee = Big6Math.mul(subtractiveFee, intentFeeRate)
+  const marketFee = tradeFee - subtractiveFee
+  const riskFee = Big6Math.mul(marketFee, riskFeeRate)
 
-  const marketFee = Big6Math.mul(takerLinearFee - subtractiveFee, marketTakerFee)
-  const tradeFee = subtractiveFee + marketFee
+  const oracleFee = Big6Math.mul(marketFee - riskFee, oracleFeeRate)
+  const protocolFee = marketFee - riskFee - oracleFee
   const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
-  const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee - tradeFee
+  // TODO: Check - Old impact calc subtracts trade fee
+  // const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee - tradeFee
+  const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee
 
   tradeFeeInfo = {
-    tradeFee,
+    tradeFee: tradeFee + marketFee,
+    // TODO: return 0 if there is a solver fee?
     tradeImpact,
     feeBasisPoints,
     proportionalFee: takerProportionalFee,
     linearFee: takerLinearFee,
     adiabaticFee: takerAdiabaticFee,
+    solverFee,
+    oracleFee,
+    protocolFee,
   }
   return tradeFeeInfo
 }
