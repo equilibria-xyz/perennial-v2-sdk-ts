@@ -293,7 +293,7 @@ export const calcFundingRates = (fundingRate: bigint = 0n) => {
 export type TradeFeeInfo = {
   tradeFee: {
     total: bigint
-    basisPoints: bigint
+    tradeFeePct: bigint
     components: {
       referralFee: bigint
     }
@@ -301,7 +301,7 @@ export type TradeFeeInfo = {
   tradeImpact: {
     total: bigint
     impactPerPosition: bigint
-    basisPoints: bigint
+    impactPerPositionPct: bigint
     components: {
       proportionalFee: bigint
       linearFee: bigint
@@ -337,7 +337,7 @@ export const calcTradeFee = ({
   let tradeFeeInfo = {
     tradeFee: {
       total: 0n,
-      basisPoints: 0n,
+      tradeFeePct: 0n,
       components: {
         referralFee: 0n,
       },
@@ -345,7 +345,7 @@ export const calcTradeFee = ({
     tradeImpact: {
       total: 0n,
       impactPerPosition: 0n,
-      basisPoints: 0n,
+      impactPerPositionPct: 0n,
       components: {
         proportionalFee: 0n,
         linearFee: 0n,
@@ -384,7 +384,7 @@ export const calcTradeFee = ({
     tradeFeeInfo = {
       tradeFee: {
         total: tradeFee,
-        basisPoints: feeBasisPoints,
+        tradeFeePct: feeBasisPoints,
         components: {
           referralFee: referralFeeNotional,
         },
@@ -392,7 +392,7 @@ export const calcTradeFee = ({
       tradeImpact: {
         total: 0n,
         impactPerPosition: 0n,
-        basisPoints: 0n,
+        impactPerPositionPct: 0n,
         components: {
           proportionalFee: makerProportionalFee,
           linearFee: makerLinearFee,
@@ -429,7 +429,7 @@ export const calcTradeFee = ({
   tradeFeeInfo = {
     tradeFee: {
       total: tradeFee,
-      basisPoints: feeBasisPoints,
+      tradeFeePct: feeBasisPoints,
       components: {
         referralFee: referralFeeNotional,
       },
@@ -437,7 +437,7 @@ export const calcTradeFee = ({
     tradeImpact: {
       total: tradeImpact,
       impactPerPosition: priceImpact,
-      basisPoints: priceImpactPct,
+      impactPerPositionPct: priceImpactPct,
       components: {
         proportionalFee: takerProportionalFee,
         linearFee: takerLinearFee,
