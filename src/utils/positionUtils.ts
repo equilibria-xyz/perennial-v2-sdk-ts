@@ -294,9 +294,6 @@ export type TradeFeeInfo = {
   tradeFee: {
     total: bigint
     tradeFeePct: bigint
-    components: {
-      referralFee: bigint
-    }
   }
   tradeImpact: {
     total: bigint
@@ -324,7 +321,6 @@ export const calcTradeFee = ({
   marketSnapshot,
   isMaker,
   direction,
-  referralFee = 0n,
   usePreGlobalPosition = false,
 }: {
   positionDelta: bigint
@@ -338,9 +334,6 @@ export const calcTradeFee = ({
     tradeFee: {
       total: 0n,
       tradeFeePct: 0n,
-      components: {
-        referralFee: 0n,
-      },
     },
     tradeImpact: {
       total: 0n,
@@ -379,15 +372,11 @@ export const calcTradeFee = ({
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
     const tradeFee = Big6Math.mul(marketMakerFee, notional)
     const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
-    const referralFeeNotional = Big6Math.mul(tradeFee, referralFee)
 
     tradeFeeInfo = {
       tradeFee: {
         total: tradeFee,
         tradeFeePct: feeBasisPoints,
-        components: {
-          referralFee: referralFeeNotional,
-        },
       },
       tradeImpact: {
         total: 0n,
@@ -420,7 +409,6 @@ export const calcTradeFee = ({
 
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const tradeFee = Big6Math.mul(marketTakerFee, notional)
-  const referralFeeNotional = Big6Math.mul(tradeFee, referralFee)
   const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
   const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee
   const priceImpact = positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
@@ -430,9 +418,6 @@ export const calcTradeFee = ({
     tradeFee: {
       total: tradeFee,
       tradeFeePct: feeBasisPoints,
-      components: {
-        referralFee: referralFeeNotional,
-      },
     },
     tradeImpact: {
       total: tradeImpact,
