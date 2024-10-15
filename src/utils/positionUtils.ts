@@ -22,11 +22,16 @@ export function side(maker: bigint | string, long: bigint | string, short: bigin
   return PositionSide.none
 }
 
+export function sideFromPosition(position?: { maker: bigint | string; long: bigint | string; short: bigint | string }) {
+  if (!position) return PositionSide.none
+  return side(position.maker, position.long, position.short)
+}
+
 export function orderSize(maker: bigint | string, long: bigint | string, short: bigint | string) {
   return BigInt(maker) + BigInt(long) + BigInt(short)
 }
 
-export function efficiency(maker: bigint, major: bigint) {
+export function calcEfficiency(maker: bigint, major: bigint) {
   return major > 0n ? Big6Math.min(Big6Math.div(maker, major), Big6Math.ONE) : Big6Math.ONE
 }
 
@@ -159,17 +164,6 @@ export const getPositionFromSelectedMarket = ({
     [PositionSide.long, PositionSide.short].includes(userMarketSnapshot.nextSide)
     ? userMarketSnapshot
     : undefined
-}
-
-export function getSideFromPosition(position?: UserMarketSnapshot['position']) {
-  if (!position) return PositionSide.none
-  return position.maker > 0n
-    ? PositionSide.maker
-    : position.long > 0n
-      ? PositionSide.long
-      : position.short > 0n
-        ? PositionSide.short
-        : PositionSide.none
 }
 
 /**
@@ -313,7 +307,6 @@ export type TradeFeeInfo = {
  * @param marketSnapshot - Market snapshot
  * @param isMaker - Is maker
  * @param direction - Position direction
- * @param referralFee - Referral fee
  * @returns Trade fee info
  */
 export const calcTradeFee = ({
@@ -325,7 +318,6 @@ export const calcTradeFee = ({
   positionDelta: bigint
   marketSnapshot: MarketSnapshot
   side: PositionSide
-  referralFee?: bigint
   usePreGlobalPosition?: boolean
 }): TradeFeeInfo => {
   let tradeFeeInfo = {
@@ -423,39 +415,27 @@ export const calcTradeFee = ({
 }
 
 export function calcEstExecutionPrice({
-  oraclePrice,
-  orderDirection,
+  indexPrice,
+  side,
   positionDelta,
   marketSnapshot,
-  referralFee,
 }: {
   positionDelta: bigint
-  oraclePrice: bigint
-  orderDirection: PositionSide.long | PositionSide.short
+  indexPrice: bigint
+  side: PositionSide.long | PositionSide.short
   marketSnapshot: MarketSnapshot
   referralFee?: bigint
 }) {
-  const tradeFeeData = calcTradeFee({
+  const { tradeImpact } = calcTradeFee({
     positionDelta,
-    side: orderDirection,
+    side: side,
     marketSnapshot,
-    referralFee,
   })
 
-  const priceImpact = tradeFeeData.tradeImpact.perPosition
+  const perPositionImpact = tradeImpact.perPosition
+  const directionalPriceImpact = positionDelta > 0n ? perPositionImpact : -perPositionImpact
 
-  const priceImpactPercentage = tradeFeeData.tradeImpact.pct
-  const directionalPriceImpact = positionDelta > 0n ? priceImpact : -priceImpact
-
-  return {
-    priceImpact,
-    total:
-      orderDirection === PositionSide.long
-        ? oraclePrice + directionalPriceImpact
-        : oraclePrice - directionalPriceImpact,
-    priceImpactPercentage,
-    nonPriceImpactFee: tradeFeeData.tradeFee.total - priceImpact,
-  }
+  return side === PositionSide.long ? indexPrice + directionalPriceImpact : indexPrice - directionalPriceImpact
 }
 
 export function calcInterfaceFee({
