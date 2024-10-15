@@ -279,7 +279,6 @@ export {
   calcSkew,
   calcFundingRates,
   calcTradeFee,
-  calcPriceImpactFromTradeFee,
   calcEstExecutionPrice,
   calcInterfaceFee,
   calcTotalPositionChangeFee,
