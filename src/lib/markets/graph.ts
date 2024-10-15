@@ -131,14 +131,13 @@ export async function fetchActivePositionsPnl({
     const pendingTradeFeeData = calcTradeFee({
       positionDelta: pendingDelta,
       marketSnapshot,
-      isMaker: side === PositionSide.maker,
-      direction: side,
+      side: side,
       usePreGlobalPosition: pendingDelta !== 0n,
     })
-    const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact
+    const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact.total
     const pendingOrderCollateral = userMarketSnapshot.pendingOrder.collateral
     const pendingOrderSettlementFee = marketSettlementFees[market].totalCost
-    const pendingTradeFee = pendingTradeFeeData.tradeFee
+    const pendingTradeFee = pendingTradeFeeData.tradeFee.total
     const pendingAdditiveFee = 0n
 
     const graphMarketAccount = marketAccounts.find((ma) => getAddress(ma.market.id) === marketAddress)
