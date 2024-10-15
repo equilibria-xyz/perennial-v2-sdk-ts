@@ -412,7 +412,7 @@ export const calcTradeFee = ({
   const feeBasisPoints = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
   const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee
   const priceImpact = positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
-  const priceImpactPct = priceImpact !== 0n ? Big6Math.div(priceImpact, Big6Math.abs(notional)) : 0n
+  const priceImpactPct = priceImpact !== 0n ? Big6Math.div(tradeImpact, notional) : 0n
 
   tradeFeeInfo = {
     tradeFee: {
