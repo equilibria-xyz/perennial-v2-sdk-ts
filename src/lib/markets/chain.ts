@@ -16,7 +16,7 @@ import {
 import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { SupportedMarketMapping } from '../../constants'
-import { calcLeverage, calcNotional, getSideFromPosition, getStatusForSnapshot } from '../../utils/positionUtils'
+import { calcLeverage, calcNotional, getStatusForSnapshot, sideFromPosition } from '../../utils/positionUtils'
 import {
   getKeeperFactoryContract,
   getKeeperOracleContract,
@@ -238,8 +238,8 @@ export async function fetchMarketSnapshots({
     const marketPrice = marketSnapshot.global.latestPrice ?? 0n
     const latestPosition = snapshot.versions[0].valid ? snapshot.position : pre.position
     const nextPosition = snapshot.versions[0].valid ? snapshot.nextPosition : pre.nextPosition
-    const side = getSideFromPosition(latestPosition)
-    const nextSide = getSideFromPosition(nextPosition)
+    const side = sideFromPosition(latestPosition)
+    const nextSide = sideFromPosition(nextPosition)
     const magnitude = side === PositionSide.none ? 0n : latestPosition[side]
     const nextMagnitude = nextSide === PositionSide.none ? 0n : nextPosition?.[nextSide] ?? 0n
     const priceUpdate = snapshot?.priceUpdate

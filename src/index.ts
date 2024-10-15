@@ -264,7 +264,8 @@ export {
 export {
   magnitude,
   side,
-  efficiency,
+  calcEfficiency,
+  orderSize,
   calcLiquidationPrice,
   calcLeverage,
   calcMakerExposure,
@@ -272,7 +273,7 @@ export {
   calcNotional,
   calcMakerStats,
   getPositionFromSelectedMarket,
-  getSideFromPosition,
+  sideFromPosition,
   getStatusForSnapshot,
   calcTakerLiquidity,
   isActivePosition,
