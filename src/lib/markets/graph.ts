@@ -131,8 +131,7 @@ export async function fetchActivePositionsPnl({
     const pendingTradeFeeData = calcTradeFee({
       positionDelta: pendingDelta,
       marketSnapshot,
-      isMaker: side === PositionSide.maker,
-      direction: side,
+      side: side,
       usePreGlobalPosition: pendingDelta !== 0n,
     })
     const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact.total
