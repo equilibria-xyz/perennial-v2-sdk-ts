@@ -360,15 +360,28 @@ export const calcTradeFee = ({
     )
     const makerProportionalFee = Big6Math.mul(notional, makerProportionalFeeRate)
     const makerLinearFee = Big6Math.mul(notional, makerFee.linearFee)
-    const tradeFee = Big6Math.mul(marketMakerFee, notional) + makerLinearFee + makerProportionalFee
-    const tradeFeePct = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
+    const tradeFee = Big6Math.mul(marketMakerFee, notional)
+    const tradeFeePct = notional !== 0n ? Big6Math.div(tradeFee, notional) : 0n
+
+    const tradeImpact = makerLinearFee + makerProportionalFee
+    const perPositionImpact = positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
+    const tradeImpactPct = notional !== 0n ? Big6Math.div(tradeImpact, notional) : 0n
 
     tradeFeeInfo = {
       tradeFee: {
         total: tradeFee,
         pct: tradeFeePct,
       },
-      tradeImpact: { ...tradeFeeInfo.tradeImpact },
+      tradeImpact: {
+        total: tradeImpact,
+        pct: tradeImpactPct,
+        perPosition: perPositionImpact,
+        components: {
+          linearFee: makerLinearFee,
+          proportionalFee: makerProportionalFee,
+          adiabaticFee: 0n,
+        },
+      },
     }
 
     return tradeFeeInfo
@@ -390,7 +403,7 @@ export const calcTradeFee = ({
 
   const takerLinearFee = Big6Math.mul(notional, takerFee.linearFee)
   const tradeFee = Big6Math.mul(marketTakerFee, notional)
-  const tradeFeePct = !Big6Math.isZero(tradeFee) ? Big6Math.div(tradeFee, notional) : 0n
+  const tradeFeePct = notional !== 0n ? Big6Math.div(tradeFee, notional) : 0n
   const tradeImpact = takerLinearFee + takerProportionalFee + takerAdiabaticFee
   const perPositionImpact = positionDelta !== 0n ? Big6Math.div(tradeImpact, Big6Math.abs(positionDelta)) : 0n
   const tradeImpactPct = notional !== 0n ? Big6Math.div(tradeImpact, notional) : 0n
@@ -405,8 +418,8 @@ export const calcTradeFee = ({
       pct: tradeImpactPct,
       perPosition: perPositionImpact,
       components: {
-        proportionalFee: takerProportionalFee,
         linearFee: takerLinearFee,
+        proportionalFee: takerProportionalFee,
         adiabaticFee: takerAdiabaticFee,
       },
     },
