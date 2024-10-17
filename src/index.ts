@@ -68,7 +68,15 @@ export {
 } from './lib/vaults/tx'
 
 // Operator - Transaction
-export { buildApproveUSDCTx, buildApproveMarketFactoryTx, buildApproveVaultFactoryTx } from './lib/operators'
+export {
+  buildApproveUSDCTx,
+  buildApproveMarketFactoryTx,
+  buildApproveVaultFactoryTx,
+  buildAccessUpdateBatchTx,
+  buildApproveDSUReserveTx,
+  buildUnwrapDSUTx,
+  buildUpdateMultiInvokerOperatorTx,
+} from './lib/operators'
 
 // Collateral Account - Intents
 export * from './lib/collateralAccounts/intent'
