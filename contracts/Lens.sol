@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import '@perennial/perennial-v2/contracts/interfaces/IMarket.sol';
-import '@perennial/perennial-v2-oracle/contracts/interfaces/IOracle.sol';
-import '@perennial/perennial-v2-oracle/contracts/interfaces/IKeeperFactory.sol';
-import * as Vault from '@perennial/perennial-v2-vault/contracts/interfaces/IVault.sol';
-import '@perennial/perennial-v2-vault/contracts/interfaces/IVaultFactory.sol';
+import '@perennial/core/contracts/interfaces/IMarket.sol';
+import '@perennial/core/contracts/types/OracleReceipt.sol';
+import '@perennial/oracle/contracts/interfaces/IOracle.sol';
+import '@perennial/oracle/contracts/interfaces/IKeeperFactory.sol';
+import * as Vault from '@perennial/vault/contracts/interfaces/IVault.sol';
+import '@perennial/vault/contracts/interfaces/IVaultFactory.sol';
+import '@equilibria/root/number/types/UFixed6.sol';
 
 struct PriceCommitData {
   IKeeperFactory keeperFactory;
