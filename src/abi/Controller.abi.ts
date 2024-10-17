@@ -1,48 +1,5 @@
 export const ControllerAbi = [
   {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'implementation',
-        type: 'address',
-      },
-      {
-        components: [
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierCalldata',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferCalldata',
-            type: 'uint256',
-          },
-        ],
-        internalType: 'struct IKept.KeepConfig',
-        name: 'keepConfig',
-        type: 'tuple',
-      },
-      {
-        internalType: 'contract IVerifierBase',
-        name: 'nonceManager',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'constructor',
-  },
-  {
     inputs: [],
     name: 'ControllerGroupBalancedError',
     type: 'error',
@@ -102,6 +59,17 @@ export const ControllerAbi = [
   {
     inputs: [],
     name: 'FactoryNotInstanceError',
+    type: 'error',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'value',
+        type: 'uint256',
+      },
+    ],
+    name: 'Fixed6OverflowError',
     type: 'error',
   },
   {
@@ -404,32 +372,6 @@ export const ControllerAbi = [
     inputs: [],
     name: 'Unpaused',
     type: 'event',
-  },
-  {
-    inputs: [],
-    name: 'ARB_FIXED_OVERHEAD',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'ARB_GAS_MULTIPLIER',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
   },
   {
     inputs: [],
@@ -782,11 +724,6 @@ export const ControllerAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IMarketFactory',
-        name: 'marketFactory_',
-        type: 'address',
-      },
-      {
         internalType: 'contract IAccountVerifier',
         name: 'verifier_',
         type: 'address',
@@ -800,11 +737,6 @@ export const ControllerAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IMarketFactory',
-        name: 'marketFactory_',
-        type: 'address',
-      },
-      {
         internalType: 'contract IAccountVerifier',
         name: 'verifier_',
         type: 'address',
@@ -813,6 +745,87 @@ export const ControllerAbi = [
         internalType: 'contract AggregatorV3Interface',
         name: 'chainlinkFeed_',
         type: 'address',
+      },
+      {
+        components: [
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierCalldata',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferCalldata',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct IKept.KeepConfig',
+        name: 'keepConfig_',
+        type: 'tuple',
+      },
+      {
+        components: [
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierCalldata',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferCalldata',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct IKept.KeepConfig',
+        name: 'keepConfigBuffered_',
+        type: 'tuple',
+      },
+      {
+        components: [
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierCalldata',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferCalldata',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct IKept.KeepConfig',
+        name: 'keepConfigWithdrawal_',
+        type: 'tuple',
       },
     ],
     name: 'initialize',
@@ -842,6 +855,62 @@ export const ControllerAbi = [
   {
     inputs: [],
     name: 'keepConfig',
+    outputs: [
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierCalldata',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferCalldata',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'keepConfigBuffered',
+    outputs: [
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierCalldata',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferCalldata',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'keepConfigWithdrawal',
     outputs: [
       {
         internalType: 'UFixed18',

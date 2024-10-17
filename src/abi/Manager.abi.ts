@@ -79,6 +79,16 @@ export const ManagerAbi = [
   },
   {
     inputs: [],
+    name: 'ManagerCannotReduceMaxFee',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'ManagerInvalidOperatorError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'ManagerInvalidOrderNonceError',
     type: 'error',
   },
@@ -685,6 +695,43 @@ export const ManagerAbi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'bool',
+        name: 'unwrap',
+        type: 'bool',
+      },
+    ],
+    name: 'claim',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'claimable',
+    outputs: [
+      {
+        internalType: 'UFixed6',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'ethTokenOracleFeed',
     outputs: [
@@ -754,6 +801,33 @@ export const ManagerAbi = [
         name: 'keepConfig_',
         type: 'tuple',
       },
+      {
+        components: [
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferBase',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed18',
+            name: 'multiplierCalldata',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'bufferCalldata',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct IKept.KeepConfig',
+        name: 'keepConfigBuffered_',
+        type: 'tuple',
+      },
     ],
     name: 'initialize',
     outputs: [],
@@ -763,6 +837,34 @@ export const ManagerAbi = [
   {
     inputs: [],
     name: 'keepConfig',
+    outputs: [
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferBase',
+        type: 'uint256',
+      },
+      {
+        internalType: 'UFixed18',
+        name: 'multiplierCalldata',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'bufferCalldata',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'keepConfigBuffered',
     outputs: [
       {
         internalType: 'UFixed18',

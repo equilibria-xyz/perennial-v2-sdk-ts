@@ -250,7 +250,7 @@ export const MarketFactoryAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'maxFeeAbsolute',
+            name: 'maxLiquidationFee',
             type: 'uint256',
           },
           {
@@ -281,6 +281,11 @@ export const MarketFactoryAbi = [
           {
             internalType: 'UFixed6',
             name: 'minScale',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'maxStaleAfter',
             type: 'uint256',
           },
         ],
@@ -597,7 +602,7 @@ export const MarketFactoryAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'maxFeeAbsolute',
+            name: 'maxLiquidationFee',
             type: 'uint256',
           },
           {
@@ -628,6 +633,11 @@ export const MarketFactoryAbi = [
           {
             internalType: 'UFixed6',
             name: 'minScale',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'maxStaleAfter',
             type: 'uint256',
           },
         ],
@@ -989,7 +999,7 @@ export const MarketFactoryAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'maxFeeAbsolute',
+            name: 'maxLiquidationFee',
             type: 'uint256',
           },
           {
@@ -1020,6 +1030,11 @@ export const MarketFactoryAbi = [
           {
             internalType: 'UFixed6',
             name: 'minScale',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'maxStaleAfter',
             type: 'uint256',
           },
         ],
