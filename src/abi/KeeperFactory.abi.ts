@@ -67,6 +67,11 @@ export const KeeperFactoryAbi = [
   },
   {
     inputs: [],
+    name: 'KeeperOracleParameterStorageInvalidError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'OwnableAlreadyInitializedError',
     type: 'error',
   },
@@ -282,6 +287,30 @@ export const KeeperFactoryAbi = [
     type: 'event',
   },
   {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    name: '_toUnderlyingPayoff',
+    outputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: 'provider',
+        type: 'address',
+      },
+      {
+        internalType: 'int16',
+        name: 'decimals',
+        type: 'int16',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'acceptOwner',
     outputs: [],
@@ -358,7 +387,7 @@ export const KeeperFactoryAbi = [
     outputs: [
       {
         internalType: 'contract IKeeperOracle',
-        name: 'oracle',
+        name: 'newOracle',
         type: 'address',
       },
     ],
@@ -395,12 +424,12 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'underlyingId',
+        name: '',
         type: 'bytes32',
       },
       {
         internalType: 'contract IPayoffProvider',
-        name: 'payoff',
+        name: '',
         type: 'address',
       },
     ],
@@ -419,7 +448,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'contract IOracleProvider',
-        name: 'oracleProvider',
+        name: '',
         type: 'address',
       },
     ],
@@ -427,7 +456,7 @@ export const KeeperFactoryAbi = [
     outputs: [
       {
         internalType: 'bytes32',
-        name: 'id',
+        name: '',
         type: 'bytes32',
       },
     ],
@@ -451,7 +480,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'contract IOracleFactory',
-        name: 'oracleFactory',
+        name: 'oracleFactory_',
         type: 'address',
       },
     ],
@@ -480,10 +509,23 @@ export const KeeperFactoryAbi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'oracleFactory',
+    outputs: [
+      {
+        internalType: 'contract IOracleFactory',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'id',
+        name: '',
         type: 'bytes32',
       },
     ],
@@ -590,6 +632,25 @@ export const KeeperFactoryAbi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'payoffs',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'pendingOwner',
     outputs: [
@@ -655,7 +716,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'oracleId',
+        name: '',
         type: 'bytes32',
       },
     ],
@@ -674,7 +735,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'oracleId',
+        name: 'id',
         type: 'bytes32',
       },
     ],
@@ -694,7 +755,7 @@ export const KeeperFactoryAbi = [
           },
         ],
         internalType: 'struct IKeeperFactory.PayoffDefinition',
-        name: 'payoff',
+        name: '',
         type: 'tuple',
       },
     ],
@@ -735,7 +796,7 @@ export const KeeperFactoryAbi = [
       },
       {
         internalType: 'UFixed6',
-        name: 'newOracleFee',
+        name: 'newOraclefee',
         type: 'uint256',
       },
       {

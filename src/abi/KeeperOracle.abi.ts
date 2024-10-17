@@ -328,19 +328,6 @@ export const KeeperOracleAbi = [
   },
   {
     inputs: [],
-    name: 'commitmentGasOracle',
-    outputs: [
-      {
-        internalType: 'contract IGasOracle',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
     name: 'current',
     outputs: [
       {
@@ -585,23 +572,15 @@ export const KeeperOracleAbi = [
         name: 'maxCount',
         type: 'uint256',
       },
+      {
+        internalType: 'address',
+        name: 'receiver',
+        type: 'address',
+      },
     ],
     name: 'settle',
     outputs: [],
     stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'settlementGasOracle',
-    outputs: [
-      {
-        internalType: 'contract IGasOracle',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
   {

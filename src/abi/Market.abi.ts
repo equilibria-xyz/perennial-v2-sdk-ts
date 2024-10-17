@@ -131,6 +131,11 @@ export const MarketAbi = [
   },
   {
     inputs: [],
+    name: 'MarketIntentPriceDeviationError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'MarketInvalidIntentFeeError',
     type: 'error',
   },
@@ -653,6 +658,11 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
+            internalType: 'UFixed6',
+            name: 'maxPriceDeviation',
+            type: 'uint256',
+          },
+          {
             internalType: 'bool',
             name: 'closed',
             type: 'bool',
@@ -1022,67 +1032,6 @@ export const MarketAbi = [
       },
     ],
     name: 'RiskParameterUpdated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'sender',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'account',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'version',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed6',
-        name: 'newMaker',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed6',
-        name: 'newLong',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed6',
-        name: 'newShort',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'Fixed6',
-        name: 'collateral',
-        type: 'int256',
-      },
-      {
-        indexed: false,
-        internalType: 'bool',
-        name: 'protect',
-        type: 'bool',
-      },
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'referrer',
-        type: 'address',
-      },
-    ],
-    name: 'Updated',
     type: 'event',
   },
   {
@@ -1567,6 +1516,11 @@ export const MarketAbi = [
           {
             internalType: 'uint256',
             name: 'maxPendingLocal',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxPriceDeviation',
             type: 'uint256',
           },
           {
@@ -2435,6 +2389,11 @@ export const MarketAbi = [
           {
             internalType: 'uint256',
             name: 'maxPendingLocal',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxPriceDeviation',
             type: 'uint256',
           },
           {
