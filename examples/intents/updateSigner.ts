@@ -34,7 +34,7 @@ async function run() {
 
   const { innerSignature, outerSignature, relayedSignerUpdate } = await sdk.collateralAccounts.sign.relayedSignerUpdate(
     {
-      newSigner: getAddress('0x5134268619513181eD3Fd49Aa7FdCE764c445e2B'),
+      signer: getAddress('0x5134268619513181eD3Fd49Aa7FdCE764c445e2B'),
       approved: true,
       maxFee: Big6Math.fromFloatString('10'),
       expiry: timeToSeconds(addHours(new Date(), 1), true),

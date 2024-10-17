@@ -42,3 +42,8 @@ export const AccessUpdateBatchSigningTypes = {
   AccessUpdate: EIP712_AccessUpdate,
   Common: EIP712_Common,
 } as const
+
+export type AccessUpdateBatchSigningPayload = Omit<
+  SignTypedDataParameters<typeof AccessUpdateBatchSigningTypes, 'AccessUpdateBatch'>,
+  'account'
+>

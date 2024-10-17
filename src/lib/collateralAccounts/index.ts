@@ -16,6 +16,10 @@ import {
   buildRebalanceConfigChangeSigningPayload,
 } from './intent/buildRebalanceConfigChangeSigningPayload'
 import {
+  BuildRelayedAccessUpdateBatchSigningPayloadArgs,
+  buildRelayedAccessUpdateBatchSigningPayload,
+} from './intent/buildRelayedAccessUpdateBatchSigningPayload'
+import {
   BuildRelayedGroupCancellationSigningPayloadArgs,
   buildRelayedGroupCancellationSigningPayload,
 } from './intent/buildRelayedGroupCancellationSigningPayload'
@@ -116,6 +120,15 @@ export class CollateralAccountModule {
           throwIfZeroAddress(address)
 
           return buildRelayedOperatorUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
+
+        relayedAccessUpdateBatch: (
+          args: OmitBound<BuildRelayedAccessUpdateBatchSigningPayloadArgs> & OptionalAddress,
+        ) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          return buildRelayedAccessUpdateBatchSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
         relayedGroupCancellation: (
@@ -226,6 +239,17 @@ export class CollateralAccountModule {
         }
       },
 
+      relayedAccessUpdateBatch: async (...args: Parameters<typeof this.build.signed.relayedAccessUpdateBatch>) => {
+        const { relayedAccessUpdateBatch, accessUpdateBatch } = this.build.signed.relayedAccessUpdateBatch(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedAccessUpdateBatch, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...accessUpdateBatch, ...signOpts })
+        return {
+          outerSignature,
+          innerSignature,
+          relayedAccessUpdateBatch,
+          accessUpdateBatch,
+        }
+      },
       relayedGroupCancellation: async (...args: Parameters<typeof this.build.signed.relayedGroupCancellation>) => {
         const { groupCancellation, relayedGroupCancellation } = this.build.signed.relayedGroupCancellation(...args)
         const outerSignature = await walletClient.signTypedData({ ...relayedGroupCancellation, ...signOpts })

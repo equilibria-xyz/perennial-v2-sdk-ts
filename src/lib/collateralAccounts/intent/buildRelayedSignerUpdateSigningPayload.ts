@@ -14,13 +14,13 @@ import { ActionRequred, buildActionMessage } from './_util'
 export type BuildRelayedSignerUpdateSigningPayloadArgs = CommonRequired &
   ActionRequred &
   CommonOverrides & {
-    newSigner: Address
+    signer: Address
     approved: boolean
   }
 export function buildRelayedSignerUpdateSigningPayload({
   chainId,
   address: account,
-  newSigner,
+  signer,
   approved,
   maxFee,
   overrides,
@@ -34,7 +34,7 @@ export function buildRelayedSignerUpdateSigningPayload({
   const message = {
     signerUpdate: {
       access: {
-        accessor: newSigner,
+        accessor: signer,
         approved,
       },
       common: {
