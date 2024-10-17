@@ -1,39 +1,42 @@
-import PerennialSDK from '@perennial/sdk'
-import { createWalletClient, http, zeroAddress } from 'viem'
-import { arbitrum } from 'viem/chains' // Required for BigInt serialization
+import PerennialSDK, { SupportedChainId } from '@perennial/sdk'
+import { Chain } from 'viem'
+import { arbitrum, arbitrumSepolia } from 'viem/chains' // Required for BigInt serialization
 
 ;(BigInt.prototype as any).toJSON = function () {
   return this.toString()
 }
 
-const setupSDK = (wallet?: `0x${string}`) => {
-  if (wallet) {
-    const walletClient = createWalletClient({
-      account: (wallet as `0x${string}`) || zeroAddress,
-      chain: arbitrum,
-      transport: http(process.env.RPC_URL_ARBITRUM),
-    })
-    // Initalize the SDK
-    const sdk = new PerennialSDK.default({
-      chainId: 42161,
-      rpcUrl: process.env.RPC_URL_ARBITRUM!,
-      graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
-      pythUrl: process.env.PYTH_URL!,
-      cryptexUrl: process.env.CRYPTEX_URL!,
-      // @ts-ignore
-      walletClient,
-    })
-    return sdk
-  } else {
-    // Initalize the SDK
-    const sdk = new PerennialSDK.default({
-      chainId: 42161,
-      rpcUrl: process.env.RPC_URL_ARBITRUM!,
-      graphUrl: process.env.GRAPH_URL_ARBITRUM_NEW!,
-      pythUrl: process.env.PYTH_URL!,
-    })
-    return sdk
-  }
+const ChainIdToArgs: Record<
+  SupportedChainId,
+  { chain: Chain; rpcUrl: string; graphUrl: string; pythUrl: string; cryptexUrl: string }
+> = {
+  [arbitrum.id]: {
+    chain: arbitrum,
+    rpcUrl: process.env.RPC_URL_ARBITRUM!,
+    graphUrl: process.env.GRAPH_URL_ARBITRUM!,
+    pythUrl: process.env.PYTH_URL!,
+    cryptexUrl: process.env.CRYPTEX_URL!,
+  },
+  [arbitrumSepolia.id]: {
+    chain: arbitrumSepolia,
+    rpcUrl: process.env.RPC_URL_ARBITRUM_SEPOLIA!,
+    graphUrl: process.env.GRAPH_URL_ARBITRUM_SEPOLIA!,
+    pythUrl: process.env.PYTH_URL!,
+    cryptexUrl: process.env.CRYPTEX_URL_TESTNET!,
+  },
+}
+
+const setupSDK = (chainId: SupportedChainId, wallet: `0x${string}`) => {
+  const args = ChainIdToArgs[chainId]
+  const sdk = new PerennialSDK.default({
+    chainId: chainId,
+    rpcUrl: args.rpcUrl,
+    graphUrl: args.graphUrl,
+    pythUrl: args.pythUrl,
+    cryptexUrl: args.cryptexUrl,
+    operatingFor: wallet,
+  })
+  return sdk
 }
 
 export default setupSDK

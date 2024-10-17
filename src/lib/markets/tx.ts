@@ -1,19 +1,27 @@
-import { Address, PublicClient, encodeFunctionData, getAddress } from 'viem'
+import { Address, Hex, PublicClient, getAddress } from 'viem'
 
-import { MarketAbi, MultiInvokerAbi } from '../..'
 import {
   OrderExecutionDeposit,
   PositionSide,
   SupportedChainId,
+  SupportedMarket,
   TriggerComparison,
   addressToMarket,
 } from '../../constants'
 import { InterfaceFee } from '../../constants'
-import { MultiInvokerAddresses } from '../../constants/contracts'
-import { MultiInvokerAction } from '../../types/perennial'
+import { Intent, MultiInvokerAction } from '../../types/perennial'
 import { BigOrZero, nowSeconds } from '../../utils'
-import { buildCancelOrder, buildCommitPrice, buildPlaceTriggerOrder, buildUpdateMarket } from '../../utils/multiinvoker'
-import { getMultiInvokerContract, getOracleContract } from '../contracts'
+import { addressForMarket } from '../../utils/addressUtils'
+import {
+  buildCancelOrder,
+  buildClaimFee,
+  buildCommitPrice,
+  buildPlaceTriggerOrder,
+  buildUpdateIntent,
+  buildUpdateMarket,
+  encodeInvoke,
+} from '../../utils/multiinvoker'
+import { getOracleContract } from '../contracts'
 import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
 import { OpenOrder } from './graph'
@@ -52,7 +60,6 @@ export async function buildUpdateMarketTx({
   referralFee,
   onCommitmentError,
 }: BuildUpdateMarketTxArgs) {
-  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
   const market = addressToMarket(chainId, marketAddress)
 
   if (!marketOracles) {
@@ -95,7 +102,7 @@ export async function buildUpdateMarketTx({
       riskParameter: { staleAfter },
       pendingPositions,
     } = marketSnapshot
-    const lastUpdated = await getOracleContract(oracleInfo.address, publicClient).read.latest()
+    const lastUpdated = await getOracleContract(oracleInfo.oracleAddress, publicClient).read.latest()
     isPriceStale = BigInt(nowSeconds()) - lastUpdated.timestamp > staleAfter / 2n
     // If there is a backlog of pending positions, we need to commit the price
     isPriceStale = isPriceStale || BigInt(pendingPositions.length) >= maxPendingGlobal
@@ -114,7 +121,7 @@ export async function buildUpdateMarketTx({
       onError: onCommitmentError,
     })
     const commitAction = buildCommitPrice({
-      keeperFactory: oracleInfo.providerFactoryAddress,
+      keeperFactory: oracleInfo.subOracleFactoryAddress,
       version,
       value,
       ids,
@@ -125,16 +132,13 @@ export async function buildUpdateMarketTx({
     actions.unshift(commitAction)
   }
 
-  const data = encodeFunctionData({
-    functionName: 'invoke',
-    abi: multiInvoker.abi,
-    args: [address, actions],
-  })
-  return {
-    data,
-    to: multiInvoker.address,
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
     value: 1n,
-  }
+  })
+  return txData
 }
 
 export type CancelOrderDetails = { market: Address; nonce: bigint } | OpenOrder
@@ -157,7 +161,6 @@ export type BuildLimitOrderTxArgs = {
 export async function buildLimitOrderTx({
   address,
   chainId,
-  publicClient,
   marketAddress,
   limitPrice,
   side,
@@ -166,11 +169,9 @@ export async function buildLimitOrderTx({
   interfaceFee,
   referralFee,
 }: BuildLimitOrderTxArgs) {
-  if (!address || !chainId || !publicClient) {
+  if (!address || !chainId) {
     return
   }
-
-  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const limitOrderAction = buildPlaceTriggerOrder({
     triggerPrice: limitPrice,
@@ -185,16 +186,13 @@ export async function buildLimitOrderTx({
 
   const actions: MultiInvokerAction[] = [limitOrderAction]
 
-  const data = encodeFunctionData({
-    functionName: 'invoke',
-    abi: multiInvoker.abi,
-    args: [address, actions],
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
+    value: 0n,
   })
-  return {
-    data,
-    to: multiInvoker.address,
-    value: 1n,
-  }
+  return txData
 }
 
 export type BuildStopLossTxArgs = {
@@ -210,14 +208,11 @@ export async function buildStopLossTx({
   delta = 0n,
   interfaceFee,
   referralFee,
-  publicClient,
   maxFee,
 }: BuildStopLossTxArgs) {
   if (delta > 0n) {
     throw new Error('Position delta must be negative for stop loss transactions')
   }
-  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
-
   const stopLossAction = buildPlaceTriggerOrder({
     triggerPrice: stopLossPrice,
     side: side as PositionSide.long | PositionSide.short,
@@ -230,17 +225,13 @@ export async function buildStopLossTx({
   })
   const actions: MultiInvokerAction[] = [stopLossAction]
 
-  const data = encodeFunctionData({
-    functionName: 'invoke',
-    abi: multiInvoker.abi,
-    args: [address, actions],
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
+    value: 0n,
   })
-
-  return {
-    data,
-    to: multiInvoker.address,
-    value: 1n,
-  }
+  return txData
 }
 
 export type BuildTakeProfitTxArgs = {
@@ -256,13 +247,11 @@ export async function buildTakeProfitTx({
   delta = 0n,
   interfaceFee,
   referralFee,
-  publicClient,
   maxFee,
 }: BuildTakeProfitTxArgs) {
   if (delta > 0n) {
     throw new Error('Position delta must be negative for take profit transactions')
   }
-  const multiInvoker = getMultiInvokerContract(chainId, publicClient)
 
   const takeProfitAction = buildPlaceTriggerOrder({
     triggerPrice: takeProfitPrice,
@@ -276,17 +265,14 @@ export async function buildTakeProfitTx({
   })
   const actions: MultiInvokerAction[] = [takeProfitAction]
 
-  const data = encodeFunctionData({
-    functionName: 'invoke',
-    abi: multiInvoker.abi,
-    args: [address, actions],
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
+    value: 0n,
   })
 
-  return {
-    data,
-    to: multiInvoker.address,
-    value: 1n,
-  }
+  return txData
 }
 
 function buildCancelOrderActions(orders: CancelOrderDetails[]) {
@@ -305,29 +291,48 @@ export type BuildCancelOrderTxArgs = {
 export function buildCancelOrderTx({ chainId, address, orderDetails }: BuildCancelOrderTxArgs) {
   const actions: MultiInvokerAction[] = buildCancelOrderActions(orderDetails)
 
-  const data = encodeFunctionData({
-    functionName: 'invoke',
-    abi: MultiInvokerAbi,
-    args: [address, actions],
-  })
-  return {
-    data,
-    to: MultiInvokerAddresses[chainId],
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
     value: 0n,
-  }
+  })
+  return txData
 }
 
 export type BuildClaimFeeTxArgs = {
+  chainId: SupportedChainId
+  address: Address
   marketAddress: Address
+  unwrap?: boolean
 }
-export function buildClaimFeeTx({ marketAddress }: BuildClaimFeeTxArgs) {
-  const data = encodeFunctionData({
-    functionName: 'claimFee',
-    abi: MarketAbi,
-  })
-  return {
-    data,
-    to: marketAddress,
+export function buildClaimFeeTx({ chainId, address, marketAddress, unwrap = true }: BuildClaimFeeTxArgs) {
+  const actions: MultiInvokerAction[] = [buildClaimFee({ market: marketAddress, unwrap })]
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
     value: 0n,
-  }
+  })
+  return txData
+}
+
+export type BuildUpdateIntentTxArgs = {
+  chainId: SupportedChainId
+  address: Address
+  market: SupportedMarket | Address
+  intent: Intent
+  signature: Hex
+}
+export function buildUpdateIntentTx({ chainId, address, market, intent, signature }: BuildUpdateIntentTxArgs) {
+  const marketAddress = addressForMarket(chainId, market)
+
+  const actions: MultiInvokerAction[] = [buildUpdateIntent({ market: marketAddress, intent, signature })]
+  const txData = encodeInvoke({
+    chainId,
+    actions,
+    address,
+    value: 0n,
+  })
+  return txData
 }

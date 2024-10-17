@@ -263,7 +263,12 @@ export const VaultAbi = [
         components: [
           {
             internalType: 'UFixed6',
-            name: 'cap',
+            name: 'maxDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'minDeposit',
             type: 'uint256',
           },
         ],
@@ -324,11 +329,6 @@ export const VaultAbi = [
       {
         components: [
           {
-            internalType: 'UFixed6',
-            name: 'settlementFee',
-            type: 'uint256',
-          },
-          {
             internalType: 'uint256',
             name: 'currentId',
             type: 'uint256',
@@ -379,7 +379,12 @@ export const VaultAbi = [
             components: [
               {
                 internalType: 'UFixed6',
-                name: 'cap',
+                name: 'maxDeposit',
+                type: 'uint256',
+              },
+              {
+                internalType: 'UFixed6',
+                name: 'minDeposit',
                 type: 'uint256',
               },
             ],
@@ -804,7 +809,7 @@ export const VaultAbi = [
       },
       {
         internalType: 'UFixed6',
-        name: 'cap',
+        name: 'initialDeposit',
         type: 'uint256',
       },
       {
@@ -839,7 +844,12 @@ export const VaultAbi = [
         components: [
           {
             internalType: 'UFixed6',
-            name: 'cap',
+            name: 'maxDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'minDeposit',
             type: 'uint256',
           },
         ],
@@ -1017,7 +1027,12 @@ export const VaultAbi = [
         components: [
           {
             internalType: 'UFixed6',
-            name: 'cap',
+            name: 'maxDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'minDeposit',
             type: 'uint256',
           },
         ],
