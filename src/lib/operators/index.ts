@@ -180,8 +180,8 @@ export async function buildAccessUpdateBatchTx({
     abi: MarketFactoryAbi,
     functionName: 'updateAccessBatch',
     args: [
-      signers.map(({ signer, approved }) => ({ accessor: signer, approved })),
       operators.map(({ operator, approved }) => ({ accessor: operator, approved })),
+      signers.map(({ signer, approved }) => ({ accessor: signer, approved })),
     ],
   })
 
