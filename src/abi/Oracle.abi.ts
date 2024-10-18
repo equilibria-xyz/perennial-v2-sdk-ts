@@ -49,6 +49,21 @@ export const OracleAbi = [
   },
   {
     inputs: [],
+    name: 'OracleNotBeneficiaryError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'OracleNotMarketError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'OracleNotSubOracleError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'OracleOutOfOrderCommitError',
     type: 'error',
   },
@@ -67,12 +82,57 @@ export const OracleAbi = [
     inputs: [
       {
         indexed: false,
+        internalType: 'address',
+        name: 'newBeneficiary',
+        type: 'address',
+      },
+    ],
+    name: 'BeneficiaryUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'UFixed6',
+        name: 'settlementFee',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'UFixed6',
+        name: 'oracleFee',
+        type: 'uint256',
+      },
+    ],
+    name: 'FeeReceived',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
         internalType: 'uint256',
         name: 'version',
         type: 'uint256',
       },
     ],
     name: 'Initialized',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'contract IMarket',
+        name: 'newMarket',
+        type: 'address',
+      },
+    ],
+    name: 'MarketUpdated',
     type: 'event',
   },
   {
@@ -113,6 +173,12 @@ export const OracleAbi = [
         internalType: 'uint256',
         name: 'version',
         type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'newPrice',
+        type: 'bool',
       },
     ],
     name: 'OracleProviderVersionRequested',
@@ -163,8 +229,51 @@ export const OracleAbi = [
         name: 'atVersion',
         type: 'tuple',
       },
+      {
+        components: [
+          {
+            internalType: 'UFixed6',
+            name: 'settlementFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'oracleFee',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct OracleReceipt',
+        name: 'atReceipt',
+        type: 'tuple',
+      },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'beneficiary',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'UFixed6',
+        name: 'settlementFeeRequested',
+        type: 'uint256',
+      },
+    ],
+    name: 'claimFee',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -218,6 +327,11 @@ export const OracleAbi = [
         name: 'initialProvider',
         type: 'address',
       },
+      {
+        internalType: 'string',
+        name: 'name_',
+        type: 'string',
+      },
     ],
     name: 'initialize',
     outputs: [],
@@ -255,6 +369,32 @@ export const OracleAbi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'market',
+    outputs: [
+      {
+        internalType: 'contract IMarket',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'name',
+    outputs: [
+      {
+        internalType: 'string',
+        name: '',
+        type: 'string',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',
@@ -282,7 +422,20 @@ export const OracleAbi = [
     inputs: [
       {
         internalType: 'contract IMarket',
-        name: 'market',
+        name: 'newMarket',
+        type: 'address',
+      },
+    ],
+    name: 'register',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'contract IMarket',
+        name: '',
         type: 'address',
       },
       {
@@ -340,6 +493,45 @@ export const OracleAbi = [
       },
     ],
     name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'newBeneficiary',
+        type: 'address',
+      },
+    ],
+    name: 'updateBeneficiary',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'string',
+        name: 'newName',
+        type: 'string',
+      },
+    ],
+    name: 'updateName',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'Token18',
+        name: 'token',
+        type: 'address',
+      },
+    ],
+    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

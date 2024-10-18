@@ -190,11 +190,6 @@ export const MultiInvokerAbi = [
             name: 'receiver',
             type: 'address',
           },
-          {
-            internalType: 'bool',
-            name: 'unwrap',
-            type: 'bool',
-          },
         ],
         indexed: false,
         internalType: 'struct InterfaceFee',
@@ -414,11 +409,6 @@ export const MultiInvokerAbi = [
                 name: 'receiver',
                 type: 'address',
               },
-              {
-                internalType: 'bool',
-                name: 'unwrap',
-                type: 'bool',
-              },
             ],
             internalType: 'struct InterfaceFee',
             name: 'interfaceFee1',
@@ -436,11 +426,6 @@ export const MultiInvokerAbi = [
                 name: 'receiver',
                 type: 'address',
               },
-              {
-                internalType: 'bool',
-                name: 'unwrap',
-                type: 'bool',
-              },
             ],
             internalType: 'struct InterfaceFee',
             name: 'interfaceFee2',
@@ -455,32 +440,6 @@ export const MultiInvokerAbi = [
     ],
     name: 'OrderPlaced',
     type: 'event',
-  },
-  {
-    inputs: [],
-    name: 'ARB_FIXED_OVERHEAD',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'ARB_GAS_MULTIPLIER',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
   },
   {
     inputs: [],
@@ -545,6 +504,43 @@ export const MultiInvokerAbi = [
         internalType: 'bool',
         name: '',
         type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'bool',
+        name: 'unwrap',
+        type: 'bool',
+      },
+    ],
+    name: 'claim',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'claimable',
+    outputs: [
+      {
+        internalType: 'UFixed6',
+        name: '',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -779,11 +775,6 @@ export const MultiInvokerAbi = [
                 name: 'receiver',
                 type: 'address',
               },
-              {
-                internalType: 'bool',
-                name: 'unwrap',
-                type: 'bool',
-              },
             ],
             internalType: 'struct InterfaceFee',
             name: 'interfaceFee1',
@@ -800,11 +791,6 @@ export const MultiInvokerAbi = [
                 internalType: 'address',
                 name: 'receiver',
                 type: 'address',
-              },
-              {
-                internalType: 'bool',
-                name: 'unwrap',
-                type: 'bool',
               },
             ],
             internalType: 'struct InterfaceFee',

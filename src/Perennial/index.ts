@@ -4,6 +4,7 @@ import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClie
 
 import { ChainMarkets, SupportedChainId, SupportedMarket } from '..'
 import { BackupPythClient, DefaultChain, chainIdToChainMap } from '../constants/network'
+import { CollateralAccountModule } from '../lib/collateralAccounts'
 import { ContractsModule } from '../lib/contracts'
 import { MarketsModule } from '../lib/markets'
 import { OperatorModule } from '../lib/operators'
@@ -49,6 +50,7 @@ export default class PerennialSDK {
   public vaults: VaultsModule
   public operator: OperatorModule
   public oracles: OraclesModule
+  public collateralAccounts: CollateralAccountModule
 
   constructor(config: SDKConfig) {
     this.config = {
@@ -103,6 +105,14 @@ export default class PerennialSDK {
       publicClient: this._publicClient,
       oracleClients: this._oracleClients,
       supportedMarkets: this.config.supportedMarkets,
+      operatingFor: this.config.operatingFor,
+      walletClient: config.walletClient,
+    })
+    this.collateralAccounts = new CollateralAccountModule({
+      chainId: config.chainId,
+      publicClient: this._publicClient,
+      walletClient: config.walletClient,
+      operatingFor: this.config.operatingFor,
     })
 
     this._walletClient = config.walletClient

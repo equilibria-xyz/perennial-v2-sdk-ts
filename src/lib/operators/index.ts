@@ -1,4 +1,4 @@
-import { Address, PublicClient, WalletClient, encodeFunctionData, zeroAddress } from 'viem'
+import { Address, PublicClient, WalletClient, encodeFunctionData, getAddress, zeroAddress } from 'viem'
 
 import {
   Big6Math,
@@ -20,8 +20,8 @@ import {
   getMultiInvokerContract,
   getUSDCContract,
   getVaultFactoryContract,
-} from '..'
-import { OptionalAddress } from '../types/shared'
+} from '../..'
+import { OptionalAddress } from '../../types/shared'
 
 /**
  * Builds a transaction to approve USDC for the MultiInvoker contract.
@@ -153,6 +153,46 @@ export async function buildUpdateMultiInvokerOperatorTx({
 }
 
 /**
+ * Builds a transaction to update the access for a batch of signers and operators in the MarketFactory contract.
+ *
+ * @param chainId {@link SupportedChainId}
+ * @param signers - The signers to update access for.
+ * @param operators - The operators to update access for.
+ *
+ * @returns Transaction calldata, destination address and transaction value.
+ */
+export async function buildAccessUpdateBatchTx({
+  chainId,
+  signers,
+  operators,
+}: {
+  chainId: SupportedChainId
+  signers: {
+    signer: Address
+    approved: boolean
+  }[]
+  operators: {
+    operator: Address
+    approved: boolean
+  }[]
+}) {
+  const data = encodeFunctionData({
+    abi: MarketFactoryAbi,
+    functionName: 'updateAccessBatch',
+    args: [
+      operators.map(({ operator, approved }) => ({ accessor: operator, approved })),
+      signers.map(({ signer, approved }) => ({ accessor: signer, approved })),
+    ],
+  })
+
+  return {
+    to: MarketFactoryAddresses[chainId],
+    value: 0n,
+    data,
+  }
+}
+
+/**
  * Builds a transaction to unwrap DSU into USDC.
  * @param chainId {@link SupportedChainId}
  * @param amount - The amount to unwrap in 18 decimal precision.
@@ -218,13 +258,13 @@ export async function getDSUAllowance({
 }
 
 /**
- * Checks if the provided address is approved to interact with the market factory.
+ * Checks if the MultiInvoker contract is approved to interact with Perennial Markets by the provided address.
  *
  * @param chainId {@link SupportedChainId}
  * @param publicClient Public Client
  * @param address Wallet Address
  *
- * @returns Whether the MarketFactory contract is approved.
+ * @returns Whether the MultiInvoker contract is approved.
  */
 export async function checkMarketFactoryApproval({
   chainId,
@@ -235,21 +275,77 @@ export async function checkMarketFactoryApproval({
   publicClient: PublicClient
   address: Address
 }) {
-  const isMarketFactoryApproved = await getMarketFactoryContract(chainId, publicClient).read.operators([
+  const { operators } = await checkMarketFactoryAccessors({
+    chainId,
+    publicClient,
     address,
-    MultiInvokerAddresses[chainId],
-  ])
-  return isMarketFactoryApproved
+    signers: [],
+    operators: [MultiInvokerAddresses[chainId]],
+  })
+  return Boolean(operators.find(({ operator }) => operator === MultiInvokerAddresses[chainId])?.approved)
 }
 
 /**
- * Checks if the provided address is approved to interact with the vault factory.
+ * Checks if the provided signers and operators have access to the MarketFactory contract.
+ *
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient Public Client
+ * @param address Wallet Address
+ * @param signers - The signers to check access for.
+ * @param operators - The operators to check access for.
+ *
+ * @returns The access status for the provided signers and operators.
+ */
+export async function checkMarketFactoryAccessors({
+  chainId,
+  publicClient,
+  address,
+  signers,
+  operators,
+}: {
+  chainId: SupportedChainId
+  publicClient: PublicClient
+  address: Address
+  signers: Address[]
+  operators: Address[]
+}): Promise<{
+  signers: {
+    signer: Address
+    approved: boolean
+  }[]
+  operators: {
+    operator: Address
+    approved: boolean
+  }[]
+}> {
+  const marketFactory = getMarketFactoryContract(chainId, publicClient)
+  const signerAccess = await Promise.all(
+    signers.map(async (signer) => ({
+      signer: getAddress(signer),
+      approved: await marketFactory.read.signers([address, signer]),
+    })),
+  )
+  const operatorAccess = await Promise.all(
+    operators.map(async (operator) => ({
+      operator: getAddress(operator),
+      approved:
+        (await marketFactory.read.operators([address, operator])) || (await marketFactory.read.extensions([operator])),
+    })),
+  )
+  return {
+    signers: signerAccess,
+    operators: operatorAccess,
+  }
+}
+
+/**
+ * Checks if the MultiInvoker contract is approved to interact with Perennial Vaults by the provided address.
  *
  * @param chainId {@link SupportedChainId}
  * @param publicClient Public Client
  * @param address Wallet Address
  *
- * @returns Whether the VaultFactory contract is approved.
+ * @returns Whether the MultiInvoker contract is approved.
  */
 export async function checkVaultFactoryApproval({
   chainId,
@@ -352,7 +448,7 @@ export class OperatorModule {
           ...args,
         }),
       /**
-       * Check if the provided address is approved to interact with the market factory
+       * Check if the MultiInvoker contract is approved to interact with Perennial Markets by the provided address.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Whether the MarketFactory contract is approved
        */
@@ -366,7 +462,7 @@ export class OperatorModule {
           ...args,
         }),
       /**
-       * Check if the provided address is approved to interact with the vault factory
+       * Check if the MultiInvoker contract is approved to interact with Perennial Vaults by the provided address.
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
        * @returns Whether the VaultFactory contract is approved
        */
@@ -388,6 +484,19 @@ export class OperatorModule {
         args: OmitBound<Parameters<typeof checkMultiInvokerOperatorApproval>[0]> & OptionalAddress,
       ) =>
         checkMultiInvokerOperatorApproval({
+          chainId: this.config.chainId,
+          address: this.defaultAddress,
+          publicClient: this.config.publicClient,
+          ...args,
+        }),
+
+      /**
+       * Check if the provided signers and operators have access to operate on Perennial markets by the provided address.
+       * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
+       * @returns The access status for the provided signers and operators.
+       */
+      marketFactoryAccessors: (args: OmitBound<Parameters<typeof checkMarketFactoryAccessors>[0]> & OptionalAddress) =>
+        checkMarketFactoryAccessors({
           chainId: this.config.chainId,
           address: this.defaultAddress,
           publicClient: this.config.publicClient,
@@ -415,12 +524,12 @@ export class OperatorModule {
         buildApproveDSUReserveTx({ chainId: this.config.chainId, suggestedAmount }),
 
       /**
-       * Build a transaction to approve the MarketFactory contract for the MultiInvoker contract
+       * Build a transaction to approve the MultiInvoker contract as an operator in the MarketFactory contract
        * @returns Transaction calldata, destination address and transaction value
        */
       approveMarketFactoryTx: () => buildApproveMarketFactoryTx({ chainId: this.config.chainId }),
       /**
-       * Build a transaction to approve the VaultFactory contract for the MultiInvoker contract
+       * Build a transaction to approve the MultiInvoker contract as an operator in the VaultFactory contract
        * @returns Transaction calldata, destination address and transaction value
        */
       approveVaultFactoryTx: () => buildApproveVaultFactoryTx({ chainId: this.config.chainId }),
@@ -440,14 +549,23 @@ export class OperatorModule {
        * @returns Transaction calldata, destination address and transaction value
        */
       unwrapDSU: ({ amount }: { amount: bigint }) => buildUnwrapDSUTx({ chainId: this.config.chainId, amount }),
+
+      /**
+       * Build a transaction to update the access for a batch of signers and operators in the MarketFactory contract.
+       * @param signers - The signers to update access for.
+       * @param operators - The operators to update access for.
+       * @returns Transaction calldata, destination address and transaction value
+       */
+      accessUpdateBatch: (args: OmitBound<Parameters<typeof buildAccessUpdateBatchTx>[0]>) =>
+        buildAccessUpdateBatchTx({ chainId: this.config.chainId, ...args }),
     }
   }
 
+  /**
+   * Operator module write methods
+   * @throws Error if wallet client is not provided
+   */
   get write() {
-    /**
-     * Operator module write methods
-     * @throws Error if wallet client is not provided
-     */
     const walletClient = this.config.walletClient
     if (!walletClient || !walletClient.account) {
       throw new Error('Wallet client required for write methods.')
@@ -482,7 +600,7 @@ export class OperatorModule {
       },
 
       /**
-       * approves the MarketFactory contract for the MultiInvoker contract
+       * approves the MultiInvoker contract as an operator in the MarketFactory contract
        * @returns Transaction hash
        */
       approveMarketFactory: async () => {
@@ -491,7 +609,7 @@ export class OperatorModule {
         return hash
       },
       /**
-       * approves the VaultFactory contract for the MultiInvoker contract
+       * approves the MultiInvoker contract as an operator in the VaultFactory contract
        * @returns Transaction hash
        */
       approveVaultFactory: async () => {
@@ -519,6 +637,18 @@ export class OperatorModule {
        */
       unwrapDSU: async (...args: Parameters<typeof this.build.unwrapDSU>) => {
         const tx = await this.build.unwrapDSU(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+
+      /**
+       * Build a transaction to update the access for a batch of signers and operators in the MarketFactory contract.
+       * @param signers - The signers to update access for.
+       * @param operators - The operators to update access for.
+       * @returns Transaction calldata, destination address and transaction value
+       */
+      accessUpdateBatch: async (...args: Parameters<typeof this.build.accessUpdateBatch>) => {
+        const tx = await this.build.accessUpdateBatch(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
       },

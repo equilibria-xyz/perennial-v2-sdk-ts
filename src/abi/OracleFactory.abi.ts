@@ -43,11 +43,6 @@ export const OracleFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'OracleFactoryClaimTooLargeError',
-    type: 'error',
-  },
-  {
-    inputs: [],
     name: 'OracleFactoryInvalidIdError',
     type: 'error',
   },
@@ -59,6 +54,16 @@ export const OracleFactoryAbi = [
   {
     inputs: [],
     name: 'OracleFactoryNotRegisteredError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'OracleParameterStorageInvalidError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'OwnableAlreadyInitializedError',
     type: 'error',
   },
   {
@@ -155,19 +160,6 @@ export const OracleFactoryAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: false,
-        internalType: 'UFixed6',
-        name: 'newMaxClaim',
-        type: 'uint256',
-      },
-    ],
-    name: 'MaxClaimUpdated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: true,
         internalType: 'contract IOracleProvider',
         name: 'oracle',
@@ -244,70 +236,6 @@ export const OracleFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IFactory',
-        name: 'caller',
-        type: 'address',
-      },
-    ],
-    name: 'authorize',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'caller',
-        type: 'address',
-      },
-    ],
-    name: 'authorized',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'contract IFactory',
-        name: '',
-        type: 'address',
-      },
-    ],
-    name: 'callers',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'UFixed6',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'claim',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'bytes32',
         name: 'id',
         type: 'bytes32',
@@ -316,6 +244,11 @@ export const OracleFactoryAbi = [
         internalType: 'contract IOracleProviderFactory',
         name: 'factory',
         type: 'address',
+      },
+      {
+        internalType: 'string',
+        name: 'name',
+        type: 'string',
       },
     ],
     name: 'create',
@@ -351,14 +284,20 @@ export const OracleFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IMarket',
-        name: 'market',
+        internalType: 'contract IOracleProvider',
+        name: '',
         type: 'address',
       },
     ],
-    name: 'fund',
-    outputs: [],
-    stateMutability: 'nonpayable',
+    name: 'ids',
+    outputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -376,25 +315,6 @@ export const OracleFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'incentive',
-    outputs: [
-      {
-        internalType: 'Token18',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'Token18',
-        name: 'incentive_',
-        type: 'address',
-      },
-    ],
     name: 'initialize',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -414,19 +334,6 @@ export const OracleFactoryAbi = [
         internalType: 'bool',
         name: '',
         type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'maxClaim',
-    outputs: [
-      {
-        internalType: 'UFixed6',
-        name: '',
-        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -459,6 +366,36 @@ export const OracleFactoryAbi = [
         internalType: 'address',
         name: '',
         type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'parameter',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'maxGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxSettlementFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxOracleFee',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct OracleParameter',
+        name: '',
+        type: 'tuple',
       },
     ],
     stateMutability: 'view',
@@ -551,12 +488,47 @@ export const OracleFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'UFixed6',
-        name: 'newMaxClaim',
-        type: 'uint256',
+        internalType: 'contract IOracleProvider',
+        name: 'oracleProvider',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'id',
+        type: 'bytes32',
       },
     ],
-    name: 'updateMaxClaim',
+    name: 'updateId',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'maxGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxSettlementFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'maxOracleFee',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct OracleParameter',
+        name: 'newParameter',
+        type: 'tuple',
+      },
+    ],
+    name: 'updateParameter',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -583,6 +555,19 @@ export const OracleFactoryAbi = [
       },
     ],
     name: 'updatePendingOwner',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'Token18',
+        name: 'token',
+        type: 'address',
+      },
+    ],
+    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
