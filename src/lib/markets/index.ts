@@ -15,6 +15,7 @@ import {
 import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
+import { addSignerOverrideFromWalletClientSigner } from '../../utils/intentUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { waitForOrderSettlement } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
@@ -720,6 +721,11 @@ export class MarketsModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildIntentSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
@@ -727,12 +733,22 @@ export class MarketsModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildPlaceOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
         cancelOrder: (args: OmitBound<BuildCancelOrderSigningPayloadArgs> & OptionalAddress) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
 
           return buildCancelOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
