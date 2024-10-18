@@ -21,3 +21,6 @@ export * as accumulatorUtils from './accumulatorUtils'
 
 export * from './fundingAndInterestUtils'
 export * as fundingAndInterestUtils from './fundingAndInterestUtils'
+
+export * from './intentUtils'
+export * as intentUtils from './intentUtils'

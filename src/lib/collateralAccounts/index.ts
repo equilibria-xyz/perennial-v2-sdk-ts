@@ -3,6 +3,7 @@ import { Address, PublicClient, WalletClient, zeroAddress } from 'viem'
 import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
+import { addSignerOverrideFromWalletClientSigner } from '../../utils/intentUtils'
 import {
   BuildDeployAccountSigningPayloadArgs,
   buildDeployAccountSigningPayload,
@@ -84,12 +85,22 @@ export class CollateralAccountModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildDeployAccountSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
         withdrawal: (args: OmitBound<BuildWithdrawalSigningPayloadArgs> & OptionalAddress) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
 
           return buildWithdrawalSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
@@ -98,12 +109,22 @@ export class CollateralAccountModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildMarketTransferSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
         rebalanceConfigChange: (args: OmitBound<BuildRebalanceConfigChangeSigningPayloadArgs> & OptionalAddress) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
 
           return buildRebalanceConfigChangeSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
@@ -112,12 +133,22 @@ export class CollateralAccountModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildRelayedSignerUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
         relayedOperatorUpdate: (args: OmitBound<BuildRelayedOperatorUpdateSigningPayloadArgs> & OptionalAddress) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
 
           return buildRelayedOperatorUpdateSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
@@ -128,6 +159,11 @@ export class CollateralAccountModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildRelayedAccessUpdateBatchSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
@@ -137,6 +173,11 @@ export class CollateralAccountModule {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
 
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
           return buildRelayedGroupCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
@@ -145,6 +186,11 @@ export class CollateralAccountModule {
         ) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
 
           return buildRelayedNonceCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
