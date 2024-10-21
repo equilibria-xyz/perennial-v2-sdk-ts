@@ -693,6 +693,8 @@ export async function fetchOpenOrders({
     ...triggerOrder,
     market: addressToMarket(chainId, triggerOrder.market),
     marketAddress: getAddress(triggerOrder.market),
+    source: getAddress(triggerOrder.source),
+    account: getAddress(triggerOrder.account),
   }))
 }
 
