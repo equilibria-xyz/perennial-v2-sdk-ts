@@ -17,7 +17,7 @@ import {
   QueryMarketAccountPositionOrders,
   QueryMarketAccountTakerPositions,
   QueryMarketAccumulationData,
-  QueryMultiInvokerOpenOrders,
+  QueryOpenTriggerOrders,
 } from '../../graphQueries/markets'
 import { Bucket, OrderDataFragment, PositionDataFragment } from '../../types/gql/graphql'
 import { Day, last24hrBounds, nowSeconds } from '../../utils'
@@ -679,15 +679,17 @@ export async function fetchOpenOrders({
   isMaker?: boolean
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
-  const { multiInvokerTriggerOrders } = await graphClient.request(QueryMultiInvokerOpenOrders, {
+  const { multiInvokerTriggerOrders: triggerOrders } = await graphClient.request(QueryOpenTriggerOrders, {
     account: address,
     markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
     first,
     skip,
-    side: isMaker ? [0, 3] : [1, 2, 3], // 3 = collateral withdrawal
+    side: isMaker
+      ? [0, 3, 4] // 0 = multiInvoker maker, 3 = multiInvoker collateral withdrawal, 4 = manager maker
+      : [1, 2, 3, 5, 6], // 1 = multiInvoker long, 2 = multiInvoker short, 3 = multiInvoker collateral withdrawal, 5 = manager long, 6 = manager short
   })
 
-  return multiInvokerTriggerOrders.map((triggerOrder) => ({
+  return triggerOrders.map((triggerOrder) => ({
     ...triggerOrder,
     market: addressToMarket(chainId, triggerOrder.market),
     marketAddress: getAddress(triggerOrder.market),

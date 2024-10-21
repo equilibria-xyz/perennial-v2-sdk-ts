@@ -100,13 +100,13 @@ export const QueryMarketAccumulationData = gql(`
   }
 `)
 
-export const QueryMultiInvokerOpenOrders = gql(`
-  query QueryMultiInvokerOpenOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
+export const QueryOpenTriggerOrders = gql(`
+  query QueryOpenTriggerOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
     multiInvokerTriggerOrders(
       where: { account: $account, market_in: $markets, cancelled: false, executed: false, triggerOrderSide_in: $side },
       orderBy: nonce, orderDirection: desc, first: $first, skip: $skip
     ) {
-        account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
+        source, account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
         blockTimestamp, transactionHash, associatedOrder { collateral, depositTotal, withdrawalTotal }
       }
   }
