@@ -37,7 +37,8 @@ export function calcEfficiency(maker: bigint, major: bigint) {
 
 // LiquidationPrice = ((position * abs(price) + collateral) / (position * (1 + maintenanceRatio))
 /**
- * Calculates the liquidation price for a position
+ * Calculates the liquidation price for a position. Liquidation price is the price at which the collateral falls below
+ * the required maintenance.
  * @param params - { marketSnapshot, collateral, position, limitPrice }
  * @returns Liquidation price for long and short positions
  */
@@ -78,6 +79,58 @@ export const calcLiquidationPrice = ({
 
   const shortNumerator = collateral + notional
   const shortDenominator = Big6Math.mul(position, marketSnapshot.riskParameter.maintenance + Big6Math.ONE)
+  const short = Big6Math.abs(Big6Math.div(shortNumerator, shortDenominator))
+
+  const { long: longBelowMargin, short: shortBelowMargin } = calcBelowMarginPrice({
+    marketSnapshot,
+    collateral,
+    position,
+    limitPrice,
+  })
+
+  return { long, short, longBelowMargin, shortBelowMargin }
+}
+
+/**
+ * Calculates the price at which collateral falls below the margin requirement for the position.
+ * @param params - { marketSnapshot, collateral, position, limitPrice }
+ * @returns Price at which collateral falls below the margin requirement for long and short positions
+ */
+export const calcBelowMarginPrice = ({
+  marketSnapshot,
+  collateral,
+  position,
+  limitPrice,
+}: {
+  marketSnapshot?: MarketSnapshot
+  collateral?: bigint
+  position?: bigint
+  limitPrice?: bigint
+}) => {
+  const noValue = { long: 0n, short: 0n }
+  if (!collateral || !marketSnapshot || !position) return noValue
+
+  const price = limitPrice ? limitPrice : marketSnapshot.global.latestPrice
+
+  const notional = calcNotional(position, price)
+  const margin = Big6Math.mul(notional, marketSnapshot.riskParameter.margin)
+
+  if (margin < marketSnapshot.riskParameter.minMargin) {
+    const minMarginPriceLong = Big6Math.abs(
+      Big6Math.div(marketSnapshot.riskParameter.minMargin - collateral, position) + price,
+    )
+    const minMarginPriceShort = Big6Math.abs(
+      Big6Math.div(marketSnapshot.riskParameter.minMargin - collateral, position * -1n) + price,
+    )
+    return { long: minMarginPriceLong, short: minMarginPriceShort }
+  }
+
+  const longNumerator = notional - collateral
+  const longDenominator = Big6Math.mul(position, marketSnapshot.riskParameter.margin - Big6Math.ONE)
+  const long = Big6Math.abs(Big6Math.div(longNumerator, longDenominator))
+
+  const shortNumerator = collateral + notional
+  const shortDenominator = Big6Math.mul(position, marketSnapshot.riskParameter.margin + Big6Math.ONE)
   const short = Big6Math.abs(Big6Math.div(shortNumerator, shortDenominator))
 
   return { long, short }

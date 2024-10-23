@@ -275,6 +275,7 @@ export {
   calcEfficiency,
   orderSize,
   calcLiquidationPrice,
+  calcBelowMarginPrice,
   calcLeverage,
   calcMakerExposure,
   closedOrResolved,
