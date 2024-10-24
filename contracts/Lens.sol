@@ -138,7 +138,12 @@ contract Lens {
       marketAccountSnapshot.pendingPositions[j] = (j == 0 ? marketAccountSnapshot.position : marketAccountSnapshot.pendingPositions[j - 1]).clone();
       if (j > 0) marketAccountSnapshot.pendingPositions[j].update(market.pendingOrders(account, marketAccountSnapshot.local.latestId + j));
       marketAccountSnapshot.versions[j] = market.versions(marketAccountSnapshot.pendingPositions[j].timestamp);
-      (marketAccountSnapshot.oracleVersions[j], marketAccountSnapshot.oracleReceipts[j]) = oracle.at(marketAccountSnapshot.pendingPositions[j].timestamp);
+      try oracle.at(marketAccountSnapshot.pendingPositions[j].timestamp) returns (OracleVersion memory oracleVersion, OracleReceipt memory oracleReceipt) {
+        marketAccountSnapshot.oracleVersions[j] = oracleVersion;
+        marketAccountSnapshot.oracleReceipts[j] = oracleReceipt;
+      } catch {
+        // Do nothing
+      }
     }
     marketAccountSnapshot.nextPosition = marketAccountSnapshot.pendingPositions[marketAccountSnapshot.pendingPositions.length - 1];
   }
