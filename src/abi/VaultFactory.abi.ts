@@ -47,6 +47,11 @@ export const VaultFactoryAbi = [
     type: 'error',
   },
   {
+    inputs: [],
+    name: 'OwnableAlreadyInitializedError',
+    type: 'error',
+  },
+  {
     inputs: [
       {
         internalType: 'address',

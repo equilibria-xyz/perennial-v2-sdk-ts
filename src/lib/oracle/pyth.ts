@@ -67,35 +67,27 @@ export const buildCommitmentsForOracles = async ({
         const oracles = marketOracles.filter((o) => o.underlyingId.toLowerCase() === `0x${p.id}`.toLowerCase())
         if (!oracles) return acc
 
-        // We can't commit two oracles with the same underlying ID at once
-        // So if there is multiple oracles with the same underlying ID, split them into separate commitments
-        // TODO: Change this once submitting for multiple oracles with the same underlying ID is supported in v2.3
-        oracles.forEach((o, i) => {
-          if (!acc[p.price.publish_time][i]) acc[p.price.publish_time][i] = []
-          acc[p.price.publish_time][i].push({ ...o, price: pythPriceToBig18(BigInt(p.price.price), p.price.expo) })
+        oracles.forEach((o) => {
+          acc[p.price.publish_time].push({ ...o, price: pythPriceToBig18(BigInt(p.price.price), p.price.expo) })
         })
         return acc
       },
-      {} as Record<number, { underlyingId: Hex; providerId: Hex; minValidTime: bigint; price: bigint }[][]>,
+      {} as Record<number, { underlyingId: Hex; providerId: Hex; minValidTime: bigint; price: bigint }[]>,
     )
 
-    return Object.entries(publishTimeMap)
-      .map(([publishTime, allOracles]) => {
-        return allOracles.map((oracles) => ({
-          keeperFactory: marketOracles[0].providerFactoryAddress,
-          version: BigInt(publishTime) - Big6Math.max(...oracles.map((o) => o.minValidTime)),
-          value: BigInt(uniqueFeeds.length),
-          updateData: `0x${priceFeedUpdateData.binary.data[0]}` as Hex,
-          ids: oracles.map((o) => o.providerId),
-          details: oracles.map((o) => ({
-            id: o.providerId,
-            underlyingId: o.underlyingId,
-            price: o.price,
-            publishTime: Number(publishTime),
-          })),
-        }))
-      })
-      .flat()
+    return Object.entries(publishTimeMap).map(([publishTime, oracles]) => ({
+      keeperFactory: marketOracles[0].providerFactoryAddress,
+      version: BigInt(publishTime) - Big6Math.max(...oracles.map((o) => o.minValidTime)),
+      value: BigInt(uniqueFeeds.length),
+      updateData: `0x${priceFeedUpdateData.binary.data[0]}` as Hex,
+      ids: oracles.map((o) => o.providerId),
+      details: oracles.map((o) => ({
+        id: o.providerId,
+        underlyingId: o.underlyingId,
+        price: o.price,
+        publishTime: Number(publishTime),
+      })),
+    }))
   } catch (err: any) {
     const nextPyth = Array.isArray(pyth_) ? pyth_.slice(1) : []
     const useBackup = nextPyth.length > 0

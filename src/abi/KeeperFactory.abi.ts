@@ -32,12 +32,12 @@ export const KeeperFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'KeeperFactoryInvalidGranularityError',
+    name: 'KeeperFactoryInvalidIdError',
     type: 'error',
   },
   {
     inputs: [],
-    name: 'KeeperFactoryInvalidIdError',
+    name: 'KeeperFactoryInvalidParameterError',
     type: 'error',
   },
   {
@@ -63,6 +63,16 @@ export const KeeperFactoryAbi = [
   {
     inputs: [],
     name: 'KeeperFactoryVersionOutsideRangeError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'KeeperOracleParameterStorageInvalidError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'OwnableAlreadyInitializedError',
     type: 'error',
   },
   {
@@ -107,38 +117,6 @@ export const KeeperFactoryAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: 'contract IFactory',
-        name: 'caller',
-        type: 'address',
-      },
-    ],
-    name: 'CallerAuthorized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'newGranularity',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'effectiveAfter',
-        type: 'uint256',
-      },
-    ],
-    name: 'GranularityUpdated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: false,
         internalType: 'uint256',
         name: 'version',
@@ -159,49 +137,6 @@ export const KeeperFactoryAbi = [
       },
     ],
     name: 'InstanceRegistered',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'sender',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'applicableGas',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'applicableValue',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed18',
-        name: 'baseFee',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed18',
-        name: 'calldataFee',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'UFixed18',
-        name: 'keeperFee',
-        type: 'uint256',
-      },
-    ],
-    name: 'KeeperCall',
     type: 'event',
   },
   {
@@ -257,6 +192,51 @@ export const KeeperFactoryAbi = [
   },
   {
     anonymous: false,
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'latestGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'currentGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'effectiveAfter',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'oracleFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'validFrom',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'validTo',
+            type: 'uint256',
+          },
+        ],
+        indexed: false,
+        internalType: 'struct KeeperOracleParameter',
+        name: 'newParameter',
+        type: 'tuple',
+      },
+    ],
+    name: 'ParameterUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
     inputs: [],
     name: 'Paused',
     type: 'event',
@@ -307,6 +287,30 @@ export const KeeperFactoryAbi = [
     type: 'event',
   },
   {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    name: '_toUnderlyingPayoff',
+    outputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: 'provider',
+        type: 'address',
+      },
+      {
+        internalType: 'int16',
+        name: 'decimals',
+        type: 'int16',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'acceptOwner',
     outputs: [],
@@ -316,40 +320,8 @@ export const KeeperFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IFactory',
-        name: 'factory',
-        type: 'address',
-      },
-    ],
-    name: 'authorize',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'caller',
-        type: 'address',
-      },
-    ],
-    name: 'authorized',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'bytes32[]',
-        name: 'ids',
+        name: 'oracleIds',
         type: 'bytes32[]',
       },
       {
@@ -369,41 +341,13 @@ export const KeeperFactoryAbi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'numRequested',
-        type: 'uint256',
-      },
-    ],
-    name: 'commitKeepConfig',
+    inputs: [],
+    name: 'commitmentGasOracle',
     outputs: [
       {
-        components: [
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierCalldata',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferCalldata',
-            type: 'uint256',
-          },
-        ],
-        internalType: 'struct IKept.KeepConfig',
+        internalType: 'contract IGasOracle',
         name: '',
-        type: 'tuple',
+        type: 'address',
       },
     ],
     stateMutability: 'view',
@@ -413,7 +357,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'id',
+        name: 'oracleId',
         type: 'bytes32',
       },
       {
@@ -443,7 +387,7 @@ export const KeeperFactoryAbi = [
     outputs: [
       {
         internalType: 'contract IKeeperOracle',
-        name: 'oracle',
+        name: 'newOracle',
         type: 'address',
       },
     ],
@@ -465,12 +409,12 @@ export const KeeperFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'ethTokenOracleFeed',
+    name: 'factoryType',
     outputs: [
       {
-        internalType: 'contract AggregatorV3Interface',
+        internalType: 'string',
         name: '',
-        type: 'address',
+        type: 'string',
       },
     ],
     stateMutability: 'view',
@@ -480,12 +424,12 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'underlyingId',
+        name: '',
         type: 'bytes32',
       },
       {
         internalType: 'contract IPayoffProvider',
-        name: 'payoff',
+        name: '',
         type: 'address',
       },
     ],
@@ -497,34 +441,23 @@ export const KeeperFactoryAbi = [
         type: 'bytes32',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'view',
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'granularity',
+    inputs: [
+      {
+        internalType: 'contract IOracleProvider',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'ids',
     outputs: [
       {
-        components: [
-          {
-            internalType: 'uint64',
-            name: 'latestGranularity',
-            type: 'uint64',
-          },
-          {
-            internalType: 'uint64',
-            name: 'currentGranularity',
-            type: 'uint64',
-          },
-          {
-            internalType: 'uint128',
-            name: 'effectiveAfter',
-            type: 'uint128',
-          },
-        ],
-        internalType: 'struct IKeeperFactory.Granularity',
+        internalType: 'bytes32',
         name: '',
-        type: 'tuple',
+        type: 'bytes32',
       },
     ],
     stateMutability: 'view',
@@ -547,17 +480,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'contract IOracleFactory',
-        name: 'oracleFactory',
-        type: 'address',
-      },
-      {
-        internalType: 'contract AggregatorV3Interface',
-        name: 'chainlinkFeed_',
-        type: 'address',
-      },
-      {
-        internalType: 'Token18',
-        name: 'dsu_',
+        name: 'oracleFactory_',
         type: 'address',
       },
     ],
@@ -587,10 +510,10 @@ export const KeeperFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'keeperToken',
+    name: 'oracleFactory',
     outputs: [
       {
-        internalType: 'Token18',
+        internalType: 'contract IOracleFactory',
         name: '',
         type: 'address',
       },
@@ -602,7 +525,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'id',
+        name: '',
         type: 'bytes32',
       },
     ],
@@ -625,6 +548,51 @@ export const KeeperFactoryAbi = [
         internalType: 'address',
         name: '',
         type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'parameter',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'latestGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'currentGranularity',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'effectiveAfter',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'oracleFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'validFrom',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'validTo',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct KeeperOracleParameter',
+        name: '',
+        type: 'tuple',
       },
     ],
     stateMutability: 'view',
@@ -664,6 +632,25 @@ export const KeeperFactoryAbi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'contract IPayoffProvider',
+        name: '',
+        type: 'address',
+      },
+    ],
+    name: 'payoffs',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'pendingOwner',
     outputs: [
@@ -693,13 +680,8 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32[]',
-        name: 'ids',
+        name: 'oracleIds',
         type: 'bytes32[]',
-      },
-      {
-        internalType: 'contract IMarket[]',
-        name: 'markets',
-        type: 'address[]',
       },
       {
         internalType: 'uint256[]',
@@ -719,34 +701,12 @@ export const KeeperFactoryAbi = [
   },
   {
     inputs: [],
-    name: 'settleKeepConfig',
+    name: 'settlementGasOracle',
     outputs: [
       {
-        components: [
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferBase',
-            type: 'uint256',
-          },
-          {
-            internalType: 'UFixed18',
-            name: 'multiplierCalldata',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'bufferCalldata',
-            type: 'uint256',
-          },
-        ],
-        internalType: 'struct IKept.KeepConfig',
+        internalType: 'contract IGasOracle',
         name: '',
-        type: 'tuple',
+        type: 'address',
       },
     ],
     stateMutability: 'view',
@@ -756,7 +716,7 @@ export const KeeperFactoryAbi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'id',
+        name: '',
         type: 'bytes32',
       },
     ],
@@ -795,7 +755,7 @@ export const KeeperFactoryAbi = [
           },
         ],
         internalType: 'struct IKeeperFactory.PayoffDefinition',
-        name: 'payoff',
+        name: '',
         type: 'tuple',
       },
     ],
@@ -812,12 +772,45 @@ export const KeeperFactoryAbi = [
   {
     inputs: [
       {
+        internalType: 'contract IOracleProvider',
+        name: 'oracleProvider',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'oracleId',
+        type: 'bytes32',
+      },
+    ],
+    name: 'updateId',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'uint256',
         name: 'newGranularity',
         type: 'uint256',
       },
+      {
+        internalType: 'UFixed6',
+        name: 'newOraclefee',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'newValidFrom',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'newValidTo',
+        type: 'uint256',
+      },
     ],
-    name: 'updateGranularity',
+    name: 'updateParameter',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -846,32 +839,6 @@ export const KeeperFactoryAbi = [
     name: 'updatePendingOwner',
     outputs: [],
     stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'validFrom',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'validTo',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
 ] as const

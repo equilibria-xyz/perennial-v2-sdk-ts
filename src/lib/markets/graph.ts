@@ -6,6 +6,7 @@ import {
   PositionSide,
   SupportedChainId,
   SupportedMarket,
+  SupportedMarketMapping,
   addressToMarket,
   chainMarketsWithAddress,
 } from '../../constants'
@@ -16,7 +17,7 @@ import {
   QueryMarketAccountPositionOrders,
   QueryMarketAccountTakerPositions,
   QueryMarketAccumulationData,
-  QueryMultiInvokerOpenOrders,
+  QueryOpenTriggerOrders,
 } from '../../graphQueries/markets'
 import { Bucket, OrderDataFragment, PositionDataFragment } from '../../types/gql/graphql'
 import { Day, last24hrBounds, nowSeconds } from '../../utils'
@@ -39,7 +40,7 @@ import {
   side as positionSide,
 } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
-import { MarketSnapshots, fetchMarketSnapshots } from './chain'
+import { MarketOracles, MarketSnapshots, fetchMarketSettlementFees, fetchMarketSnapshots } from './chain'
 
 /**
  * Fetches position PnL for a given market and Address
@@ -55,6 +56,7 @@ import { MarketSnapshots, fetchMarketSnapshots } from './chain'
  */
 export async function fetchActivePositionsPnl({
   markets,
+  marketOracles,
   marketSnapshots,
   chainId,
   address,
@@ -66,14 +68,14 @@ export async function fetchActivePositionsPnl({
   markets: SupportedMarket[]
   address: Address
   marketSnapshots?: MarketSnapshots
+  marketOracles?: MarketOracles
   markToMarket?: boolean
   chainId: SupportedChainId
   oracleClients: OracleClients
   publicClient: PublicClient
   graphClient: GraphQLClient
 }): Promise<
-  Record<
-    SupportedMarket,
+  SupportedMarketMapping<
     ProcessedGraphPosition & {
       realtime: bigint
       realtimePercent: bigint
@@ -89,8 +91,16 @@ export async function fetchActivePositionsPnl({
       oracleClients,
       publicClient,
       markets,
+      marketOracles,
     })
   }
+
+  const marketSettlementFees = await fetchMarketSettlementFees({
+    chainId,
+    markets,
+    marketOracles,
+    publicClient,
+  })
 
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const marketLatestVersions = marketsWithAddresses.map(({ market }) =>
@@ -121,14 +131,13 @@ export async function fetchActivePositionsPnl({
     const pendingTradeFeeData = calcTradeFee({
       positionDelta: pendingDelta,
       marketSnapshot,
-      isMaker: side === PositionSide.maker,
-      direction: side,
+      side: side,
       usePreGlobalPosition: pendingDelta !== 0n,
     })
-    const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact
+    const pendingTradeImpactAsOffset = -1n * pendingTradeFeeData.tradeImpact.total
     const pendingOrderCollateral = userMarketSnapshot.pendingOrder.collateral
-    const pendingOrderSettlementFee = pendingDelta !== 0n ? marketSnapshot.parameter.settlementFee : 0n
-    const pendingTradeFee = pendingTradeFeeData.tradeFee
+    const pendingOrderSettlementFee = marketSettlementFees[market].totalCost
+    const pendingTradeFee = pendingTradeFeeData.tradeFee.total
     const pendingAdditiveFee = 0n
 
     const graphMarketAccount = marketAccounts.find((ma) => getAddress(ma.market.id) === marketAddress)
@@ -169,7 +178,7 @@ export async function fetchActivePositionsPnl({
         markToMarket ? pendingMarkToMarketAccumulations : undefined,
         {
           currentId: userMarketSnapshot.local.currentId,
-          latestPrice: userMarketSnapshot.prices[0],
+          latestPrice: userMarketSnapshot.oracleVersions[0].price,
           collateral: pendingOrderCollateral,
           size: pendingDelta,
           offset: pendingTradeImpactAsOffset,
@@ -197,7 +206,7 @@ export async function fetchActivePositionsPnl({
     }
 
     const averageEntryPrice = calcExecutionPriceWithImpact({
-      notional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
+      notional: calcNotional(userMarketSnapshot.oracleVersions[0].price, pendingDelta),
       offset: pendingTradeImpactAsOffset,
       size: pendingDelta,
       side,
@@ -215,13 +224,13 @@ export async function fetchActivePositionsPnl({
       endVersion: null,
       trades: 1n,
       startSize: magnitude_,
-      startPrice: userMarketSnapshot.prices[0],
+      startPrice: userMarketSnapshot.oracleVersions[0].price,
       positionId: userMarketSnapshot.local.currentId,
       startCollateral,
       startTransactionHash: null,
       totalPnl: pendingTradeImpactAsOffset,
       totalFees: pendingTradeFee + pendingOrderSettlementFee,
-      totalNotional: calcNotional(userMarketSnapshot.prices[0], pendingDelta),
+      totalNotional: calcNotional(userMarketSnapshot.oracleVersions[0].price, pendingDelta),
       pnlAccumulations: {
         offset: pendingTradeImpactAsOffset,
         pnl: 0n,
@@ -229,6 +238,7 @@ export async function fetchActivePositionsPnl({
         interest: 0n,
         makerPositionFee: 0n,
         makerExposure: 0n,
+        priceOverride: 0n,
       },
       feeAccumulations: {
         settlement: pendingOrderSettlementFee,
@@ -255,8 +265,7 @@ export async function fetchActivePositionsPnl({
       if (v) acc[v.market] = v
       return acc
     },
-    {} as Record<
-      SupportedMarket,
+    {} as SupportedMarketMapping<
       ProcessedGraphPosition & {
         realtime: bigint
         realtimePercent: bigint
@@ -585,7 +594,7 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
   const priceWithImpact =
     delta !== 0n
       ? calcExecutionPriceWithImpact({
-          notional: calcNotional(BigInt(order.executionPrice), delta),
+          notional: calcNotional(BigInt(order.guaranteePrice ?? order.executionPrice), delta),
           offset: BigInt(order.accumulation.collateral_subAccumulation_offset),
           size: delta,
           side,
@@ -625,6 +634,8 @@ function processOrder(market: SupportedMarket, order: OrderDataFragment) {
     // PNL
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
+    // Guarantee Price
+    guaranteePrice: order.guaranteePrice ? BigInt(order.guaranteePrice) : null,
     // Accumulation Breakdowns
     totalPnl,
     totalFees,
@@ -668,18 +679,22 @@ export async function fetchOpenOrders({
   isMaker?: boolean
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
-  const { multiInvokerTriggerOrders } = await graphClient.request(QueryMultiInvokerOpenOrders, {
+  const { multiInvokerTriggerOrders: triggerOrders } = await graphClient.request(QueryOpenTriggerOrders, {
     account: address,
     markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
     first,
     skip,
-    side: isMaker ? [0, 3] : [1, 2, 3], // 3 = collateral withdrawal
+    side: isMaker
+      ? [0, 3, 4] // 0 = multiInvoker maker, 3 = multiInvoker collateral withdrawal, 4 = manager maker
+      : [1, 2, 3, 5, 6], // 1 = multiInvoker long, 2 = multiInvoker short, 3 = multiInvoker collateral withdrawal, 5 = manager long, 6 = manager short
   })
 
-  return multiInvokerTriggerOrders.map((triggerOrder) => ({
+  return triggerOrders.map((triggerOrder) => ({
     ...triggerOrder,
     market: addressToMarket(chainId, triggerOrder.market),
     marketAddress: getAddress(triggerOrder.market),
+    source: getAddress(triggerOrder.source),
+    account: getAddress(triggerOrder.account),
   }))
 }
 
@@ -807,6 +822,6 @@ export async function fetchMarketsHistoricalData({
       acc[market.market] = market
       return acc
     },
-    {} as Record<SupportedMarket, (typeof parsedData)[0]>,
+    {} as SupportedMarketMapping<(typeof parsedData)[0]>,
   )
 }

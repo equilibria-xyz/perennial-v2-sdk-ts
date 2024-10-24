@@ -15,10 +15,17 @@ import {
 import { OptionalAddress } from '../../types/shared'
 import { notEmpty } from '../../utils'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
+import { addSignerOverrideFromWalletClientSigner } from '../../utils/intentUtils'
 import { mergeMultiInvokerTxs } from '../../utils/multiinvoker'
 import { waitForOrderSettlement } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
-import { MarketOracles, MarketSnapshots, fetchMarketOracles, fetchMarketSnapshots } from './chain'
+import {
+  MarketOracles,
+  MarketSnapshots,
+  fetchMarketOracles,
+  fetchMarketSettlementFees,
+  fetchMarketSnapshots,
+} from './chain'
 import {
   fetchActivePositionHistory,
   fetchActivePositionsPnl,
@@ -30,12 +37,20 @@ import {
   fetchTradeHistory,
 } from './graph'
 import {
+  BuildCancelOrderSigningPayloadArgs,
+  BuildPlaceOrderSigningPayloadArgs,
+  buildCancelOrderSigningPayload,
+  buildPlaceOrderSigningPayload,
+} from './intent'
+import { BuildIntentSigningPayloadArgs, buildIntentSigningPayload } from './intent/buildIntentSigningPayload'
+import {
   BuildCancelOrderTxArgs,
   BuildClaimFeeTxArgs,
   BuildLimitOrderTxArgs,
   BuildStopLossTxArgs,
   BuildTakeProfitTxArgs,
   BuildTriggerOrderBaseArgs,
+  BuildUpdateIntentTxArgs,
   BuildUpdateMarketTxArgs,
   CancelOrderDetails,
   WithChainIdAndPublicClient,
@@ -44,6 +59,7 @@ import {
   buildLimitOrderTx,
   buildStopLossTx,
   buildTakeProfitTx,
+  buildUpdateIntentTx,
   buildUpdateMarketTx,
 } from './tx'
 
@@ -348,6 +364,20 @@ export class MarketsModule {
           timeoutMs: 30000,
         })
       },
+      /**
+       * Fetches the market settlement fees for a list of markets
+       * @param markets List of {@link SupportedMarket}. Defaults to config supported markets
+       * @param chainId {@link SupportedChainId}
+       * @returns Markets settlement fees.
+       */
+      settlementFees: (args: OmitBound<Parameters<typeof fetchMarketSettlementFees>[0]> & OptionalMarkets = {}) => {
+        return fetchMarketSettlementFees({
+          chainId: this.config.chainId,
+          markets: this.config.supportedMarkets,
+          publicClient: this.config.publicClient,
+          ...args,
+        })
+      },
     }
   }
 
@@ -451,7 +481,6 @@ export class MarketsModule {
        */
       update: (args: OmitBound<BuildUpdateMarketTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildUpdateMarketTx({
           chainId: this.config.chainId,
@@ -477,7 +506,6 @@ export class MarketsModule {
        */
       limitOrder: (args: OmitBound<BuildLimitOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildLimitOrderTx({
           chainId: this.config.chainId,
@@ -502,7 +530,6 @@ export class MarketsModule {
        */
       stopLoss: (args: OmitBound<BuildStopLossTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildStopLossTx({
           chainId: this.config.chainId,
@@ -527,7 +554,6 @@ export class MarketsModule {
        */
       takeProfit: (args: OmitBound<BuildTakeProfitTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildTakeProfitTx({
           chainId: this.config.chainId,
@@ -652,7 +678,6 @@ export class MarketsModule {
        */
       cancelOrder: (args: OmitBound<BuildCancelOrderTxArgs> & OptionalAddress) => {
         const address = args.address ?? this.defaultAddress
-        throwIfZeroAddress(address)
 
         return buildCancelOrderTx({
           chainId: this.config.chainId,
@@ -666,8 +691,67 @@ export class MarketsModule {
        * @notice This method only claims for the transaction sending address. OperatingFor is not supported
        * @param marketAddress Market Address to claim fees for
        */
-      claimFee: (args: OmitBound<BuildClaimFeeTxArgs>) => {
-        return buildClaimFeeTx({ ...args })
+      claimFee: (args: OmitBound<BuildClaimFeeTxArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+
+        return buildClaimFeeTx({ chainId: this.config.chainId, ...args, address })
+      },
+
+      /**
+       * Build a update intent transaction
+       * @param marketAddress Market Address to update intent for
+       * @param intent {@link EIP712_Intent}
+       * @param signature Signature of the intent
+       */
+      updateIntent: (args: OmitBound<BuildUpdateIntentTxArgs> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+
+        return buildUpdateIntentTx({ chainId: this.config.chainId, ...args, address })
+      },
+
+      // EIP712 Typed Data Signature Payloads
+      signed: {
+        /**
+         * Build a EIP712 paylod for signing a market update intent
+         * @param marketAddress Market Address to update intent for
+         * @param intent {@link EIP712_Intent}
+         * @param signature Signature of the intent
+         */
+        intent: (args: OmitBound<BuildIntentSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
+          return buildIntentSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
+
+        placeOrder: (args: OmitBound<BuildPlaceOrderSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
+          return buildPlaceOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
+
+        cancelOrder: (args: OmitBound<BuildCancelOrderSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
+          return buildCancelOrderSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
       },
     }
   }
@@ -832,6 +916,63 @@ export class MarketsModule {
         const tx = this.build.claimFee(...args)
         const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
         return hash
+      },
+      /**
+       * Send a update intent transaction
+       * @param marketAddress Market Address to update intent for
+       * @param intent {@link EIP712_Intent}
+       * @param signature Signature of the intent
+       */
+      updateIntent: async (...args: Parameters<typeof this.build.updateIntent>) => {
+        const tx = this.build.updateIntent(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
+      },
+    }
+  }
+
+  get sign() {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
+
+    const { chainId } = this.config
+    const address = walletClient.account
+
+    const signOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
+
+    return {
+      /**
+       * Sign a EIP712 intent signing payload
+       * @param intent {@link EIP712_Intent}
+       * @param signature Signature of the intent
+       */
+      intent: async (...args: Parameters<typeof this.build.signed.intent>) => {
+        const { intent } = this.build.signed.intent(...args)
+        const signature = await walletClient.signTypedData({ ...intent, ...signOpts })
+        return {
+          signature,
+          intent,
+        }
+      },
+
+      placeOrder: async (...args: Parameters<typeof this.build.signed.placeOrder>) => {
+        const { placeOrder } = this.build.signed.placeOrder(...args)
+        const signature = await walletClient.signTypedData({ ...placeOrder, ...signOpts })
+        return {
+          signature,
+          placeOrder,
+        }
+      },
+
+      cancelOrder: async (...args: Parameters<typeof this.build.signed.cancelOrder>) => {
+        const { cancelOrder } = this.build.signed.cancelOrder(...args)
+        const signature = await walletClient.signTypedData({ ...cancelOrder, ...signOpts })
+        return {
+          signature,
+          cancelOrder,
+        }
       },
     }
   }

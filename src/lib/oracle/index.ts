@@ -1,5 +1,5 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
-import { Address, Hex, PublicClient } from 'viem'
+import { Address, Hex, PublicClient, WalletClient, zeroAddress } from 'viem'
 
 import {
   ChainlinkFactoryAddresses,
@@ -7,27 +7,43 @@ import {
   PythFactoryAddresses,
   SupportedChainId,
   SupportedMarket,
+  chainIdToChainMap,
 } from '../../constants'
+import { OptionalAddress } from '../../types/shared'
+import { buildCommitPrice, encodeInvoke } from '../../utils/multiinvoker'
+import { getKeeperFactoryContract } from '../contracts'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
 import { fetchPrices } from './cryptex'
 import { buildCommitmentsForOracles as pythBuildCommitmentsForOracles } from './pyth'
 
-export type OracleProviderType = 'pyth' | 'cryptex' | 'chainlink' | 'unknown'
+export type OracleProviderType = 'PythFactory' | 'CryptexFactory' | 'ChainlinkFactory' | 'unknown'
 export type OracleClients = {
   pyth: HermesClient | HermesClient[]
   cryptex?: string
 }
 
-export function oracleProviderTypeForFactoryAddress({
+export async function oracleProviderTypeForFactoryAddress({
   chainId,
+  publicClient,
   factory,
 }: {
   chainId: SupportedChainId
+  publicClient: PublicClient
   factory: Address
-}): OracleProviderType {
-  if (PythFactoryAddresses[chainId] === factory) return 'pyth'
-  if (CryptexFactoryAddresses[chainId] === factory) return 'cryptex'
-  if (ChainlinkFactoryAddresses[chainId] === factory) return 'chainlink'
+}): Promise<OracleProviderType> {
+  // Check hardcoded addresses first
+  if (factory === PythFactoryAddresses[chainId]) return 'PythFactory'
+  if (factory === ChainlinkFactoryAddresses[chainId]) return 'ChainlinkFactory'
+  if (factory === CryptexFactoryAddresses[chainId]) return 'CryptexFactory'
+
+  // Otherwise, try to read from the contract
+  try {
+    const oracleFactory = getKeeperFactoryContract(factory, publicClient)
+    const type = await oracleFactory.read.factoryType()
+    return type as OracleProviderType
+  } catch (err) {
+    console.error(err)
+  }
 
   return 'unknown'
 }
@@ -82,8 +98,8 @@ export async function oracleCommitmentsLatest({
     // Generate commitment(s) gor each factory grouping
     const commitmentPromises = Array.from(groupedRequests.entries()).map(
       async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
-        const providerType = oracleProviderTypeForFactoryAddress({ chainId, factory })
-        if (providerType === 'pyth') {
+        const providerType = await oracleProviderTypeForFactoryAddress({ chainId, publicClient, factory })
+        if (providerType === 'PythFactory') {
           const pythResponse = await pythBuildCommitmentsForOracles({
             chainId,
             publicClient,
@@ -100,7 +116,7 @@ export async function oracleCommitmentsLatest({
           return pythResponse.map((res) => ({ ...res, keeperFactory: factory }))
         }
 
-        if (providerType === 'cryptex' && oracleClients.cryptex) {
+        if (providerType === 'CryptexFactory' && oracleClients.cryptex) {
           const cryptexResponse = await fetchPrices({
             url: oracleClients.cryptex,
             feeds: reqs,
@@ -156,8 +172,8 @@ export async function oracleCommitmentsTimestamp({
     // Generate commitment(s) gor each factory grouping
     const commitmentPromises = Array.from(groupedRequests.entries()).map(
       async ([factory, reqs]): Promise<UpdateDataResponse[]> => {
-        const providerType = oracleProviderTypeForFactoryAddress({ chainId, factory })
-        if (providerType === 'pyth') {
+        const providerType = await oracleProviderTypeForFactoryAddress({ chainId, publicClient, factory })
+        if (providerType === 'PythFactory') {
           const pythResponse = await pythBuildCommitmentsForOracles({
             chainId,
             publicClient,
@@ -176,7 +192,7 @@ export async function oracleCommitmentsTimestamp({
           return pythResponse.map((res) => ({ ...res, keeperFactory: factory }))
         }
 
-        if (providerType === 'cryptex' && oracleClients.cryptex) {
+        if (providerType === 'CryptexFactory' && oracleClients.cryptex) {
           const cryptexResponse = await fetchPrices({
             url: oracleClients.cryptex,
             timestamp,
@@ -204,13 +220,42 @@ export async function oracleCommitmentsTimestamp({
 
 export function marketOraclesToUpdateDataRequest(marketOracles: MarketOracles[SupportedMarket][]): UpdateDataRequest[] {
   return marketOracles.map((marketOracle) => ({
-    factory: marketOracle.providerFactoryAddress,
-    subOracle: marketOracle.providerAddress,
-    id: marketOracle.providerId,
+    factory: marketOracle.subOracleFactoryAddress,
+    subOracle: marketOracle.subOracleAddress,
+    id: marketOracle.id,
     underlyingId: marketOracle.underlyingId,
     minValidTime: marketOracle.minValidTime,
     staleAfter: marketOracle.staleAfter,
   }))
+}
+
+export type BuildCommitPriceTxArgs = {
+  chainId: SupportedChainId
+  keeperFactory: Address
+  address: Address
+  value: bigint
+  ids: Hex[]
+  version: bigint
+  updateData: Hex
+  revertOnFailure?: boolean
+}
+export function buildCommitPriceTx({
+  chainId,
+  keeperFactory,
+  address,
+  value,
+  ids,
+  version,
+  updateData,
+  revertOnFailure = true,
+}: BuildCommitPriceTxArgs) {
+  const actions = [buildCommitPrice({ keeperFactory, value, ids, version, vaa: updateData, revertOnFailure })]
+  return encodeInvoke({
+    chainId,
+    address,
+    actions,
+    value,
+  })
 }
 
 type OracleConfig = {
@@ -218,11 +263,16 @@ type OracleConfig = {
   publicClient: PublicClient
   oracleClients: OracleClients
   supportedMarkets: SupportedMarket[]
+  walletClient?: WalletClient
+  operatingFor?: Address
 }
-type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'oracleClients' | 'requests'>
+type OmitBound<T> = Omit<T, 'chainId' | 'publicClient' | 'oracleClients' | 'requests' | 'address'>
 type OptionalRequests = { requests?: UpdateDataRequest[]; markets?: SupportedMarket[] }
 export class OraclesModule {
-  constructor(private config: OracleConfig) {}
+  private defaultAddress: Address = zeroAddress
+  constructor(private config: OracleConfig) {
+    this.defaultAddress = config.operatingFor ?? config.walletClient?.account?.address ?? this.defaultAddress
+  }
 
   get read() {
     return {
@@ -273,8 +323,43 @@ export class OraclesModule {
       oracleProviderForFactoryAddress: (args: OmitBound<Parameters<typeof oracleProviderTypeForFactoryAddress>[0]>) => {
         return oracleProviderTypeForFactoryAddress({
           chainId: this.config.chainId,
+          publicClient: this.config.publicClient,
           ...args,
         })
+      },
+    }
+  }
+
+  get build() {
+    return {
+      commitPrice: (args: OmitBound<Parameters<typeof buildCommitPriceTx>[0]> & OptionalAddress) => {
+        const address = args.address ?? this.defaultAddress
+
+        return buildCommitPriceTx({
+          chainId: this.config.chainId,
+          ...args,
+          address,
+        })
+      },
+    }
+  }
+
+  get write() {
+    const walletClient = this.config.walletClient
+    if (!walletClient || !walletClient.account) {
+      throw new Error('Wallet client required for write methods.')
+    }
+
+    const { chainId } = this.config
+    const address = walletClient.account
+
+    const txOpts = { account: address, chainId, chain: chainIdToChainMap[chainId] }
+
+    return {
+      commitPrice: async (...args: Parameters<typeof this.build.commitPrice>) => {
+        const tx = this.build.commitPrice(...args)
+        const hash = await walletClient.sendTransaction({ ...tx, ...txOpts })
+        return hash
       },
     }
   }

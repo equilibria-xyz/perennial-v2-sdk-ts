@@ -5,7 +5,7 @@ export const PositionDataFragment = gql(`
     marketAccount { currentOrderId, market { id } }, startCollateral, startMaker, startLong, startShort, openSize, openNotional, openOffset, netDeposits, positionId: nonce, startVersion, closeSize, closeNotional, closeOffset, trades
     accumulation {
       collateral_accumulation, fee_accumulation, collateral_subAccumulation_offset, collateral_subAccumulation_pnl,
-      collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, fee_subAccumulation_settlement
+      collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, collateral_subAccumulation_priceOverride, fee_subAccumulation_settlement
       fee_subAccumulation_trade, fee_subAccumulation_additive, fee_subAccumulation_triggerOrder, fee_subAccumulation_liquidation
     }
     openOrder: orders(first: 1, orderBy: orderId, orderDirection: asc) { executionPrice, transactionHashes }
@@ -15,11 +15,11 @@ export const PositionDataFragment = gql(`
 
 export const OrderDataFragbment = gql(`
   fragment OrderData on Order {
-    orderId, market { id }, account { id }, maker, long, short, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal
+    orderId, market { id }, account { id }, maker, long, short, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal, guaranteePrice
     position { startMaker, startLong, startShort }
     accumulation {
       collateral_accumulation, fee_accumulation, collateral_subAccumulation_offset, collateral_subAccumulation_pnl,
-      collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, fee_subAccumulation_settlement
+      collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, collateral_subAccumulation_priceOverride, fee_subAccumulation_settlement
       fee_subAccumulation_trade, fee_subAccumulation_additive, fee_subAccumulation_triggerOrder, fee_subAccumulation_liquidation
     }
   }
@@ -100,13 +100,13 @@ export const QueryMarketAccumulationData = gql(`
   }
 `)
 
-export const QueryMultiInvokerOpenOrders = gql(`
-  query QueryMultiInvokerOpenOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
+export const QueryOpenTriggerOrders = gql(`
+  query QueryOpenTriggerOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
     multiInvokerTriggerOrders(
       where: { account: $account, market_in: $markets, cancelled: false, executed: false, triggerOrderSide_in: $side },
       orderBy: nonce, orderDirection: desc, first: $first, skip: $skip
     ) {
-        account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
+        source, account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
         blockTimestamp, transactionHash, associatedOrder { collateral, depositTotal, withdrawalTotal }
       }
   }

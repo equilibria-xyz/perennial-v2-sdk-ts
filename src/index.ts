@@ -42,6 +42,9 @@ export {
   type BuildUpdateMarketTxArgs,
 } from './lib/markets/tx'
 
+// Market - Intents
+export * from './lib/markets/intent'
+
 // Vault - Chain
 export {
   type VaultSnapshot,
@@ -65,7 +68,21 @@ export {
 } from './lib/vaults/tx'
 
 // Operator - Transaction
-export { buildApproveUSDCTx, buildApproveMarketFactoryTx, buildApproveVaultFactoryTx } from './lib/operators'
+export {
+  buildApproveUSDCTx,
+  buildApproveMarketFactoryTx,
+  buildApproveVaultFactoryTx,
+  buildAccessUpdateBatchTx,
+  buildApproveDSUReserveTx,
+  buildUnwrapDSUTx,
+  buildUpdateMultiInvokerOperatorTx,
+} from './lib/operators'
+
+// Collateral Account - Intents
+export * from './lib/collateralAccounts/intent'
+
+// Collateral Account - Read
+export * from './lib/collateralAccounts/read'
 
 /* #################### Constants #################### */
 
@@ -83,6 +100,11 @@ export {
   DSUAddresses,
   USDCAddresses,
   EmptysetReserveAddresses,
+  VerifierAddresses,
+  ControllerAddresses,
+  ManagerAddresses,
+  AccountVerifierAddresses,
+  OrderVerifierAddresses,
 } from './constants/contracts'
 
 export {
@@ -97,6 +119,11 @@ export {
   getVaultContract,
   getOracleContract,
   getKeeperOracleContract,
+  getKeeperFactoryContract,
+  getOracleFactoryContract,
+  getGasOracleContract,
+  getControllerContract,
+  getManagerContract,
 } from './lib/contracts'
 
 // Vaults
@@ -167,10 +194,12 @@ export { EmptysetReserveAbi } from './abi/EmptysetReserve.abi'
 export { FactoryAbi } from './abi/Factory.abi'
 export { OracleFactoryAbi } from './abi/OracleFactory.abi'
 export { PayoffAbi } from './abi/Payoff.abi'
+export { ManagerAbi } from './abi/Manager.abi'
+export { ControllerAbi } from './abi/Controller.abi'
 
 /* #################### Types #################### */
 
-export { type JumpRateUtilizationCurve, type MultiInvokerAction } from './types/perennial'
+export { type JumpRateUtilizationCurve, type MultiInvokerAction, type Intent, type Common } from './types/perennial'
 
 // Graph Types
 export * from './types/gql'
@@ -199,6 +228,9 @@ export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from 
 // Contract Utils
 export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
 
+// Address Utils
+export { throwIfZeroAddress, addressForMarket } from './utils/addressUtils'
+
 // Funding and Interest Rate Utils
 export {
   computeInterestRate,
@@ -219,6 +251,8 @@ export {
   buildCommitPrice,
   buildLiquidate,
   buildApproveTarget,
+  buildUpdateIntent,
+  buildClaimFee,
   mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
@@ -238,22 +272,23 @@ export {
 export {
   magnitude,
   side,
-  efficiency,
+  calcEfficiency,
+  orderSize,
   calcLiquidationPrice,
+  calcBelowMarginPrice,
   calcLeverage,
   calcMakerExposure,
   closedOrResolved,
   calcNotional,
   calcMakerStats,
   getPositionFromSelectedMarket,
-  getSideFromPosition,
+  sideFromPosition,
   getStatusForSnapshot,
   calcTakerLiquidity,
   isActivePosition,
   calcSkew,
   calcFundingRates,
   calcTradeFee,
-  calcPriceImpactFromTradeFee,
   calcEstExecutionPrice,
   calcInterfaceFee,
   calcTotalPositionChangeFee,
@@ -266,14 +301,16 @@ export {
 
 // Oracle Utils
 export {
-  type OracleProviderType as OracleProvider,
+  type OracleProviderType,
   type OracleClients,
   type UpdateDataRequest,
   type UpdateDataResponse,
+  type BuildCommitPriceTxArgs,
   oracleProviderTypeForFactoryAddress,
   oracleCommitmentsLatest,
   oracleCommitmentsTimestamp,
   marketOraclesToUpdateDataRequest,
+  buildCommitPriceTx,
 } from './lib/oracle'
 
 // Pyth Utils
@@ -294,6 +331,9 @@ export {
   last7dBounds,
   formatDateRelative,
 } from './utils/timeUtils'
+
+// Signed Message Types
+export * as eip712 from './constants/eip712'
 
 // Graph Types
 export { Bucket as AccumulationBucket } from './types/gql/graphql'
