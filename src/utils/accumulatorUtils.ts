@@ -25,12 +25,17 @@ export const AccumulatorTypes = [
   {
     type: 'makerPositionFee',
     realizedKey: `collateral_subAccumulation_makerPositionFee`,
-    unrealizedKey: { maker: `positionFeeMaker`, long: `positionFeeMaker`, short: `positionFeeMaker` } as const,
+    unrealizedKey: { maker: `positionFeeMaker`, long: ``, short: `` } as const,
   },
   {
     type: 'makerExposure',
     realizedKey: `collateral_subAccumulation_makerExposure`,
-    unrealizedKey: { maker: `exposureMaker`, long: `exposureMaker`, short: `exposureMaker` } as const,
+    unrealizedKey: { maker: `exposureMaker`, long: ``, short: `` } as const,
+  },
+  {
+    type: 'priceOverride',
+    realizedKey: `collateral_subAccumulation_priceOverride`,
+    unrealizedKey: { maker: ``, long: ``, short: `` } as const,
   },
 ] as const
 

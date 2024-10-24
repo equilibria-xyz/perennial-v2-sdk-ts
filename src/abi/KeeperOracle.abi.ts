@@ -11,6 +11,11 @@ export const KeeperOracleAbi = [
     type: 'constructor',
   },
   {
+    inputs: [],
+    name: 'DivisionByZero',
+    type: 'error',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',
@@ -70,6 +75,16 @@ export const KeeperOracleAbi = [
   },
   {
     inputs: [],
+    name: 'KeeperOracleNoPriorRequestsError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'KeeperOracleNotOracleError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'KeeperOracleVersionOutsideRangeError',
     type: 'error',
   },
@@ -80,7 +95,7 @@ export const KeeperOracleAbi = [
   },
   {
     inputs: [],
-    name: 'PriceStorageInvalidError',
+    name: 'PriceResponseStorageInvalidError',
     type: 'error',
   },
   {
@@ -195,8 +210,27 @@ export const KeeperOracleAbi = [
         name: 'version',
         type: 'uint256',
       },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'newPrice',
+        type: 'bool',
+      },
     ],
     name: 'OracleProviderVersionRequested',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'contract IOracleProvider',
+        name: 'newOracle',
+        type: 'address',
+      },
+    ],
+    name: 'OracleUpdated',
     type: 'event',
   },
   {
@@ -231,6 +265,23 @@ export const KeeperOracleAbi = [
         name: '',
         type: 'tuple',
       },
+      {
+        components: [
+          {
+            internalType: 'UFixed6',
+            name: 'settlementFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'oracleFee',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct OracleReceipt',
+        name: '',
+        type: 'tuple',
+      },
     ],
     stateMutability: 'view',
     type: 'function',
@@ -259,15 +310,19 @@ export const KeeperOracleAbi = [
         name: 'version',
         type: 'tuple',
       },
-    ],
-    name: 'commit',
-    outputs: [
       {
-        internalType: 'bool',
-        name: 'requested',
-        type: 'bool',
+        internalType: 'address',
+        name: 'receiver',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'value',
+        type: 'uint256',
       },
     ],
+    name: 'commit',
+    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
@@ -319,28 +374,9 @@ export const KeeperOracleAbi = [
             type: 'uint64',
           },
         ],
-        internalType: 'struct IKeeperOracle.Global',
+        internalType: 'struct IKeeperOracle.KeeperOracleGlobal',
         name: '',
         type: 'tuple',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'version',
-        type: 'uint256',
-      },
-    ],
-    name: 'globalCallbacks',
-    outputs: [
-      {
-        internalType: 'address[]',
-        name: '',
-        type: 'address[]',
       },
     ],
     stateMutability: 'view',
@@ -376,7 +412,7 @@ export const KeeperOracleAbi = [
           },
         ],
         internalType: 'struct OracleVersion',
-        name: '',
+        name: 'latestVersion',
         type: 'tuple',
       },
     ],
@@ -389,11 +425,6 @@ export const KeeperOracleAbi = [
         internalType: 'uint256',
         name: 'version',
         type: 'uint256',
-      },
-      {
-        internalType: 'contract IMarket',
-        name: 'market',
-        type: 'address',
       },
     ],
     name: 'localCallbacks',
@@ -421,10 +452,36 @@ export const KeeperOracleAbi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'oracle',
+    outputs: [
+      {
+        internalType: 'contract IOracle',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'contract IOracle',
+        name: 'newOracle',
+        type: 'address',
+      },
+    ],
+    name: 'register',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'contract IMarket',
-        name: 'market',
+        name: '',
         type: 'address',
       },
       {
@@ -441,10 +498,70 @@ export const KeeperOracleAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IMarket',
-        name: 'market',
-        type: 'address',
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
       },
+    ],
+    name: 'requests',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'timestamp',
+        type: 'uint256',
+      },
+    ],
+    name: 'responses',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'Fixed6',
+            name: 'price',
+            type: 'int256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'syncFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'asyncFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'oracleFee',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bool',
+            name: 'valid',
+            type: 'bool',
+          },
+        ],
+        internalType: 'struct PriceResponse',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
       {
         internalType: 'uint256',
         name: 'version',
@@ -454,6 +571,11 @@ export const KeeperOracleAbi = [
         internalType: 'uint256',
         name: 'maxCount',
         type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'receiver',
+        type: 'address',
       },
     ],
     name: 'settle',
@@ -499,25 +621,6 @@ export const KeeperOracleAbi = [
   {
     inputs: [],
     name: 'timeout',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    name: 'versions',
     outputs: [
       {
         internalType: 'uint256',

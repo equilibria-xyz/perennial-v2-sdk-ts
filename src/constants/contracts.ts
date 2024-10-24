@@ -25,6 +25,31 @@ export const OracleFactoryAddresses: AddressMapping = {
   [arbitrumSepolia.id]: getAddress('0x9d2CaE012AAe0aE00f4d8F42CD287a6923612456'),
 }
 
+export const VerifierAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0xF12a4ACDA6cA2e777b353538cb8e5ad6f05e0437'),
+  [arbitrumSepolia.id]: getAddress('0x6FaabfA2fDb093A027Ed16F291ADc7F07780014A'),
+}
+
+export const ControllerAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0x197dE1B26ad733380fD22159A2671f497A6DDd7C'),
+  [arbitrumSepolia.id]: getAddress('0x80f5b854971B1B302FE9f94E9B19ef0C41c544Fb'),
+}
+
+export const ManagerAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0xbbF8A9D4961496FFE3F9c35F76106ec697Af2261'),
+  [arbitrumSepolia.id]: getAddress('0x1D5DB9e0832E23C9A771b59c81aAF82A2D30a1Bb'),
+}
+
+export const AccountVerifierAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0x0E9D1dF540aCB30A321D3D3edd4996E0248aaf5C'),
+  [arbitrumSepolia.id]: getAddress('0x4d556433d056f6e749b90CbBFFfbe590b0CA017e'),
+}
+
+export const OrderVerifierAddresses: AddressMapping = {
+  [arbitrum.id]: getAddress('0x7C65ab8fc1f2d31c7144e148dd900Ea4EdC7EDd3'),
+  [arbitrumSepolia.id]: getAddress('0x04e570a5Ef49b3Dc79a01A9552B803110a3F5e6b'),
+}
+
 export const DSUAddresses: AddressMapping = {
   [arbitrum.id]: getAddress('0x52C64b8998eB7C80b6F526E99E29ABdcC86B841b'),
   [arbitrumSepolia.id]: getAddress('0x5FA881826AD000D010977645450292701bc2f56D'),
@@ -41,16 +66,16 @@ export const USDCAddresses: AddressMapping = {
 }
 
 export const PythFactoryAddresses: AddressMapping = {
-  [arbitrum.id]: getAddress('0x663B38A93FdC2164D45F35051B0F905211d1C9E4'),
-  [arbitrumSepolia.id]: getAddress('0xC3bE5FcBfDD38f5c6eb5d8cDdE712eb1d54A1Aa1'),
+  [arbitrum.id]: getAddress('0xFeB35f293D2114DF6b284876dc8fbfcFfB873B7C'),
+  [arbitrumSepolia.id]: getAddress('0xC2782aaA8aEd48056f0E2D9877681267B0bcC065'),
 }
 
 export const CryptexFactoryAddresses: AddressMapping = {
-  [arbitrum.id]: getAddress('0x8bF8a44A6b2f4a174404854ec14c05204cF31dA9'),
-  [arbitrumSepolia.id]: getAddress('0x161Ef7447eC2B3F9425edc405830A111F4033Cb6'),
+  [arbitrum.id]: getAddress('0xcB3B6A451Ca973F99BE29cC616bD9fD1D35ef048'),
+  [arbitrumSepolia.id]: getAddress('0x4c71662764748375545fD2613d19F21c9C8A04FE'),
 }
 
 export const ChainlinkFactoryAddresses: AddressMapping = {
   [arbitrum.id]: zeroAddress,
-  [arbitrumSepolia.id]: getAddress('0x5250115dde6ce8d11e619003E0B2d816Dcb4546e'),
+  [arbitrumSepolia.id]: zeroAddress,
 }

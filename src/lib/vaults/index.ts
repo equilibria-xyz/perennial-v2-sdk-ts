@@ -41,7 +41,7 @@ export const fetchVaultCommitments = async ({
 }) => {
   const oracles = preMarketSnapshots
     .map((marketSnapshot) => {
-      const oracle = Object.values(marketOracles).find((o) => o.address === marketSnapshot.oracle)
+      const oracle = Object.values(marketOracles).find((o) => o.oracleAddress === marketSnapshot.oracle)
       if (!oracle) return
       return oracle
     })

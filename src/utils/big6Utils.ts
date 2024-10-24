@@ -147,7 +147,9 @@ export class Big6Math {
   }
 
   public static fromDecimals(amount: bigint, decimals: number): bigint {
-    return amount * 10n ** BigInt(Big6Math.FIXED_DECIMALS - decimals)
+    const exponent = BigInt(Big6Math.FIXED_DECIMALS - decimals)
+    if (exponent >= 0n) return amount * (10n ** exponent)
+    return amount / (10n ** (exponent * -1n))
   }
 
   public static to18Decimals(amount: bigint): bigint {

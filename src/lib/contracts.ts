@@ -1,16 +1,31 @@
 import { Address, GetContractReturnType, PublicClient, WalletClient, getContract } from 'viem'
 
-import { DefaultChain, EmptysetReserveAbi, KeeperOracleAbi, MarketAbi, OracleAbi, SupportedChainId, VaultAbi } from '..'
+import {
+  ControllerAbi,
+  DefaultChain,
+  EmptysetReserveAbi,
+  KeeperOracleAbi,
+  ManagerAbi,
+  MarketAbi,
+  OracleAbi,
+  OracleFactoryAbi,
+  SupportedChainId,
+  VaultAbi,
+} from '..'
 import { ERC20Abi } from '../abi/ERC20.abi'
+import { GasOracleAbi } from '../abi/GasOracle.abi'
 import { KeeperFactoryAbi } from '../abi/KeeperFactory.abi'
 import { MarketFactoryAbi } from '../abi/MarketFactory.abi'
 import { MultiInvokerAbi } from '../abi/MultiInvoker.abi'
 import { VaultFactoryAbi } from '../abi/VaultFactory.abi'
 import {
+  ControllerAddresses,
   DSUAddresses,
   EmptysetReserveAddresses,
+  ManagerAddresses,
   MarketFactoryAddresses,
   MultiInvokerAddresses,
+  OracleFactoryAddresses,
   PythFactoryAddresses,
   USDCAddresses,
   VaultFactoryAddresses,
@@ -79,7 +94,10 @@ export const getMultiInvokerContract = (chainId: SupportedChainId = DefaultChain
  * @param publicClient {@link PublicClient}
  * @returns The MarketFactory contract instance.
  */
-export const getMarketFactoryContract = (chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) => {
+export const getMarketFactoryContract = (
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient }, Address> => {
   const contract = getContract({
     address: MarketFactoryAddresses[chainId],
     abi: MarketFactoryAbi,
@@ -103,6 +121,42 @@ export const getKeeperFactoryContract = (
   const contract = getContract({
     address: keeperFactoryAddress,
     abi: KeeperFactoryAbi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+
+/**
+ * Returns the OracleFactory contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The OracleFactory contract instance.
+ */
+export const getOracleFactoryContract = (
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof OracleFactoryAbi, { public: PublicClient }, Address> => {
+  const contract = getContract({
+    address: OracleFactoryAddresses[chainId],
+    abi: OracleFactoryAbi,
+    client: { public: publicClient },
+  })
+  return contract
+}
+
+/**
+ * Returns the GasOracle contract instance.
+ * @param gasOracleAddress {@link Address}
+ * @param publicClient {@link PublicClient}
+ * @returns The GasOracle contract instance.
+ */
+export const getGasOracleContract = (
+  gasOracleAddress: Address,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof GasOracleAbi, { public: PublicClient }, Address> => {
+  const contract = getContract({
+    address: gasOracleAddress,
+    abi: GasOracleAbi,
     client: { public: publicClient },
   })
   return contract
@@ -187,6 +241,28 @@ export function getKeeperOracleContract(keeperOracleAddress: Address, publicClie
 }
 
 /**
+ * Returns the Collateral Account Controller contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The Collateral Account Controller contract instance.
+ */
+export function getControllerContract(
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof ControllerAbi, { public: PublicClient }, Address> {
+  return getContract({ abi: ControllerAbi, address: ControllerAddresses[chainId], client: { public: publicClient } })
+}
+
+/**
+ * Returns the Manager contract instance.
+ * @param chainId {@link SupportedChainId}
+ * @param publicClient {@link PublicClient}
+ * @returns The Manager contract instance.
+ */
+export function getManagerContract(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+  return getContract({ abi: ManagerAbi, address: ManagerAddresses[chainId], client: { public: publicClient } })
+}
+/**
  * Contracts module class
  * @param config SDK configuration
  * @param config.chainId {@link SupportedChainId}
@@ -237,8 +313,26 @@ export class ContractsModule {
    * Returns the MarketFactory contract instance.
    * @returns The MarketFactory contract instance.
    */
-  public getMarketFactoryContract() {
+  public getMarketFactoryContract(): GetContractReturnType<typeof MarketFactoryAbi, { public: PublicClient }, Address> {
     return getMarketFactoryContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the OracleFactory contract instance.
+   * @returns The OracleFactory contract instance.
+   */
+  public getOracleFactoryContract(): GetContractReturnType<typeof OracleFactoryAbi, { public: PublicClient }, Address> {
+    return getOracleFactoryContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the GasOracle contract instance.
+   * @returns The GasOracle contract instance.
+   */
+  public getGasOracleContract(
+    gasOracleAddress: Address,
+  ): GetContractReturnType<typeof GasOracleAbi, { public: PublicClient }, Address> {
+    return getGasOracleContract(gasOracleAddress, this.config.publicClient)
   }
 
   // Needs explicit return type due to: 'The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.'
@@ -307,5 +401,21 @@ export class ContractsModule {
    */
   public getKeeperOracleContract(keeperOracleAddress: Address) {
     return getKeeperOracleContract(keeperOracleAddress, this.config.publicClient)
+  }
+
+  /**
+   * Returns the Collateral Account Controller contract instance.
+   * @returns The Collateral Account Controller contract instance.
+   */
+  public getControllerContract(): GetContractReturnType<typeof ControllerAbi, { public: PublicClient }, Address> {
+    return getControllerContract(this.config.chainId, this.config.publicClient)
+  }
+
+  /**
+   * Returns the Manager contract instance.
+   * @returns The Manager contract instance.
+   */
+  public getManagerContract(): GetContractReturnType<typeof ManagerAbi, { public: PublicClient }, Address> {
+    return getManagerContract(this.config.chainId, this.config.publicClient)
   }
 }
