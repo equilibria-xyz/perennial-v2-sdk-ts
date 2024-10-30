@@ -344,7 +344,7 @@ contract MarketMetadataLens {
     IGasOracle settlementGasOracle;
   }
 
-  function metadata(IMarket[] memory markets) public view returns (MarketMetadata[] memory marketMetadata) {
+  function metadataBatch(IMarket[] memory markets) public view returns (MarketMetadata[] memory marketMetadata) {
     marketMetadata = new MarketMetadata[](markets.length);
     for (uint i = 0; i < markets.length; i++) {
       marketMetadata[i] = metadata(markets[i]);
