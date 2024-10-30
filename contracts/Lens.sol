@@ -5,6 +5,8 @@ import '@perennial/core/contracts/interfaces/IMarket.sol';
 import '@perennial/core/contracts/types/OracleReceipt.sol';
 import '@perennial/oracle/contracts/interfaces/IOracle.sol';
 import '@perennial/oracle/contracts/interfaces/IKeeperFactory.sol';
+import '@perennial/oracle/contracts/interfaces/IOracleFactory.sol';
+import '@perennial/oracle/contracts/interfaces/IKeeperOracle.sol';
 import * as Vault from '@perennial/vault/contracts/interfaces/IVault.sol';
 import '@perennial/vault/contracts/interfaces/IVaultFactory.sol';
 import '@equilibria/root/number/types/UFixed6.sol';
@@ -315,5 +317,59 @@ contract VaultLens {
     } catch (bytes memory err) {
       settleErr = err;
     }
+  }
+}
+
+interface ILensOracle is IOracle {
+  function oracles(uint256 id) external view returns (Epoch memory);
+}
+
+contract MarketMetadataLens {
+  struct MarketMetadata {
+    string name;
+    IMarket marketAddress;
+    RiskParameter riskParameter;
+    MarketParameter marketParameter;
+    ILensOracle oracle;
+    IOracleFactory oracleFactory;
+    IKeeperOracle subOracle;
+    IKeeperFactory subOracleFactory;
+    IKeeperFactory.PayoffDefinition oraclePayoffDefinition;
+    string subOracleFactoryType;
+    bytes32 oracleId;
+    bytes32 oracleUnderlyingId;
+    OracleParameter oracleFactoryParameter;
+    KeeperOracleParameter subOracleFactoryParameter;
+    IGasOracle commitmentGasOracle;
+    IGasOracle settlementGasOracle;
+  }
+
+  function metadata(IMarket[] memory markets) public view returns (MarketMetadata[] memory marketMetadata) {
+    marketMetadata = new MarketMetadata[](markets.length);
+    for (uint i = 0; i < markets.length; i++) {
+      marketMetadata[i] = metadata(markets[i]);
+    }
+  }
+
+  function metadata(IMarket market) public view returns (MarketMetadata memory marketMetadata) {
+    marketMetadata.marketAddress = market;
+    marketMetadata.riskParameter = market.riskParameter();
+    marketMetadata.marketParameter = market.parameter();
+    marketMetadata.oracle = ILensOracle(address(market.oracle()));
+    marketMetadata.oracleFactory = IOracleFactory(address(marketMetadata.oracle.factory()));
+    marketMetadata.oracleFactoryParameter = marketMetadata.oracleFactory.parameter();
+    marketMetadata.name = marketMetadata.oracle.name();
+    marketMetadata.oracleId = marketMetadata.oracleFactory.ids(marketMetadata.oracle);
+
+    IOracle.OracleGlobal memory global = marketMetadata.oracle.global();
+    marketMetadata.subOracle = IKeeperOracle(address(marketMetadata.oracle.oracles(global.current).provider));
+    marketMetadata.subOracleFactory = IKeeperFactory(address(marketMetadata.subOracle.factory()));
+    marketMetadata.oraclePayoffDefinition = marketMetadata.subOracleFactory.toUnderlyingPayoff(marketMetadata.oracleId);
+    marketMetadata.subOracleFactoryType = marketMetadata.subOracleFactory.factoryType();
+    marketMetadata.oracleUnderlyingId = marketMetadata.subOracleFactory.toUnderlyingId(marketMetadata.oracleId);
+
+    marketMetadata.subOracleFactoryParameter = marketMetadata.subOracleFactory.parameter();
+    marketMetadata.commitmentGasOracle = marketMetadata.subOracleFactory.commitmentGasOracle();
+    marketMetadata.settlementGasOracle = marketMetadata.subOracleFactory.settlementGasOracle();
   }
 }
