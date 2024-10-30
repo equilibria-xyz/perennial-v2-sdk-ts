@@ -39,7 +39,7 @@ export async function fetchMarketOracles(
   const lensResult = await publicClient.readContract({
     address: marketMetadataLens,
     abi: MarketMetadataLensAbi,
-    functionName: 'metadata',
+    functionName: 'metadataBatch',
     args: [marketsWithAddress.map(({ marketAddress }) => marketAddress)],
     stateOverride: [
       {
