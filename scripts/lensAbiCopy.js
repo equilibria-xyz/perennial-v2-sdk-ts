@@ -2,7 +2,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const lenses = ['Lens', 'VaultLens']
+const lenses = ['Lens', 'VaultLens', 'MarketMetadataLens']
 
 lenses.forEach((lens) => {
   const lensJsonPath = path.join(__dirname, `../artifacts/contracts/Lens.sol/${lens}.json`)

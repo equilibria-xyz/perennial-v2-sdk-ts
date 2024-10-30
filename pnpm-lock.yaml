@@ -52,8 +52,8 @@ importers:
         specifier: 1.3.0-rc1
         version: 1.3.0-rc1
       '@perennial/oracle':
-        specifier: 1.3.0-rc2
-        version: 1.3.0-rc2
+        specifier: 1.3.0-rc3
+        version: 1.3.0-rc3
       '@perennial/vault':
         specifier: 1.3.0-rc1
         version: 1.3.0-rc1
@@ -1055,8 +1055,8 @@ packages:
   '@perennial/core@1.3.0-rc1':
     resolution: {integrity: sha512-V8T75n53tRrH/nqWqk87/XTSvVkllCXgWY14g/5vNcNqpJ5nVI1vcM9gXQGajativHd6oJCH3cGMd/nJiga63w==}
 
-  '@perennial/oracle@1.3.0-rc2':
-    resolution: {integrity: sha512-jr0WlkcI3Mcg0xRam2ozIsRmw34gQex9upr35bPm0qBLuTldGUnHwl3X5SK7HbepXx1pkHrRBu/6czfqqf4kYQ==}
+  '@perennial/oracle@1.3.0-rc3':
+    resolution: {integrity: sha512-zadEHH6yqiWfXHngMsiUwYBNwJSzAaBAPPBMELCgjm5i+Zo0J/X04u2DsVJdcUvTbNTmB0bqgvSM6sK44VLD9A==}
 
   '@perennial/vault@1.3.0-rc1':
     resolution: {integrity: sha512-2u/k5AVc94m62d/TkyejyPz8FCMAoqtE4FMIrQtVYJgtgE9UuJFJbu293ps6OIRq0muXC/HluVEOmlZtNeaDng==}
@@ -4842,7 +4842,7 @@ snapshots:
       '@chainlink/contracts': 0.3.1
       '@perennial/verifier': 1.3.0-rc1
 
-  '@perennial/oracle@1.3.0-rc2':
+  '@perennial/oracle@1.3.0-rc3':
     dependencies:
       '@perennial/core': 1.3.0-rc1
 

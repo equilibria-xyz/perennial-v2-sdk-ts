@@ -299,7 +299,7 @@ export class MarketsModule {
        * @param isMaker boolean - Filter for maker orders
        * @returns User's open orders.
        */
-      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress & OptionalMarkets) => {
+      openOrders: (args: OmitBound<Parameters<typeof fetchOpenOrders>[0]> & OptionalAddress & OptionalMarkets = {}) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch open orders.')
         }

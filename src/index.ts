@@ -12,6 +12,7 @@ export {
   type MarketSnapshots,
   fetchMarketOracles,
   fetchMarketSnapshots,
+  fetchMarketSettlementFees,
 } from './lib/markets/chain'
 
 // Market - Graph
