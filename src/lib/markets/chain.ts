@@ -12,18 +12,13 @@ import {
   addressToMarket,
   calculateFundingAndInterestForSides,
   chainMarketsWithAddress,
+  notEmpty,
 } from '../..'
 import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
+import { MarketMetadataLensAbi, MarketMetadataLensDeployedBytecode } from '../../abi/MarketMetadataLens.abi'
 import { SupportedMarketMapping } from '../../constants'
 import { calcLeverage, calcNotional, getStatusForSnapshot, sideFromPosition } from '../../utils/positionUtils'
-import {
-  getKeeperFactoryContract,
-  getKeeperOracleContract,
-  getMarketContract,
-  getOracleContract,
-  getOracleFactoryContract,
-} from '../contracts'
 import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
@@ -39,63 +34,57 @@ export async function fetchMarketOracles(
   publicClient: PublicClient,
   markets?: SupportedMarket[],
 ) {
-  // TODO: Convert this to a Lens call?
   const marketsWithAddress = chainMarketsWithAddress(chainId, markets)
-  const fetchMarketOracles = async (market: SupportedMarket, marketAddress: Address) => {
-    const marketContract = getMarketContract(marketAddress, publicClient)
-    const [riskParameter, oracleAddress] = await Promise.all([
-      marketContract.read.riskParameter(),
-      marketContract.read.oracle(),
-    ])
-    // Fetch oracle data
-    const oracle = getOracleContract(oracleAddress, publicClient)
-    const [global, oracleName] = await Promise.all([oracle.read.global(), oracle.read.name()])
-    const [keeperOracle] = await oracle.read.oracles([global[0]])
-    const keeperOracleContract = getKeeperOracleContract(keeperOracle, publicClient)
-    const subOracleFactory = getKeeperFactoryContract(await keeperOracleContract.read.factory(), publicClient)
+  const marketMetadataLens = getContractAddress({ from: zeroAddress, nonce: MaxUint256 })
+  const lensResult = await publicClient.readContract({
+    address: marketMetadataLens,
+    abi: MarketMetadataLensAbi,
+    functionName: 'metadata',
+    args: [marketsWithAddress.map(({ marketAddress }) => marketAddress)],
+    stateOverride: [
+      {
+        address: marketMetadataLens,
+        code: MarketMetadataLensDeployedBytecode,
+        balance: maxUint256,
+      },
+    ],
+  })
 
-    const oracleFactory = getOracleFactoryContract(chainId, publicClient)
-    const id = await oracleFactory.read.ids([oracleAddress])
-    const [parameter, underlyingId, subOracleFactoryType, commitmentGasOracle, settlementGasOracle] = await Promise.all(
-      [
-        subOracleFactory.read.parameter(),
-        subOracleFactory.read.toUnderlyingId([id]),
-        subOracleFactory.read.factoryType(),
-        subOracleFactory.read.commitmentGasOracle(),
-        subOracleFactory.read.settlementGasOracle(),
-      ],
-    )
+  const parseLensResult = (market: SupportedMarket, marketAddress: Address) => {
+    const marketLensResult = lensResult.find((result) => result.marketAddress === marketAddress)
+    if (!marketLensResult) return
 
     return {
       market,
       marketAddress,
-      oracleName,
-      oracleFactoryAddress: oracleFactory.address,
-      oracleAddress,
-      subOracleFactoryAddress: subOracleFactory.address,
-      subOracleAddress: keeperOracle,
-      subOracleFactoryType,
-      id,
-      underlyingId,
-      minValidTime: parameter.validFrom,
-      staleAfter: riskParameter.staleAfter,
-      commitmentGasOracle,
-      settlementGasOracle,
+      oracleName: marketLensResult.name,
+      oracleFactoryAddress: marketLensResult.oracleFactory,
+      oracleAddress: marketLensResult.oracle,
+      subOracleFactoryAddress: marketLensResult.subOracleFactory,
+      subOracleAddress: marketLensResult.subOracle,
+      subOracleFactoryType: marketLensResult.subOracleFactoryType,
+      id: marketLensResult.oracleId,
+      underlyingId: marketLensResult.oracleUnderlyingId,
+      minValidTime: marketLensResult.subOracleFactoryParameter.validFrom,
+      staleAfter: marketLensResult.riskParameter.staleAfter,
+      maxSettlementFee: marketLensResult.oracleFactoryParameter.maxSettlementFee,
+      commitmentGasOracle: marketLensResult.commitmentGasOracle,
+      settlementGasOracle: marketLensResult.settlementGasOracle,
     }
   }
 
-  const marketData = await Promise.all(
-    marketsWithAddress.map(({ market, marketAddress }) => {
-      return fetchMarketOracles(market, marketAddress)
-    }),
-  )
+  const marketData = marketsWithAddress
+    .map(({ market, marketAddress }) => {
+      return parseLensResult(market, marketAddress)
+    })
+    .filter(notEmpty)
 
   return marketData.reduce(
     (acc, market) => {
       acc[market.market] = market
       return acc
     },
-    {} as SupportedMarketMapping<Awaited<ReturnType<typeof fetchMarketOracles>>>,
+    {} as SupportedMarketMapping<NonNullable<Awaited<ReturnType<typeof parseLensResult>>>>,
   )
 }
 
@@ -438,10 +427,12 @@ export async function fetchMarketSettlementFees({
     (acc, market) => {
       const commitmentCost = commitmentCostCache.get(marketOracles[market].commitmentGasOracle) ?? 0n
       const settlementCost = settlementCostCache.get(marketOracles[market].settlementGasOracle) ?? 0n
+      const maxCost = marketOracles[market].maxSettlementFee
+
       acc[market] = {
-        commitmentCost,
-        settlementCost,
-        totalCost: commitmentCost + settlementCost,
+        commitmentCost: Big6Math.min(commitmentCost, maxCost),
+        settlementCost: Big6Math.min(settlementCost, maxCost),
+        totalCost: Big6Math.min(commitmentCost + settlementCost, maxCost),
       }
       return acc
     },
