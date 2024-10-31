@@ -185,7 +185,6 @@ contract VaultLens {
     Vault.Account vaultAccount;
     Vault.Checkpoint latestCheckpoint;
     Vault.Checkpoint currentCheckpoint;
-    UFixed6 totalSettlementFee;
     UFixed6 vaultMinimum;
     Fixed6 totalMarketCollateral;
     Lens.MarketSnapshot[] marketSnapshots;
@@ -275,11 +274,6 @@ contract VaultLens {
       vaultSnapshot.marketVaultSnapshots[i] = marketLens.snapshotMarketAccount(vaultSnapshot.registrations[i].market, address(vault));
       vaultSnapshot.vaultMinimum = vaultSnapshot.vaultMinimum.add(vaultSnapshot.parameter.minDeposit);
       vaultSnapshot.totalMarketCollateral = vaultSnapshot.totalMarketCollateral.add(vaultSnapshot.marketVaultSnapshots[i].local.collateral);
-
-      // Add settlement fee if the market weight is non-zero or the market collateral is non-zero
-      if (!vaultSnapshot.registrations[i].weight.isZero() || !vaultSnapshot.marketVaultSnapshots[i].local.collateral.isZero()) {
-        vaultSnapshot.totalSettlementFee = vaultSnapshot.totalSettlementFee.add(vaultSnapshot.parameter.minDeposit);
-      }
     }
 
     // Simulate a checkpoint complete with the latest market collateral
