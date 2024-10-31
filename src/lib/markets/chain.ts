@@ -397,7 +397,7 @@ export async function fetchMarketSettlementFees({
       abi: GasOracleAbi,
       functionName: 'cost',
       args: [value],
-      maxFeePerGas: gasPrice,
+      maxFeePerGas: gasPrice * 10n,
     })
 
     // The gas oracle returns a 18 decimal value, so we need to convert it to 6 decimal places
