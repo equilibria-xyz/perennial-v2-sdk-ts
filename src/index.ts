@@ -254,6 +254,7 @@ export {
   buildApproveTarget,
   buildUpdateIntent,
   buildClaimFee,
+  encodeInvoke,
   mergeMultiInvokerTxs,
 } from './utils/multiinvoker'
 
@@ -332,6 +333,9 @@ export {
   last7dBounds,
   formatDateRelative,
 } from './utils/timeUtils'
+
+// Intent Utils
+export * as intentUtils from './utils/intentUtils'
 
 // Signed Message Types
 export * as eip712 from './constants/eip712'
