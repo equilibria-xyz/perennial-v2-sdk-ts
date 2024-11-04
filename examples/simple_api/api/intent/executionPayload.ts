@@ -1,6 +1,6 @@
-import { Intent, SupportedChainId, addressToMarket, mergeMultiInvokerTxs } from '@perennial/sdk'
+import { Intent, SupportedChainId, addressToMarket, intentUtils, mergeMultiInvokerTxs } from '@perennial/sdk'
 import { VercelRequest, VercelResponse } from '@vercel/node'
-import { Hex, zeroAddress } from 'viem'
+import { Hex, PublicClient } from 'viem'
 
 import setupSDK from '../../lib/sdk.js'
 
@@ -10,12 +10,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     intent,
     signature,
     chainId,
-  }: { apiKey: string; intent: Intent; chainId: SupportedChainId; signature: Hex } = req.body
+    checkFillable,
+  }: { apiKey: string; intent: Intent; chainId: SupportedChainId; signature: Hex; checkFillable: boolean } = req.body
 
   if (!apiKey || !process.env.API_KEYS?.split(',').includes(apiKey))
     return res.status(401).json({ error: 'Unauthorized. Try updating the "apiKey" value' })
 
-  const sdk = setupSDK(chainId || 42161, zeroAddress)
+  const sdk = setupSDK(chainId || 42161, intentUtils.IntentSimulationSender)
   const market = addressToMarket(chainId, intent.common.domain)
   const commitment = await sdk.oracles.read.oracleCommitmentsLatest({
     markets: [market],
@@ -27,6 +28,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     signature: signature,
   })
   const txData = mergeMultiInvokerTxs([commitPriceAction, updateAction])
+
+  if (checkFillable) {
+    const { fillable, error } = await intentUtils.checkIntentFillable({
+      txData,
+      market,
+      chainId,
+      publicClient: sdk.publicClient as PublicClient,
+    })
+    if (!fillable) return res.status(400).json({ error: `Intent is not fillable: ${error}` })
+  }
 
   return res.status(200).json({
     data: txData.data,

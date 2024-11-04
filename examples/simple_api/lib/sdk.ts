@@ -26,7 +26,7 @@ const ChainIdToArgs: Record<
   },
 }
 
-const setupSDK = (chainId: SupportedChainId, wallet: `0x${string}`) => {
+const setupSDK = (chainId: SupportedChainId, wallet?: `0x${string}`) => {
   const args = ChainIdToArgs[chainId]
   const sdk = new PerennialSDK.default({
     chainId: chainId,

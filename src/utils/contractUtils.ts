@@ -1,5 +1,6 @@
-import { BaseError, ContractFunctionRevertedError } from 'viem'
+import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from 'viem'
 
+import { AllErrorsAbi } from '../abi/AllErrors.abi'
 import { SupportedChainId } from '../constants/network'
 import { ChainVaults, PerennialVaultType } from '../constants/vaults'
 
@@ -20,7 +21,12 @@ export function parseViemContractCustomError(err: unknown) {
     const revertError = err.walk((err) => err instanceof ContractFunctionRevertedError)
     if (revertError instanceof ContractFunctionRevertedError) {
       const errorName = revertError.data?.errorName
-      return errorName
+      if (errorName) return errorName
+
+      if (revertError.signature) {
+        const decodedData = decodeErrorResult({ abi: AllErrorsAbi, data: revertError.signature })
+        return decodedData.errorName
+      }
     }
   }
 }
