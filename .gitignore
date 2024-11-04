@@ -133,6 +133,7 @@ dist
 src/abi/Lens.abi.ts
 src/abi/VaultLens.abi.ts
 src/abi/MarketMetadataLens.abi.ts
+src/abi/AllErrors.abi.ts
 src/types/generated
 src/types/gql
 

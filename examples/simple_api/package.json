@@ -2,8 +2,7 @@
   "type": "module",
   "dependencies": {
     "@perennial/sdk": "../../",
-    "fuzzysort": "^2.0.4",
-    "viem": "2.9.12"
+    "fuzzysort": "^2.0.4"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
