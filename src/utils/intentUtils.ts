@@ -70,7 +70,7 @@ export async function checkIntentFillable({
     wrap: false,
   })
   const txDataWithDeposit = mergeMultiInvokerTxs([
-    encodeInvoke({ chainId, actions: [multiInvokerUpdate], address: IntentSimulationSender, value: 0n }),
+    encodeInvoke({ chainId, actions: [multiInvokerUpdate], value: 0n }),
     txData,
   ])
 

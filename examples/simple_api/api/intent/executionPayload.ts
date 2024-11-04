@@ -1,6 +1,6 @@
 import { Intent, SupportedChainId, addressToMarket, intentUtils, mergeMultiInvokerTxs } from '@perennial/sdk'
 import { VercelRequest, VercelResponse } from '@vercel/node'
-import { Hex, PublicClient } from 'viem'
+import { Hex, PublicClient, zeroAddress } from 'viem'
 
 import setupSDK from '../../lib/sdk.js'
 
@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!apiKey || !process.env.API_KEYS?.split(',').includes(apiKey))
     return res.status(401).json({ error: 'Unauthorized. Try updating the "apiKey" value' })
 
-  const sdk = setupSDK(chainId || 42161, intentUtils.IntentSimulationSender)
+  const sdk = setupSDK(chainId || 42161, zeroAddress)
   const market = addressToMarket(chainId, intent.common.domain)
   const commitment = await sdk.oracles.read.oracleCommitmentsLatest({
     markets: [market],
