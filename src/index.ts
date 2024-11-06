@@ -177,6 +177,7 @@ export {
   type InterfaceFee,
   OrderExecutionDeposit,
   TriggerOrderFullCloseMagicValue,
+  IntentTriggerOrderFullCloseMagicValue,
 } from './constants/markets'
 
 /* #################### ABIs #################### */
