@@ -1,6 +1,7 @@
 import PerennialSDK from './Perennial'
 
 export default PerennialSDK
+export { PerennialSDK }
 
 /* #################### Library #################### */
 
@@ -176,6 +177,7 @@ export {
   type InterfaceFee,
   OrderExecutionDeposit,
   TriggerOrderFullCloseMagicValue,
+  IntentTriggerOrderFullCloseMagicValue,
 } from './constants/markets'
 
 /* #################### ABIs #################### */
@@ -201,6 +203,7 @@ export { ControllerAbi } from './abi/Controller.abi'
 /* #################### Types #################### */
 
 export { type JumpRateUtilizationCurve, type MultiInvokerAction, type Intent, type Common } from './types/perennial'
+export { type OptionalAddress, type CommonRequired, type CommonOverrides } from './types/shared'
 
 // Graph Types
 export * from './types/gql'
