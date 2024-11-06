@@ -1,13 +1,14 @@
 import { Address } from 'viem'
 
-import { ManagerAddresses } from '../../../constants'
+import { ManagerAddresses, SupportedMarket } from '../../../constants'
 import { EIP712_Domain, PlaceOrderSigningPayload, PlaceOrderSigningTypes } from '../../../constants/eip712'
 import { CommonOverrides, CommonRequired } from '../../../types/shared'
+import { addressForMarket } from '../../../utils/addressUtils'
 import { generateNonce } from '../../../utils/intentUtils'
 
 export type BuildPlaceOrderSigningPayloadArgs = CommonRequired &
   CommonOverrides & {
-    market: Address
+    market: Address | SupportedMarket
     maxRelayFee: bigint
     side: 4 | 5 | 6 // 4 = Maker, 5 = Long, 6 = Short
     comparison: -1 | 1 // -1 = LTE, 1 = GTE
@@ -28,7 +29,7 @@ export function buildPlaceOrderSigningPayload({
   chainId,
   expiry,
   address: account,
-  market,
+  market: market_,
   side,
   comparison,
   price,
@@ -41,6 +42,7 @@ export function buildPlaceOrderSigningPayload({
   overrides,
 }: BuildPlaceOrderSigningPayloadArgs): { placeOrder: PlaceOrderSigningPayload } {
   const nonce = overrides?.nonce ?? generateNonce()
+  const market = addressForMarket(chainId, market_)
 
   const message = {
     order: {
