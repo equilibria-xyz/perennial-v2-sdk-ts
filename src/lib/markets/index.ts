@@ -356,7 +356,13 @@ export class MarketsModule {
        * @param txHash Transaction hash
        * @param onSettlement Optional callback to invoke on settlement
        */
-      waitForOrderSettlement: async (txHash: Hash, onSettlement?: (txReceipt?: TransactionReceipt) => void) => {
+      waitForOrderSettlement: async (
+        txHash: Hash,
+        onSettlement?: (res: {
+          txReceipt?: TransactionReceipt
+          version?: { timestamp: bigint; valid: boolean; price: bigint }
+        }) => void,
+      ) => {
         return waitForOrderSettlement({
           publicClient: this.config.publicClient,
           txHash,

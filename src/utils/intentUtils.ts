@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import {
   Address,
   Hex,
@@ -20,8 +21,8 @@ import { CommonOverrides } from '../types/shared'
 import { addressForMarket } from './addressUtils'
 import { buildUpdateMarket, encodeInvoke, mergeMultiInvokerTxs } from './multiinvoker'
 
-export function generateNonce() {
-  return BigInt(Date.now())
+export function generateNonce(bytes = 32) {
+  return BigInt(`0x${randomBytes(bytes).toString('hex')}`)
 }
 
 /**
