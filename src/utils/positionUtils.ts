@@ -643,7 +643,10 @@ export async function waitForOrderSettlement({
   publicClient: PublicClient
   txHash: Hash
   timeoutMs: number
-  onSettlement?: (txReceipt?: TransactionReceipt) => void
+  onSettlement?: (res: {
+    txReceipt?: TransactionReceipt
+    version?: { timestamp: bigint; valid: boolean; price: bigint }
+  }) => void
 }): Promise<TransactionReceipt> {
   return new Promise(async (resolve, reject) => {
     let timeoutId: NodeJS.Timeout
@@ -673,7 +676,7 @@ export async function waitForOrderSettlement({
         onLogs: (logs) => {
           const versionFulfilledEvent = logs.at(0)
           if (versionFulfilledEvent?.args?.version?.timestamp === version) {
-            onSettlement?.(receipt)
+            onSettlement?.({ txReceipt: receipt, version: versionFulfilledEvent?.args?.version })
             cleanup()
             resolve(receipt)
           }
