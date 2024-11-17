@@ -43,6 +43,8 @@ contract Lens {
     Local local;
     Order latestOrder;
     Order pendingOrder;
+    Guarantee latestGuarantee;
+    Guarantee pendingGuarantee;
     Position position;
     Position nextPosition;
     Checkpoint checkpoint;
@@ -129,6 +131,8 @@ contract Lens {
     marketAccountSnapshot.local = market.locals(account);
     marketAccountSnapshot.latestOrder = market.pendingOrders(account, marketAccountSnapshot.local.latestId);
     marketAccountSnapshot.pendingOrder = market.pendings(account);
+    marketAccountSnapshot.latestGuarantee = market.guarantees(account, marketAccountSnapshot.local.latestId);
+    marketAccountSnapshot.pendingGuarantee = market.guarantees(account, marketAccountSnapshot.local.currentId);
     marketAccountSnapshot.position = market.positions(account);
     marketAccountSnapshot.pendingPositions = new Position[](marketAccountSnapshot.local.currentId - marketAccountSnapshot.local.latestId + 1);
     marketAccountSnapshot.checkpoint = market.checkpoints(account, marketAccountSnapshot.position.timestamp);
