@@ -93,7 +93,7 @@ export const QueryMarketAccumulationData = gql(`
         fundingMaker, interestMaker, positionFeeMaker, exposureMaker, fromVersion
       }
 
-      toAccumulator: accumulators(where: { toVersion_lte: $toTs }, first: 1, orderBy: toVersion, orderDirection: desc) {
+      toAccumulator: accumulators(where: { toVersion_lte: $toTs, fromVersion_gte: $fromTs }, first: 1, orderBy: toVersion, orderDirection: desc) {
         fundingMaker, interestMaker, positionFeeMaker, exposureMaker, toVersion
       }
     }
