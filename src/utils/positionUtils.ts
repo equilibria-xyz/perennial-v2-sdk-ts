@@ -151,7 +151,10 @@ export const calcLeverage = (price: bigint, position: bigint, collateral: bigint
 export const calcMakerExposure = (userMaker: bigint, globalMaker: bigint, globalLong: bigint, globalShort: bigint) => {
   if (globalMaker === 0n) return 0n
 
-  return Big6Math.div(Big6Math.mul(userMaker, globalShort - globalLong), globalMaker)
+  const exposure = Big6Math.div(globalShort - globalLong, globalMaker)
+  const cappedExposure = Big6Math.max(Big6Math.min(exposure, Big6Math.ONE), -1n * Big6Math.ONE)
+
+  return Big6Math.mul(userMaker, cappedExposure)
 }
 /**
  * Returns whether a position is closed or inactive
@@ -283,7 +286,7 @@ export function calcLpExposure(marketSnapshot?: MarketSnapshot) {
   const majorPosition = majorSide === PositionSide.long ? long : short
   const minorPosition = majorSide === PositionSide.long ? short : long
 
-  const lpExposure = maker > 0n ? Big6Math.div(majorPosition - minorPosition, maker) : 0n
+  const lpExposure = maker > 0n ? Big6Math.min(Big6Math.div(majorPosition - minorPosition, maker), Big6Math.ONE) : 0n
 
   return {
     lpExposure: lpExposure,
