@@ -334,6 +334,7 @@ contract MarketMetadataLens {
     IKeeperFactory subOracleFactory;
     IKeeperFactory.PayoffDefinition oraclePayoffDefinition;
     string subOracleFactoryType;
+    uint256 subOracleTimeout;
     bytes32 oracleId;
     bytes32 oracleUnderlyingId;
     OracleParameter oracleFactoryParameter;
@@ -362,6 +363,7 @@ contract MarketMetadataLens {
     IOracle.OracleGlobal memory global = marketMetadata.oracle.global();
     marketMetadata.subOracle = IKeeperOracle(address(marketMetadata.oracle.oracles(global.current).provider));
     marketMetadata.subOracleFactory = IKeeperFactory(address(marketMetadata.subOracle.factory()));
+    marketMetadata.subOracleTimeout = marketMetadata.subOracle.timeout();
     marketMetadata.oraclePayoffDefinition = marketMetadata.subOracleFactory.toUnderlyingPayoff(marketMetadata.oracleId);
     marketMetadata.subOracleFactoryType = marketMetadata.subOracleFactory.factoryType();
     marketMetadata.oracleUnderlyingId = marketMetadata.subOracleFactory.toUnderlyingId(marketMetadata.oracleId);

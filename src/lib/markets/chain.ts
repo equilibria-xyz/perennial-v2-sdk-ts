@@ -63,13 +63,16 @@ export async function fetchMarketOracles(
       subOracleFactoryAddress: marketLensResult.subOracleFactory,
       subOracleAddress: marketLensResult.subOracle,
       subOracleFactoryType: marketLensResult.subOracleFactoryType,
+      oraclePayoffDefinition: marketLensResult.oraclePayoffDefinition,
       id: marketLensResult.oracleId,
       underlyingId: marketLensResult.oracleUnderlyingId,
       minValidTime: marketLensResult.subOracleFactoryParameter.validFrom,
+      maxValidTime: marketLensResult.subOracleFactoryParameter.validTo,
       staleAfter: marketLensResult.riskParameter.staleAfter,
       maxSettlementFee: marketLensResult.oracleFactoryParameter.maxSettlementFee,
       commitmentGasOracle: marketLensResult.commitmentGasOracle,
       settlementGasOracle: marketLensResult.settlementGasOracle,
+      timeout: marketLensResult.subOracleTimeout,
     }
   }
 
