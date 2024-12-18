@@ -404,6 +404,12 @@ export async function fetchMarketSettlementFees({
         functionName: 'cost',
         args: [value],
         maxFeePerGas: gasPrice * 10n,
+        stateOverride: [
+          {
+            address: zeroAddress,
+            balance: maxUint256,
+          },
+        ],
       })
 
       // The gas oracle returns a 18 decimal value, so we need to convert it to 6 decimal places
