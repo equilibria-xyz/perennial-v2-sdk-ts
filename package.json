@@ -1,6 +1,6 @@
 {
   "name": "@perennial/sdk",
-  "version": "0.0.3-beta.11-rc1",
+  "version": "0.0.3-beta.11",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
