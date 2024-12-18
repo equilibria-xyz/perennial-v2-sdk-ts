@@ -391,17 +391,27 @@ export async function fetchMarketSettlementFees({
   const settlementCostCache = new Map<Address, bigint>()
   const gasCosts = {} as SupportedMarketMapping<{ commitmentCost: bigint; settlementCost: bigint }>
 
-  const costWithGasPrice = async (oracle: Address, value: bigint, publicClient: PublicClient) => {
-    const { result } = await publicClient.simulateContract({
-      address: oracle,
-      abi: GasOracleAbi,
-      functionName: 'cost',
-      args: [value],
-      maxFeePerGas: gasPrice * 10n,
-    })
+  const costWithGasPrice = async (
+    oracle: Address,
+    value: bigint,
+    publicClient: PublicClient,
+    market: SupportedMarket,
+  ) => {
+    try {
+      const { result } = await publicClient.simulateContract({
+        address: oracle,
+        abi: GasOracleAbi,
+        functionName: 'cost',
+        args: [value],
+        maxFeePerGas: gasPrice * 10n,
+      })
 
-    // The gas oracle returns a 18 decimal value, so we need to convert it to 6 decimal places
-    return Big18Math.toDecimals(result, Big6Math.FIXED_DECIMALS)
+      // The gas oracle returns a 18 decimal value, so we need to convert it to 6 decimal places
+      return Big18Math.toDecimals(result, Big6Math.FIXED_DECIMALS)
+    } catch (e) {
+      console.error('Error in costWithGasPrice', oracle, value, e)
+      return marketOracles[market].maxSettlementFee
+    }
   }
 
   for (const market of markets) {
@@ -410,9 +420,9 @@ export async function fetchMarketSettlementFees({
 
     // TODO: Make "value" dynamic
     const commitmentCost =
-      commitmentCostCache.get(commitmentOracle) ?? (await costWithGasPrice(commitmentOracle, 1n, publicClient))
+      commitmentCostCache.get(commitmentOracle) ?? (await costWithGasPrice(commitmentOracle, 1n, publicClient, market))
     const settlementCost =
-      settlementCostCache.get(settlementOracle) ?? (await costWithGasPrice(settlementOracle, 0n, publicClient))
+      settlementCostCache.get(settlementOracle) ?? (await costWithGasPrice(settlementOracle, 0n, publicClient, market))
 
     if (commitmentOracle) commitmentCostCache.set(commitmentOracle, commitmentCost)
     if (settlementOracle) settlementCostCache.set(settlementOracle, settlementCost)
