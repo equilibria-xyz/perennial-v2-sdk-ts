@@ -546,7 +546,7 @@ export async function fetchSubPositions({
 }
 
 /**
- * Fetches the trade history for a given address. Limited to a 30 day window.
+ * Fetches the trade history for a given address
  * @param address Wallet Address
  * @param fromTs start timestamp in seconds (defaults to 7 days before toTs)
  * @param toTs end timestamp in seconds (defaults to now)

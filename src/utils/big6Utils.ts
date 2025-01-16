@@ -135,7 +135,7 @@ export class Big6Math {
     if (floor) {
       return parseUnits(this.max6Decimals(a), Big6Math.FIXED_DECIMALS)
     }
-    return parseUnits(a.replace(/','/g, '') as `${number}`, Big6Math.FIXED_DECIMALS)
+    return parseUnits(a.replace(/,/g, '') as `${number}`, Big6Math.FIXED_DECIMALS)
   }
 
   public static toFloatString(a: bigint): string {
