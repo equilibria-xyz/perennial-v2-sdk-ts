@@ -102,7 +102,7 @@ export class Big18Math {
 
   public static fromFloatString(a: string): bigint {
     if (!a || a === '.') return 0n
-    return parseEther(a.replace(/','/g, '') as `${number}`)
+    return parseEther(a.replace(/,/g, '') as `${number}`)
   }
 
   public static toFloatString(a: bigint): string {

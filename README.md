@@ -211,7 +211,7 @@ const ethMarket24hrData = await sdk.markets.read.market24hrData({
 
 #### Trade History
 
-Fetch the trade history across all markets for a given address. Limited to a 30 day window
+Fetch the trade history across all markets for a given address
 
 ```typescript
 const tradeHistory = await sdk.markets.read.tradeHistory({
