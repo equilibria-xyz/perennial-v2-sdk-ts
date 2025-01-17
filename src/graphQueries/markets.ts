@@ -71,8 +71,16 @@ export const QueryMarketAccountPositionOrders = gql(`
 `)
 
 export const QueryAccountOrders = gql(`
-  query QueryMarketOrders($account: String! $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
+  query QueryMarketOrders($account: String!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
     orders(where: { account: $account, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc) {
+      ...OrderData
+    }
+  }
+`)
+
+export const QueryAccountMarketOrders = gql(`
+  query QueryAccountMarketOrders($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
+    orders(where: { account: $account, market_in: $markets, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc) {
       ...OrderData
     }
   }

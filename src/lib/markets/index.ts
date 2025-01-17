@@ -273,6 +273,7 @@ export class MarketsModule {
       /**
        * Fetches the trade history across all markets for a given address
        * @param address Wallet Address [defaults to operatingFor or walletSigner address if set]
+       * @param markets List of {@link SupportedMarket} to fetch trade history for
        * @param fromTs start timestamp in seconds
        * @param toTs end timestamp in seconds
        * @returns User's trade history.
@@ -286,6 +287,7 @@ export class MarketsModule {
           chainId: this.config.chainId,
           graphClient: this.config.graphClient,
           address: this.defaultAddress,
+          markets: this.config.supportedMarkets,
           ...args,
         })
       },
