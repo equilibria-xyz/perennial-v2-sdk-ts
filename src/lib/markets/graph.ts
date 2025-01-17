@@ -11,6 +11,7 @@ import {
   chainMarketsWithAddress,
 } from '../../constants'
 import {
+  QueryAccountMarketOrders,
   QueryAccountOrders,
   QueryLatestMarketAccountPosition,
   QueryMarketAccountMakerPositions,
@@ -548,6 +549,7 @@ export async function fetchSubPositions({
 /**
  * Fetches the trade history for a given address
  * @param address Wallet Address
+ * @param markets {Optional} List of {@link SupportedMarket} to fetch trade history for
  * @param fromTs start timestamp in seconds (defaults to 7 days before toTs)
  * @param toTs end timestamp in seconds (defaults to now)
  * @param graphClient GraphQLClient
@@ -557,12 +559,14 @@ export async function fetchTradeHistory({
   chainId,
   graphClient,
   address,
+  markets,
   fromTs,
   toTs,
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
   address: Address
+  markets?: SupportedMarket[]
   fromTs?: bigint
   toTs?: bigint
 }) {
@@ -572,13 +576,22 @@ export async function fetchTradeHistory({
   if (!fromTs) fromTs = toTs - defaultTimeRange
 
   const { orders } = await queryAll(async (pageNumber) =>
-    graphClient.request(QueryAccountOrders, {
-      account: address,
-      first: GraphDefaultPageSize,
-      skip: pageNumber * GraphDefaultPageSize,
-      fromTs: fromTs.toString(),
-      toTs: toTs.toString(),
-    }),
+    markets && markets.length
+      ? graphClient.request(QueryAccountMarketOrders, {
+          account: address,
+          markets: chainMarketsWithAddress(chainId, markets).map(({ marketAddress }) => marketAddress),
+          first: GraphDefaultPageSize,
+          skip: pageNumber * GraphDefaultPageSize,
+          fromTs: fromTs.toString(),
+          toTs: toTs.toString(),
+        })
+      : graphClient.request(QueryAccountOrders, {
+          account: address,
+          first: GraphDefaultPageSize,
+          skip: pageNumber * GraphDefaultPageSize,
+          fromTs: fromTs.toString(),
+          toTs: toTs.toString(),
+        }),
   )
 
   const processedOrders = orders.map((order) => processOrder(addressToMarket(chainId, order.market.id), order))
