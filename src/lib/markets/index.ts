@@ -278,7 +278,9 @@ export class MarketsModule {
        * @param toTs end timestamp in seconds
        * @returns User's trade history.
        */
-      tradeHistory: (args: OmitBound<Parameters<typeof fetchTradeHistory>[0]> & OptionalAddress = {}) => {
+      tradeHistory: (
+        args: OmitBound<Parameters<typeof fetchTradeHistory>[0]> & OptionalAddress & OptionalMarkets = {},
+      ) => {
         if (!this.config.graphClient) {
           throw new Error('Graph client required to fetch trade history.')
         }
