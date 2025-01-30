@@ -5,6 +5,7 @@ import {
   ChainlinkFactoryAddresses,
   CryptexFactoryAddresses,
   PythFactoryAddresses,
+  StorkFactoryAddresses,
   SupportedChainId,
   SupportedMarket,
   chainIdToChainMap,
@@ -13,13 +14,18 @@ import { OptionalAddress } from '../../types/shared'
 import { buildCommitPrice, encodeInvoke } from '../../utils/multiinvoker'
 import { getKeeperFactoryContract } from '../contracts'
 import { MarketOracles, fetchMarketOracles } from '../markets/chain'
-import { fetchPrices } from './cryptex'
+import { fetchPrices as fetchCryptexPrices } from './cryptex'
 import { buildCommitmentsForOracles as pythBuildCommitmentsForOracles } from './pyth'
+import { fetchPrices as fetchStorkPrices } from './stork'
 
-export type OracleProviderType = 'PythFactory' | 'CryptexFactory' | 'ChainlinkFactory' | 'unknown'
+export type OracleProviderType = 'PythFactory' | 'CryptexFactory' | 'ChainlinkFactory' | 'StorkFactory' | 'unknown'
 export type OracleClients = {
   pyth: HermesClient | HermesClient[]
   cryptex?: string
+  stork?: {
+    url: string
+    apiKey?: string
+  }
 }
 
 export async function oracleProviderTypeForFactoryAddress({
@@ -35,7 +41,7 @@ export async function oracleProviderTypeForFactoryAddress({
   if (factory === PythFactoryAddresses[chainId]) return 'PythFactory'
   if (factory === ChainlinkFactoryAddresses[chainId]) return 'ChainlinkFactory'
   if (factory === CryptexFactoryAddresses[chainId]) return 'CryptexFactory'
-
+  if (factory === StorkFactoryAddresses[chainId]) return 'StorkFactory'
   // Otherwise, try to read from the contract
   try {
     const oracleFactory = getKeeperFactoryContract(factory, publicClient)
@@ -117,12 +123,22 @@ export async function oracleCommitmentsLatest({
         }
 
         if (providerType === 'CryptexFactory' && oracleClients.cryptex) {
-          const cryptexResponse = await fetchPrices({
+          const cryptexResponse = await fetchCryptexPrices({
             url: oracleClients.cryptex,
             feeds: reqs,
           })
 
           return [{ ...cryptexResponse, keeperFactory: factory }]
+        }
+
+        if (providerType === 'StorkFactory' && oracleClients.stork) {
+          const storkResponse = await fetchStorkPrices({
+            url: oracleClients.stork.url,
+            apiKey: oracleClients.stork.apiKey,
+            feeds: reqs,
+          })
+
+          return [{ ...storkResponse, keeperFactory: factory }]
         }
         // if (providerType === 'chainlink')
 
@@ -193,7 +209,7 @@ export async function oracleCommitmentsTimestamp({
         }
 
         if (providerType === 'CryptexFactory' && oracleClients.cryptex) {
-          const cryptexResponse = await fetchPrices({
+          const cryptexResponse = await fetchCryptexPrices({
             url: oracleClients.cryptex,
             timestamp,
             feeds: reqs,

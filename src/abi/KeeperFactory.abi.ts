@@ -772,24 +772,6 @@ export const KeeperFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IOracleProvider',
-        name: 'oracleProvider',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes32',
-        name: 'oracleId',
-        type: 'bytes32',
-      },
-    ],
-    name: 'updateId',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'uint256',
         name: 'newGranularity',
         type: 'uint256',

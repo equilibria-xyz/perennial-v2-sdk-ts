@@ -85,6 +85,26 @@ export const VaultAbi = [
   },
   {
     inputs: [],
+    name: 'MakerStrategyInsufficientAssetsError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'MakerStrategyInsufficientAssetsError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'MakerStrategyInsufficientCollateralError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'MakerStrategyInsufficientCollateralError',
+    type: 'error',
+  },
+  {
+    inputs: [],
     name: 'MappingStorageInvalidError',
     type: 'error',
   },
@@ -96,26 +116,6 @@ export const VaultAbi = [
   {
     inputs: [],
     name: 'RegistrationStorageInvalidError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'StrategyLibInsufficientAssetsError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'StrategyLibInsufficientAssetsError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'StrategyLibInsufficientCollateralError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'StrategyLibInsufficientCollateralError',
     type: 'error',
   },
   {
@@ -203,6 +203,19 @@ export const VaultAbi = [
     anonymous: false,
     inputs: [
       {
+        indexed: true,
+        internalType: 'address',
+        name: 'newCoordinator',
+        type: 'address',
+      },
+    ],
+    name: 'CoordinatorUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: false,
         internalType: 'uint256',
         name: 'version',
@@ -210,6 +223,25 @@ export const VaultAbi = [
       },
     ],
     name: 'Initialized',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'UFixed18',
+        name: 'newMark',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'UFixed6',
+        name: 'profitShares',
+        type: 'uint256',
+      },
+    ],
+    name: 'MarkUpdated',
     type: 'event',
   },
   {
@@ -269,6 +301,11 @@ export const VaultAbi = [
           {
             internalType: 'UFixed6',
             name: 'minDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'profitShare',
             type: 'uint256',
           },
         ],
@@ -387,6 +424,11 @@ export const VaultAbi = [
                 name: 'minDeposit',
                 type: 'uint256',
               },
+              {
+                internalType: 'UFixed6',
+                name: 'profitShare',
+                type: 'uint256',
+              },
             ],
             internalType: 'struct VaultParameter',
             name: 'parameter',
@@ -495,6 +537,11 @@ export const VaultAbi = [
             internalType: 'struct Checkpoint',
             name: 'latestCheckpoint',
             type: 'tuple',
+          },
+          {
+            internalType: 'UFixed18',
+            name: 'mark',
+            type: 'uint256',
           },
           {
             components: [
@@ -784,6 +831,19 @@ export const VaultAbi = [
   },
   {
     inputs: [],
+    name: 'coordinator',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'factory',
     outputs: [
       {
@@ -825,6 +885,19 @@ export const VaultAbi = [
   },
   {
     inputs: [],
+    name: 'mark',
+    outputs: [
+      {
+        internalType: 'UFixed18',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'name',
     outputs: [
       {
@@ -850,6 +923,11 @@ export const VaultAbi = [
           {
             internalType: 'UFixed6',
             name: 'minDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'profitShare',
             type: 'uint256',
           },
         ],
@@ -1006,6 +1084,19 @@ export const VaultAbi = [
   {
     inputs: [
       {
+        internalType: 'address',
+        name: 'newCoordinator',
+        type: 'address',
+      },
+    ],
+    name: 'updateCoordinator',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'uint256',
         name: 'marketId',
         type: 'uint256',
@@ -1033,6 +1124,11 @@ export const VaultAbi = [
           {
             internalType: 'UFixed6',
             name: 'minDeposit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'profitShare',
             type: 'uint256',
           },
         ],

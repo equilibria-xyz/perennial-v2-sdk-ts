@@ -26,6 +26,11 @@ export const ManagerAbi = [
         name: 'verifier',
         type: 'address',
       },
+      {
+        internalType: 'contract IController',
+        name: 'controller',
+        type: 'address',
+      },
     ],
     stateMutability: 'nonpayable',
     type: 'constructor',
@@ -84,17 +89,17 @@ export const ManagerAbi = [
   },
   {
     inputs: [],
-    name: 'ManagerInvalidOperatorError',
-    type: 'error',
-  },
-  {
-    inputs: [],
     name: 'ManagerInvalidOrderNonceError',
     type: 'error',
   },
   {
     inputs: [],
     name: 'ManagerInvalidSignerError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'ManagerNotOperatorError',
     type: 'error',
   },
   {
@@ -449,38 +454,25 @@ export const ManagerAbi = [
   },
   {
     inputs: [],
-    name: 'ARB_FIXED_OVERHEAD',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'ARB_GAS_MULTIPLIER',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
     name: 'DSU',
     outputs: [
       {
         internalType: 'Token18',
         name: '',
         type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'OPT_BASE_FEE_MULTIPLIER',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -726,6 +718,19 @@ export const ManagerAbi = [
         internalType: 'UFixed6',
         name: '',
         type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'controller',
+    outputs: [
+      {
+        internalType: 'contract IController',
+        name: '',
+        type: 'address',
       },
     ],
     stateMutability: 'view',

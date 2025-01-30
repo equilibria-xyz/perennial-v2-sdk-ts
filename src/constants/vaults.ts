@@ -2,6 +2,7 @@ import { Address, getAddress } from 'viem'
 import { arbitrum, arbitrumSepolia } from 'viem/chains'
 
 import { notEmpty } from '../utils/arrayUtils'
+import { perennial, perennialSepolia } from './customChains'
 import { SupportedChainId } from './network'
 
 export enum PerennialVaultType {
@@ -14,6 +15,8 @@ export const SupportedVaults: {
 } = {
   [arbitrum.id]: { alpha: true, bravo: true },
   [arbitrumSepolia.id]: { alpha: false, bravo: false },
+  [perennial.id]: { alpha: false, bravo: false },
+  [perennialSepolia.id]: { alpha: false, bravo: false },
 }
 
 export const VaultMetadata: {
@@ -27,6 +30,8 @@ export const VaultMetadata: {
     [PerennialVaultType.alpha]: { name: 'ETH Vault' },
     [PerennialVaultType.bravo]: { name: 'BTC Vault' },
   },
+  [perennial.id]: {},
+  [perennialSepolia.id]: {},
 }
 
 export const ChainVaults: {
@@ -41,6 +46,8 @@ export const ChainVaults: {
   [arbitrumSepolia.id]: {
     alpha: getAddress('0x1602A47BbFB5a3a59cA1788d35ee5e8e79AB84aF'),
   },
+  [perennial.id]: {},
+  [perennialSepolia.id]: {},
 }
 
 export const chainVaultsWithAddress = (chainId: SupportedChainId) => {

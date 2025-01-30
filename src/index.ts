@@ -107,6 +107,7 @@ export {
   ManagerAddresses,
   AccountVerifierAddresses,
   OrderVerifierAddresses,
+  StorkFactoryAddresses,
 } from './constants/contracts'
 
 export {
@@ -199,6 +200,7 @@ export { OracleFactoryAbi } from './abi/OracleFactory.abi'
 export { PayoffAbi } from './abi/Payoff.abi'
 export { ManagerAbi } from './abi/Manager.abi'
 export { ControllerAbi } from './abi/Controller.abi'
+export { VerifierAbi } from './abi/Verifier.abi'
 
 /* #################### Types #################### */
 
@@ -319,9 +321,17 @@ export {
 } from './lib/oracle'
 
 // Pyth Utils
-export { buildCommitmentsForOracles, pythMarketOpen, pythPriceToBig18 } from './lib/oracle/pyth'
+export {
+  buildCommitmentsForOracles as buildPythCommitmentsForOracles,
+  pythMarketOpen,
+  pythPriceToBig18,
+} from './lib/oracle/pyth'
+
 // Cryptex Utils
-export { fetchPrices } from './lib/oracle/cryptex'
+export { fetchPrices as fetchCryptexPrices } from './lib/oracle/cryptex'
+
+// Stork Utils
+export { fetchPrices as fetchStorkPrices } from './lib/oracle/stork'
 
 // Time Utils
 export {
@@ -347,3 +357,5 @@ export * as eip712 from './constants/eip712'
 export { Bucket as AccumulationBucket } from './types/gql/graphql'
 
 export { PriceUpdate, HermesClient } from '@pythnetwork/hermes-client'
+
+export { perennial, perennialSepolia } from './constants/customChains'

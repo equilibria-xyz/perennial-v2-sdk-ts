@@ -464,6 +464,137 @@ export const VerifierAbi = [
       {
         components: [
           {
+            components: [
+              {
+                internalType: 'Fixed6',
+                name: 'amount',
+                type: 'int256',
+              },
+              {
+                internalType: 'Fixed6',
+                name: 'price',
+                type: 'int256',
+              },
+              {
+                internalType: 'UFixed6',
+                name: 'fee',
+                type: 'uint256',
+              },
+              {
+                internalType: 'address',
+                name: 'originator',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'solver',
+                type: 'address',
+              },
+              {
+                internalType: 'UFixed6',
+                name: 'collateralization',
+                type: 'uint256',
+              },
+              {
+                components: [
+                  {
+                    internalType: 'address',
+                    name: 'account',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'signer',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'domain',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'nonce',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'group',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'expiry',
+                    type: 'uint256',
+                  },
+                ],
+                internalType: 'struct Common',
+                name: 'common',
+                type: 'tuple',
+              },
+            ],
+            internalType: 'struct Intent',
+            name: 'intent',
+            type: 'tuple',
+          },
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'signer',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'domain',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nonce',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'group',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'expiry',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct Common',
+            name: 'common',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct Fill',
+        name: 'fill',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'signature',
+        type: 'bytes',
+      },
+    ],
+    name: 'verifyFill',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
             internalType: 'uint256',
             name: 'group',
             type: 'uint256',
@@ -752,6 +883,73 @@ export const VerifierAbi = [
       },
     ],
     name: 'verifySignerUpdate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'Fixed6',
+            name: 'amount',
+            type: 'int256',
+          },
+          {
+            internalType: 'address',
+            name: 'referrer',
+            type: 'address',
+          },
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'signer',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'domain',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nonce',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'group',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'expiry',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct Common',
+            name: 'common',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct Take',
+        name: 'marketUpdateTaker',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'signature',
+        type: 'bytes',
+      },
+    ],
+    name: 'verifyTake',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

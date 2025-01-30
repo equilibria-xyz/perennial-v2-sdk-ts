@@ -32,11 +32,6 @@ export const MarketAbi = [
     type: 'error',
   },
   {
-    inputs: [],
-    name: 'GuaranteeStorageInvalidError',
-    type: 'error',
-  },
-  {
     inputs: [
       {
         internalType: 'uint256',
@@ -178,11 +173,6 @@ export const MarketAbi = [
   },
   {
     inputs: [],
-    name: 'MarketNotBeneficiaryError',
-    type: 'error',
-  },
-  {
-    inputs: [],
     name: 'MarketNotCoordinatorError',
     type: 'error',
   },
@@ -224,11 +214,6 @@ export const MarketAbi = [
   {
     inputs: [],
     name: 'MarketStalePriceError',
-    type: 'error',
-  },
-  {
-    inputs: [],
-    name: 'OrderStorageInvalidError',
     type: 'error',
   },
   {
@@ -330,6 +315,11 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
+            internalType: 'uint256',
+            name: 'invalidation',
+            type: 'uint256',
+          },
+          {
             internalType: 'UFixed6',
             name: 'makerReferral',
             type: 'uint256',
@@ -395,19 +385,6 @@ export const MarketAbi = [
       },
     ],
     name: 'AccountPositionProcessed',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'newBeneficiary',
-        type: 'address',
-      },
-    ],
-    name: 'BeneficiaryUpdated',
     type: 'event',
   },
   {
@@ -542,6 +519,11 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
+            internalType: 'uint256',
+            name: 'invalidation',
+            type: 'uint256',
+          },
+          {
             internalType: 'UFixed6',
             name: 'makerReferral',
             type: 'uint256',
@@ -571,12 +553,22 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'takerPos',
+            name: 'longPos',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'takerNeg',
+            name: 'longNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortNeg',
             type: 'uint256',
           },
           {
@@ -586,7 +578,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'referral',
+            name: 'orderReferral',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'solverReferral',
             type: 'uint256',
           },
         ],
@@ -741,6 +738,11 @@ export const MarketAbi = [
           {
             internalType: 'uint256',
             name: 'protection',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'invalidation',
             type: 'uint256',
           },
           {
@@ -1035,19 +1037,6 @@ export const MarketAbi = [
     type: 'event',
   },
   {
-    inputs: [],
-    name: 'beneficiary',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
     inputs: [
       {
         internalType: 'address',
@@ -1117,19 +1106,6 @@ export const MarketAbi = [
       },
     ],
     stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'coordinator',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -1236,12 +1212,22 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'takerPos',
+            name: 'longPos',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'takerNeg',
+            name: 'longNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortNeg',
             type: 'uint256',
           },
           {
@@ -1251,7 +1237,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'referral',
+            name: 'orderReferral',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'solverReferral',
             type: 'uint256',
           },
         ],
@@ -1316,12 +1307,22 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'takerPos',
+            name: 'longPos',
             type: 'uint256',
           },
           {
             internalType: 'UFixed6',
-            name: 'takerNeg',
+            name: 'longNeg',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortPos',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'shortNeg',
             type: 'uint256',
           },
           {
@@ -1331,7 +1332,12 @@ export const MarketAbi = [
           },
           {
             internalType: 'UFixed6',
-            name: 'referral',
+            name: 'orderReferral',
+            type: 'uint256',
+          },
+          {
+            internalType: 'UFixed6',
+            name: 'solverReferral',
             type: 'uint256',
           },
         ],
@@ -1431,13 +1437,6 @@ export const MarketAbi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'migrate',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -1599,6 +1598,11 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
+            internalType: 'uint256',
+            name: 'invalidation',
+            type: 'uint256',
+          },
+          {
             internalType: 'UFixed6',
             name: 'makerReferral',
             type: 'uint256',
@@ -1677,6 +1681,11 @@ export const MarketAbi = [
           {
             internalType: 'uint256',
             name: 'protection',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'invalidation',
             type: 'uint256',
           },
           {
@@ -1766,6 +1775,11 @@ export const MarketAbi = [
             type: 'uint256',
           },
           {
+            internalType: 'uint256',
+            name: 'invalidation',
+            type: 'uint256',
+          },
+          {
             internalType: 'UFixed6',
             name: 'makerReferral',
             type: 'uint256',
@@ -1844,6 +1858,11 @@ export const MarketAbi = [
           {
             internalType: 'uint256',
             name: 'protection',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'invalidation',
             type: 'uint256',
           },
           {
@@ -2253,6 +2272,29 @@ export const MarketAbi = [
         type: 'address',
       },
       {
+        internalType: 'Fixed6',
+        name: 'amount',
+        type: 'int256',
+      },
+      {
+        internalType: 'address',
+        name: 'referrer',
+        type: 'address',
+      },
+    ],
+    name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
         internalType: 'UFixed6',
         name: 'newMaker',
         type: 'uint256',
@@ -2329,12 +2371,235 @@ export const MarketAbi = [
   {
     inputs: [
       {
+        components: [
+          {
+            internalType: 'Fixed6',
+            name: 'amount',
+            type: 'int256',
+          },
+          {
+            internalType: 'address',
+            name: 'referrer',
+            type: 'address',
+          },
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'signer',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'domain',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nonce',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'group',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'expiry',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct Common',
+            name: 'common',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct Take',
+        name: 'take',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'signature',
+        type: 'bytes',
+      },
+    ],
+    name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'address',
-        name: 'newBeneficiary',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'Fixed6',
+        name: 'makerAmount',
+        type: 'int256',
+      },
+      {
+        internalType: 'Fixed6',
+        name: 'takerAmount',
+        type: 'int256',
+      },
+      {
+        internalType: 'Fixed6',
+        name: 'collateral',
+        type: 'int256',
+      },
+      {
+        internalType: 'address',
+        name: 'referrer',
         type: 'address',
       },
     ],
-    name: 'updateBeneficiary',
+    name: 'update',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            components: [
+              {
+                internalType: 'Fixed6',
+                name: 'amount',
+                type: 'int256',
+              },
+              {
+                internalType: 'Fixed6',
+                name: 'price',
+                type: 'int256',
+              },
+              {
+                internalType: 'UFixed6',
+                name: 'fee',
+                type: 'uint256',
+              },
+              {
+                internalType: 'address',
+                name: 'originator',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'solver',
+                type: 'address',
+              },
+              {
+                internalType: 'UFixed6',
+                name: 'collateralization',
+                type: 'uint256',
+              },
+              {
+                components: [
+                  {
+                    internalType: 'address',
+                    name: 'account',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'signer',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'domain',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'nonce',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'group',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'expiry',
+                    type: 'uint256',
+                  },
+                ],
+                internalType: 'struct Common',
+                name: 'common',
+                type: 'tuple',
+              },
+            ],
+            internalType: 'struct Intent',
+            name: 'intent',
+            type: 'tuple',
+          },
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'signer',
+                type: 'address',
+              },
+              {
+                internalType: 'address',
+                name: 'domain',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nonce',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'group',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'expiry',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct Common',
+            name: 'common',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct Fill',
+        name: 'fill',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'traderSignature',
+        type: 'bytes',
+      },
+      {
+        internalType: 'bytes',
+        name: 'solverSignature',
+        type: 'bytes',
+      },
+    ],
+    name: 'update',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

@@ -1,6 +1,6 @@
 {
   "name": "@perennial/sdk",
-  "version": "0.0.3-beta.14",
+  "version": "0.0.4-alpha.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -61,10 +61,12 @@
   "dependencies": {
     "@microsoft/tsdoc": "^0.14.2",
     "@pythnetwork/hermes-client": "^1.0.4",
+    "@types/json-bigint": "^1.0.4",
     "axios": "^1.7.2",
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
+    "json-bigint": "^1.0.0",
     "viem": "2.9.9"
   },
   "lint-staged": {
