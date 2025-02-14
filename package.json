@@ -65,7 +65,7 @@
     "date-fns": "^2.30.0",
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
-    "viem": "2.9.9"
+    "viem": "2.23.2"
   },
   "lint-staged": {
     "*.ts": [
