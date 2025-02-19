@@ -15,7 +15,7 @@ export const PositionDataFragment = gql(`
 
 export const OrderDataFragbment = gql(`
   fragment OrderData on Order {
-    orderId, market { id }, account { id }, maker, long, short, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal, guaranteePrice
+    orderId, market { id }, account { id }, maker, long, short, net, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal, guaranteePrice
     position { startMaker, startLong, startShort }
     accumulation {
       collateral_accumulation, fee_accumulation, collateral_subAccumulation_offset, collateral_subAccumulation_pnl,

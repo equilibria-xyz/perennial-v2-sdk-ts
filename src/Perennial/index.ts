@@ -17,6 +17,10 @@ export type SDKConfig = {
   graphUrl?: string
   pythUrl: string | string[]
   cryptexUrl?: string
+  storkConfig?: {
+    url: string
+    apiKey?: string
+  }
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets?: SupportedMarket[]
@@ -70,6 +74,12 @@ export default class PerennialSDK {
     this._oracleClients = {
       pyth: this.buildPythClients(config.pythUrl),
       cryptex: config.cryptexUrl,
+      stork: config.storkConfig
+        ? {
+            url: config.storkConfig.url,
+            apiKey: config.storkConfig.apiKey,
+          }
+        : undefined,
     }
     this._graphClient = config.graphUrl ? new GraphQLClient(config.graphUrl) : undefined
     this.contracts = new ContractsModule({

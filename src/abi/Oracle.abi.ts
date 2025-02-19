@@ -307,14 +307,21 @@ export const OracleAbi = [
     name: 'global',
     outputs: [
       {
-        internalType: 'uint128',
-        name: 'current',
-        type: 'uint128',
-      },
-      {
-        internalType: 'uint128',
-        name: 'latest',
-        type: 'uint128',
+        components: [
+          {
+            internalType: 'uint128',
+            name: 'current',
+            type: 'uint128',
+          },
+          {
+            internalType: 'uint128',
+            name: 'latest',
+            type: 'uint128',
+          },
+        ],
+        internalType: 'struct IOracle.OracleGlobal',
+        name: '',
+        type: 'tuple',
       },
     ],
     stateMutability: 'view',
@@ -506,19 +513,6 @@ export const OracleAbi = [
       },
     ],
     name: 'updateBeneficiary',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'string',
-        name: 'newName',
-        type: 'string',
-      },
-    ],
-    name: 'updateName',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

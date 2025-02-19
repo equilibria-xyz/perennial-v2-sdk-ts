@@ -37,7 +37,6 @@ import {
   calcNotional,
   calcTradeFee,
   magnitude,
-  orderSize,
   side as positionSide,
 } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
@@ -601,7 +600,7 @@ export async function fetchTradeHistory({
 
 function processOrder(market: SupportedMarket, order: OrderDataFragment) {
   const side = positionSide(order.position.startMaker, order.position.startLong, order.position.startShort)
-  const delta = orderSize(order.maker, order.long, order.short)
+  const delta = BigInt(order.net)
   const collateral = BigInt(order.collateral)
 
   const priceWithImpact =

@@ -488,24 +488,6 @@ export const OracleFactoryAbi = [
   {
     inputs: [
       {
-        internalType: 'contract IOracleProvider',
-        name: 'oracleProvider',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes32',
-        name: 'id',
-        type: 'bytes32',
-      },
-    ],
-    name: 'updateId',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         components: [
           {
             internalType: 'uint256',
@@ -555,19 +537,6 @@ export const OracleFactoryAbi = [
       },
     ],
     name: 'updatePendingOwner',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'Token18',
-        name: 'token',
-        type: 'address',
-      },
-    ],
-    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

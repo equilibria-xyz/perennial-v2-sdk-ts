@@ -1,5 +1,26 @@
 export const ControllerAbi = [
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'implementation',
+        type: 'address',
+      },
+      {
+        internalType: 'contract IMarketFactory',
+        name: 'marketFactory',
+        type: 'address',
+      },
+      {
+        internalType: 'contract IVerifierBase',
+        name: 'nonceManager',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'constructor',
+  },
+  {
     inputs: [],
     name: 'ControllerGroupBalancedError',
     type: 'error',
@@ -43,6 +64,11 @@ export const ControllerAbi = [
       },
     ],
     name: 'ControllerMarketAlreadyInGroupError',
+    type: 'error',
+  },
+  {
+    inputs: [],
+    name: 'ControllerNotOperatorError',
     type: 'error',
   },
   {
@@ -388,6 +414,58 @@ export const ControllerAbi = [
   },
   {
     inputs: [],
+    name: 'MAX_GROUPS_PER_OWNER',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'MAX_MARKETS_PER_GROUP',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'OPT_BASE_FEE_MULTIPLIER',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'SALT',
+    outputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'USDC',
     outputs: [
       {
@@ -503,6 +581,24 @@ export const ControllerAbi = [
       },
     ],
     name: 'changeRebalanceConfigWithSignature',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'owner',
+        type: 'address',
+      },
+      {
+        internalType: 'UFixed6',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'chargeFee',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -1872,6 +1968,134 @@ export const ControllerAbi = [
       },
     ],
     name: 'relaySignerUpdate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            components: [
+              {
+                internalType: 'Fixed6',
+                name: 'amount',
+                type: 'int256',
+              },
+              {
+                internalType: 'address',
+                name: 'referrer',
+                type: 'address',
+              },
+              {
+                components: [
+                  {
+                    internalType: 'address',
+                    name: 'account',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'signer',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'domain',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'nonce',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'group',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'expiry',
+                    type: 'uint256',
+                  },
+                ],
+                internalType: 'struct Common',
+                name: 'common',
+                type: 'tuple',
+              },
+            ],
+            internalType: 'struct Take',
+            name: 'take',
+            type: 'tuple',
+          },
+          {
+            components: [
+              {
+                internalType: 'UFixed6',
+                name: 'maxFee',
+                type: 'uint256',
+              },
+              {
+                components: [
+                  {
+                    internalType: 'address',
+                    name: 'account',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'signer',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'address',
+                    name: 'domain',
+                    type: 'address',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'nonce',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'group',
+                    type: 'uint256',
+                  },
+                  {
+                    internalType: 'uint256',
+                    name: 'expiry',
+                    type: 'uint256',
+                  },
+                ],
+                internalType: 'struct Common',
+                name: 'common',
+                type: 'tuple',
+              },
+            ],
+            internalType: 'struct Action',
+            name: 'action',
+            type: 'tuple',
+          },
+        ],
+        internalType: 'struct RelayedTake',
+        name: 'message',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes',
+        name: 'outerSignature',
+        type: 'bytes',
+      },
+      {
+        internalType: 'bytes',
+        name: 'innerSignature',
+        type: 'bytes',
+      },
+    ],
+    name: 'relayTake',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

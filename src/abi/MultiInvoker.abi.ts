@@ -18,7 +18,12 @@ export const MultiInvokerAbi = [
       },
       {
         internalType: 'contract IFactory',
-        name: 'vaultFactory_',
+        name: 'makerVaultFactory_',
+        type: 'address',
+      },
+      {
+        internalType: 'contract IFactory',
+        name: 'solverVaultFactory_',
         type: 'address',
       },
       {
@@ -456,6 +461,19 @@ export const MultiInvokerAbi = [
   },
   {
     inputs: [],
+    name: 'OPT_BASE_FEE_MULTIPLIER',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'USDC',
     outputs: [
       {
@@ -681,6 +699,19 @@ export const MultiInvokerAbi = [
   },
   {
     inputs: [],
+    name: 'makerVaultFactory',
+    outputs: [
+      {
+        internalType: 'contract IFactory',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'marketFactory',
     outputs: [
       {
@@ -820,6 +851,19 @@ export const MultiInvokerAbi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'solverVaultFactory',
+    outputs: [
+      {
+        internalType: 'contract IFactory',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -835,19 +879,6 @@ export const MultiInvokerAbi = [
     name: 'updateOperator',
     outputs: [],
     stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'vaultFactory',
-    outputs: [
-      {
-        internalType: 'contract IFactory',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
 ] as const

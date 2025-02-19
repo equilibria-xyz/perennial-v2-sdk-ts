@@ -15,6 +15,7 @@ import {
   microPowerTwoTransform,
   microPowerTwoUntransform,
 } from '../utils/payoffUtils'
+import { perennial, perennialSepolia } from './customChains'
 import { SupportedChainId } from './network'
 
 export enum SupportedMarket {
@@ -340,6 +341,14 @@ export const ChainMarkets: {
     [SupportedMarket.xau]: getAddress('0x122b781CF4fCa219aDB9704132D7fa11460D4fBa'),
     [SupportedMarket.meem]: getAddress('0x7A2fE407C4F459eD62ea75fEeBB27188e4F9E6aD'),
     [SupportedMarket.sol]: getAddress('0x15ba2b5D1C3eA1cfFb4541d2B1baF0Deab6aAF9B'),
+  },
+  [perennial.id]: {
+    [SupportedMarket.eth]: getAddress('0x62564Cd7278B79b9CFe76388e0EEe115389586c6'),
+    [SupportedMarket.btc]: getAddress('0x687CC5097210dE03940bBC8e5edD820da7Dd6827'),
+    [SupportedMarket.sol]: getAddress('0xa534972Ec3Bc7e25559cc7A3b1e3Adc03C9Fb6f8'),
+  },
+  [perennialSepolia.id]: {
+    [SupportedMarket.eth]: getAddress('0xb1f5301294695d70eCDb27E5181E94eC41d809f0'),
   },
 }
 
