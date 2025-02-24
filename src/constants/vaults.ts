@@ -30,8 +30,12 @@ export const VaultMetadata: {
     [PerennialVaultType.alpha]: { name: 'ETH Vault' },
     [PerennialVaultType.bravo]: { name: 'BTC Vault' },
   },
-  [perennial.id]: {},
-  [perennialSepolia.id]: {},
+  [perennial.id]: {
+    [PerennialVaultType.alpha]: { name: 'Perennial AMM Vault' },
+  },
+  [perennialSepolia.id]: {
+    [PerennialVaultType.alpha]: { name: 'Perennial AMM Vault' },
+  },
 }
 
 export const ChainVaults: {
@@ -46,8 +50,12 @@ export const ChainVaults: {
   [arbitrumSepolia.id]: {
     alpha: getAddress('0x1602A47BbFB5a3a59cA1788d35ee5e8e79AB84aF'),
   },
-  [perennial.id]: {},
-  [perennialSepolia.id]: {},
+  [perennial.id]: {
+    alpha: getAddress('0xD7dA94b3F07843bD851FD61166F2C62Ae6267714'),
+  },
+  [perennialSepolia.id]: {
+    alpha: getAddress('0x39bF98E3829Ea7ca9F3e711DB86a8BFd41a29c55'),
+  },
 }
 
 export const chainVaultsWithAddress = (chainId: SupportedChainId) => {

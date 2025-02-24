@@ -244,7 +244,7 @@ contract VaultLens {
     result.settleStatus = new bytes[](vaults.length);
     result.updateStatus = new bytes[](vaults.length);
     for (uint i = 0; i < vaults.length; i++) {
-      (result.updateStatus[i], result.settleStatus[i]) = updateAndSettle(vaults[i], account, result.preUpdate.vaultSnapshots[i].vaultMinimum);
+      (result.updateStatus[i], result.settleStatus[i]) = updateAndSettle(vaults[i], account);
     }
 
     // Snapshot post
@@ -299,11 +299,11 @@ contract VaultLens {
     vaultAccountSnapshot.multiInvokerApproved = IVaultFactory(address(vault.factory())).operators(account, multiInvoker);
   }
 
-  function updateAndSettle(IVault vault, address account, UFixed6 vaultMinimum) public returns (bytes memory updateErr, bytes memory settleErr) {
+  function updateAndSettle(IVault vault, address account) public returns (bytes memory updateErr, bytes memory settleErr) {
     vault.asset().approve(address(vault));
 
     // Update the vault from a fake account
-    try vault.update(address(this), vaultMinimum, UFixed6Lib.ZERO, UFixed6Lib.ZERO) {
+    try vault.update(address(this), UFixed6Lib.ZERO, UFixed6Lib.ZERO, UFixed6Lib.ZERO) {
       updateErr = bytes('');
     } catch (bytes memory err) {
       updateErr = err;
