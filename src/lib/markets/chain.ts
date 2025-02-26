@@ -18,7 +18,13 @@ import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { MarketMetadataLensAbi, MarketMetadataLensDeployedBytecode } from '../../abi/MarketMetadataLens.abi'
 import { SupportedMarketMapping } from '../../constants'
-import { calcLeverage, calcNotional, getStatusForSnapshot, sideFromPosition } from '../../utils/positionUtils'
+import {
+  calcLeverage,
+  calcMakerExposure,
+  calcNotional,
+  getStatusForSnapshot,
+  sideFromPosition,
+} from '../../utils/positionUtils'
 import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
@@ -125,6 +131,8 @@ export type UserMarketSnapshot = ChainUserMarketSnapshot & {
   notional: bigint
   nextNotional: bigint
   priceUpdate: Address
+  makerExposure: bigint
+  nextMakerExposure: bigint
 }
 
 export type MarketSnapshots = NonNullable<Awaited<ReturnType<typeof fetchMarketSnapshots>>>
@@ -279,6 +287,18 @@ export async function fetchMarketSnapshots({
       nextLeverage: calcLeverage(marketPrice, nextMagnitude, snapshot.local.collateral),
       notional: calcNotional(magnitude, marketPrice),
       nextNotional: calcNotional(nextMagnitude, marketPrice),
+      makerExposure: calcMakerExposure(
+        snapshot.position.maker,
+        marketSnapshot.position.maker,
+        marketSnapshot.position.long,
+        marketSnapshot.position.short,
+      ),
+      nextMakerExposure: calcMakerExposure(
+        snapshot.nextPosition.maker,
+        marketSnapshot.nextPosition.maker,
+        marketSnapshot.nextPosition.long,
+        marketSnapshot.nextPosition.short,
+      ),
     }
     return acc
   }, {} as SupportedMarketMapping<UserMarketSnapshot>)
