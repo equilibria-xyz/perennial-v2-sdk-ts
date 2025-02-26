@@ -141,7 +141,7 @@ export default class PerennialSDK {
     return this._walletClient
   }
 
-  get publicClient() {
+  get publicClient(): PublicClient<Transport<'http'>, Chain> {
     return this._publicClient
   }
 
