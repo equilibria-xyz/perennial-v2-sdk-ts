@@ -259,7 +259,10 @@ export function getControllerContract(
  * @param publicClient {@link PublicClient}
  * @returns The Manager contract instance.
  */
-export function getManagerContract(chainId: SupportedChainId = DefaultChain.id, publicClient: PublicClient) {
+export function getManagerContract(
+  chainId: SupportedChainId = DefaultChain.id,
+  publicClient: PublicClient,
+): GetContractReturnType<typeof ManagerAbi, { public: PublicClient }, Address> {
   return getContract({ abi: ManagerAbi, address: ManagerAddresses[chainId], client: { public: publicClient } })
 }
 /**
