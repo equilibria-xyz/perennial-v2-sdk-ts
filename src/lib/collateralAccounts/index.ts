@@ -4,6 +4,7 @@ import { SupportedChainId, chainIdToChainMap } from '../../constants'
 import { OptionalAddress } from '../../types/shared'
 import { throwIfZeroAddress } from '../../utils/addressUtils'
 import { addSignerOverrideFromWalletClientSigner } from '../../utils/intentUtils'
+import { BuildRelayedTakeSigningPayloadArgs, buildRelayedTakeSigningPayload } from './intent'
 import {
   BuildDeployAccountSigningPayloadArgs,
   buildDeployAccountSigningPayload,
@@ -194,6 +195,18 @@ export class CollateralAccountModule {
 
           return buildRelayedNonceCancellationSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
+
+        relayedTake: (args: OmitBound<BuildRelayedTakeSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
+          return buildRelayedTakeSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
       },
     }
   }
@@ -317,6 +330,18 @@ export class CollateralAccountModule {
           innerSignature,
           nonceCancellation,
           relayedNonceCancellation,
+        }
+      },
+
+      relayedTake: async (...args: Parameters<typeof this.build.signed.relayedTake>) => {
+        const { relayedTake, take } = this.build.signed.relayedTake(...args)
+        const outerSignature = await walletClient.signTypedData({ ...relayedTake, ...signOpts })
+        const innerSignature = await walletClient.signTypedData({ ...take, ...signOpts })
+        return {
+          outerSignature,
+          innerSignature,
+          relayedTake,
+          take,
         }
       },
     }
