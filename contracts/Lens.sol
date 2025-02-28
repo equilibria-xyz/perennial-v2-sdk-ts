@@ -64,6 +64,7 @@ contract Lens {
     bytes[] updateStatus;
     SnapshotResult preUpdate;
     SnapshotResult postUpdate;
+    uint256 blockNumber;
   }
 
   function snapshot(
@@ -71,6 +72,7 @@ contract Lens {
     IMarket[] memory markets,
     address account
   ) external returns (SnapshotReturnValue memory result) {
+    result.blockNumber = block.number;
     // Snapshot pre
     MarketSnapshot[] memory preMarketSnapshots = new MarketSnapshot[](markets.length);
     MarketAccountSnapshot[] memory preMarketAccountSnapshots = new MarketAccountSnapshot[](markets.length);

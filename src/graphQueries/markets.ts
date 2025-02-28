@@ -26,8 +26,8 @@ export const OrderDataFragbment = gql(`
 `)
 
 export const QueryLatestMarketAccountPosition = gql(`
-  query QueryLatestAccountPosition($account: String!, $markets: [String!]!, $latestVersions: [BigInt!]!) {
-    marketAccounts(where: { account: $account, market_in: $markets }) {
+  query QueryLatestAccountPosition($account: String!, $markets: [String!]!, $latestVersions: [BigInt!]!, $minBlock: Int) {
+    marketAccounts(where: { account: $account, market_in: $markets }, block: { number_gte: $minBlock }) {
       market { id }, collateral, maker, long, short, latestVersion
       positions(first: 1, orderBy: nonce, orderDirection: desc) {
         ...PositionData
@@ -47,48 +47,48 @@ export const QueryLatestMarketAccountPosition = gql(`
 `)
 
 export const QueryMarketAccountTakerPositions = gql(`
-  query QueryMarketAccountTakerPositions($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-    positions(where: { and: [{ marketAccount_: {account: $account, market_in: $markets}, maker: 0, long: 0, short: 0, startVersion_gte: $fromTs, startVersion_lt: $toTs }, { or: [{ startLong_gt: 0 }, { startShort_gt: 0 }]}]}, orderBy: startVersion, orderDirection: desc, first: $first, skip: $skip) {
+  query QueryMarketAccountTakerPositions($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!, $minBlock: Int) {
+    positions(where: { and: [{ marketAccount_: {account: $account, market_in: $markets}, maker: 0, long: 0, short: 0, startVersion_gte: $fromTs, startVersion_lt: $toTs }, { or: [{ startLong_gt: 0 }, { startShort_gt: 0 }]}]}, orderBy: startVersion, orderDirection: desc, first: $first, skip: $skip, block: { number_gte: $minBlock }) {
       ...PositionData
     }
   }
 `)
 
 export const QueryMarketAccountMakerPositions = gql(`
-  query QueryMarketAccountMakerPositions($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-    positions(where: { marketAccount_: {account: $account, market_in: $markets}, maker: 0, long: 0, short: 0, startMaker_gt: 0, startVersion_gte: $fromTs, startVersion_lt: $toTs }, orderBy: startVersion, orderDirection: desc, first: $first, skip: $skip) {
+  query QueryMarketAccountMakerPositions($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!, $minBlock: Int) {
+    positions(where: { marketAccount_: {account: $account, market_in: $markets}, maker: 0, long: 0, short: 0, startMaker_gt: 0, startVersion_gte: $fromTs, startVersion_lt: $toTs }, orderBy: startVersion, orderDirection: desc, first: $first, skip: $skip, block: { number_gte: $minBlock }) {
       ...PositionData
     }
   }
 `)
 
 export const QueryMarketAccountPositionOrders = gql(`
-  query QueryMarketAccountPositionOrders($account: String!, $market: String!, $positionId: BigInt!, $first: Int!, $skip: Int!) {
-    orders(where: { account: $account, market: $market, position_: { nonce: $positionId }}, first: $first, skip: $skip, orderBy: orderId, orderDirection: desc) {
+  query QueryMarketAccountPositionOrders($account: String!, $market: String!, $positionId: BigInt!, $first: Int!, $skip: Int!, $minBlock: Int) {
+    orders(where: { account: $account, market: $market, position_: { nonce: $positionId }}, first: $first, skip: $skip, orderBy: orderId, orderDirection: desc, block: { number_gte: $minBlock }) {
       ...OrderData
     }
   }
 `)
 
 export const QueryAccountOrders = gql(`
-  query QueryMarketOrders($account: String!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-    orders(where: { account: $account, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc) {
+  query QueryMarketOrders($account: String!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!, $minBlock: Int) {
+    orders(where: { account: $account, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc, block: { number_gte: $minBlock }) {
       ...OrderData
     }
   }
 `)
 
 export const QueryAccountMarketOrders = gql(`
-  query QueryAccountMarketOrders($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!) {
-    orders(where: { account: $account, market_in: $markets, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc) {
+  query QueryAccountMarketOrders($account: String!, $markets: [String!]!, $fromTs: BigInt, $toTs: BigInt, $first: Int!, $skip: Int!, $minBlock: Int) {
+    orders(where: { account: $account, market_in: $markets, oracleVersion_: { timestamp_gte: $fromTs, timestamp_lt: $toTs }}, first: $first, skip: $skip, orderBy: oracleVersion__timestamp, orderDirection: desc, block: { number_gte: $minBlock }) {
       ...OrderData
     }
   }
 `)
 
 export const QueryMarketAccumulationData = gql(`
-  query QueryMarketAccumulationData($markets: [Bytes!]!, $fromTs: BigInt!, $toTs: BigInt!, $bucket: Bucket!) {
-    marketData: markets(where: { id_in: $markets }) {
+  query QueryMarketAccumulationData($markets: [Bytes!]!, $fromTs: BigInt!, $toTs: BigInt!, $bucket: Bucket!, $minBlock: Int) {
+    marketData: markets(where: { id_in: $markets }, block: { number_gte: $minBlock }) {
       id
 
       accumulations(where: { bucket: $bucket, timestamp_gte: $fromTs, timestamp_lte: $toTs }
@@ -109,10 +109,10 @@ export const QueryMarketAccumulationData = gql(`
 `)
 
 export const QueryOpenTriggerOrders = gql(`
-  query QueryOpenTriggerOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!) {
+  query QueryOpenTriggerOrders($account: Bytes!, $markets: [Bytes!]!, $side: [Int!]!, $first: Int!, $skip: Int!, $minBlock: Int) {
     multiInvokerTriggerOrders(
       where: { account: $account, market_in: $markets, cancelled: false, executed: false, triggerOrderSide_in: $side },
-      orderBy: nonce, orderDirection: desc, first: $first, skip: $skip
+      orderBy: nonce, orderDirection: desc, first: $first, skip: $skip, block: { number_gte: $minBlock }
     ) {
         source, account, market, nonce, triggerOrderSide, triggerOrderComparison, triggerOrderFee, triggerOrderPrice, triggerOrderDelta
         blockTimestamp, transactionHash, associatedOrder { collateral, depositTotal, withdrawalTotal }
