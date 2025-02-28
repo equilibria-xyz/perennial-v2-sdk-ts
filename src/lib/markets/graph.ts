@@ -64,6 +64,7 @@ export async function fetchActivePositionsPnl({
   oracleClients,
   publicClient,
   graphClient,
+  minBlock = 0,
 }: {
   markets: SupportedMarket[]
   address: Address
@@ -74,6 +75,7 @@ export async function fetchActivePositionsPnl({
   oracleClients: OracleClients
   publicClient: PublicClient
   graphClient: GraphQLClient
+  minBlock?: number
 }): Promise<
   SupportedMarketMapping<
     ProcessedGraphPosition & {
@@ -110,6 +112,7 @@ export async function fetchActivePositionsPnl({
     account: address,
     markets: marketsWithAddresses.map(({ marketAddress }) => marketAddress),
     latestVersions: marketLatestVersions,
+    minBlock,
   })
 
   const positionPnls = marketsWithAddresses.map(({ market, marketAddress }) => {
@@ -335,6 +338,7 @@ export async function fetchHistoricalPositions({
   first = GraphDefaultPageSize,
   skip = 0,
   maker,
+  minBlock = 0,
 }: {
   markets: SupportedMarket[]
   address: Address
@@ -345,6 +349,7 @@ export async function fetchHistoricalPositions({
   first?: number
   skip?: number
   maker?: boolean
+  minBlock?: number
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const query = maker ? QueryMarketAccountMakerPositions : QueryMarketAccountTakerPositions
@@ -355,6 +360,7 @@ export async function fetchHistoricalPositions({
     toTs: (toTs ?? nowSeconds()).toString(),
     first,
     skip,
+    minBlock,
   })
 
   return positions.map((graphPosition) =>
@@ -520,6 +526,7 @@ export async function fetchSubPositions({
   skip = 0,
   chainId,
   graphClient,
+  minBlock = 0,
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
@@ -528,6 +535,7 @@ export async function fetchSubPositions({
   positionId: bigint
   first?: number
   skip?: number
+  minBlock?: number
 }) {
   const marketAddress = ChainMarkets[chainId][market]
   if (!marketAddress) return []
@@ -538,6 +546,7 @@ export async function fetchSubPositions({
     positionId: positionId.toString(),
     first,
     skip,
+    minBlock,
   })
 
   const processedOrders = orders.map((order) => processOrder(market, order))
@@ -561,6 +570,7 @@ export async function fetchTradeHistory({
   markets,
   fromTs,
   toTs,
+  minBlock = 0,
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
@@ -568,6 +578,7 @@ export async function fetchTradeHistory({
   markets?: SupportedMarket[]
   fromTs?: bigint
   toTs?: bigint
+  minBlock?: number
 }) {
   const defaultTimeRange = Day * 7n
   const now = BigInt(nowSeconds())
@@ -583,6 +594,7 @@ export async function fetchTradeHistory({
           skip: pageNumber * GraphDefaultPageSize,
           fromTs: fromTs.toString(),
           toTs: toTs.toString(),
+          minBlock,
         })
       : graphClient.request(QueryAccountOrders, {
           account: address,
@@ -590,6 +602,7 @@ export async function fetchTradeHistory({
           skip: pageNumber * GraphDefaultPageSize,
           fromTs: fromTs.toString(),
           toTs: toTs.toString(),
+          minBlock,
         }),
   )
 
@@ -681,6 +694,7 @@ export async function fetchOpenOrders({
   first = GraphDefaultPageSize,
   skip = 0,
   isMaker,
+  minBlock = 0,
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
@@ -689,6 +703,7 @@ export async function fetchOpenOrders({
   first?: number
   skip?: number
   isMaker?: boolean
+  minBlock?: number
 }) {
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const { multiInvokerTriggerOrders: triggerOrders } = await graphClient.request(QueryOpenTriggerOrders, {
@@ -699,6 +714,7 @@ export async function fetchOpenOrders({
     side: isMaker
       ? [0, 3, 4] // 0 = multiInvoker maker, 3 = multiInvoker collateral withdrawal, 4 = manager maker
       : [1, 2, 3, 5, 6], // 1 = multiInvoker long, 2 = multiInvoker short, 3 = multiInvoker collateral withdrawal, 5 = manager long, 6 = manager short
+    minBlock,
   })
 
   return triggerOrders.map((triggerOrder) => ({
@@ -754,6 +770,7 @@ export async function fetchMarketsHistoricalData({
   fromTs,
   toTs,
   bucket = Bucket.Daily,
+  minBlock = 0,
 }: {
   chainId: SupportedChainId
   graphClient: GraphQLClient
@@ -761,6 +778,7 @@ export async function fetchMarketsHistoricalData({
   fromTs: bigint
   toTs: bigint
   bucket?: Bucket
+  minBlock?: number
 }) {
   const marketAddresses = chainMarketsWithAddress(chainId, markets)
   const { marketData } = await graphClient.request(QueryMarketAccumulationData, {
@@ -768,6 +786,7 @@ export async function fetchMarketsHistoricalData({
     fromTs: fromTs.toString(),
     toTs: toTs.toString(),
     bucket,
+    minBlock,
   })
 
   const parsedData = marketAddresses.map(({ market, marketAddress }) => {

@@ -39,8 +39,10 @@ import {
 import {
   BuildCancelOrderSigningPayloadArgs,
   BuildPlaceOrderSigningPayloadArgs,
+  BuildTakeSigningPayloadArgs,
   buildCancelOrderSigningPayload,
   buildPlaceOrderSigningPayload,
+  buildTakeSigningPayload,
 } from './intent'
 import { BuildIntentSigningPayloadArgs, buildIntentSigningPayload } from './intent/buildIntentSigningPayload'
 import {
@@ -739,6 +741,24 @@ export class MarketsModule {
           return buildIntentSigningPayload({ chainId: this.config.chainId, ...args, address })
         },
 
+        /**
+         * Build a EIP712 paylod for signing a take order
+         * @param marketAddress Market Address to take for
+         * @param amount BigInt - Amount to take
+         * @param referrer Address to referrer
+         */
+        take: (args: OmitBound<BuildTakeSigningPayloadArgs> & OptionalAddress) => {
+          const address = args.address ?? this.defaultAddress
+          throwIfZeroAddress(address)
+
+          args.overrides = addSignerOverrideFromWalletClientSigner({
+            walletClientSigner: this.config.walletClient?.account?.address,
+            overrides: args.overrides,
+          })
+
+          return buildTakeSigningPayload({ chainId: this.config.chainId, ...args, address })
+        },
+
         placeOrder: (args: OmitBound<BuildPlaceOrderSigningPayloadArgs> & OptionalAddress) => {
           const address = args.address ?? this.defaultAddress
           throwIfZeroAddress(address)
@@ -967,6 +987,19 @@ export class MarketsModule {
         }
       },
 
+      /**
+       * Sign a EIP712 take signing payload
+       * @param take {@link EIP712_Take}
+       * @param signature Signature of the take
+       */
+      take: async (...args: Parameters<typeof this.build.signed.take>) => {
+        const { take } = this.build.signed.take(...args)
+        const signature = await walletClient.signTypedData({ ...take, ...signOpts })
+        return {
+          signature,
+          take,
+        }
+      },
       placeOrder: async (...args: Parameters<typeof this.build.signed.placeOrder>) => {
         const { placeOrder } = this.build.signed.placeOrder(...args)
         const signature = await walletClient.signTypedData({ ...placeOrder, ...signOpts })

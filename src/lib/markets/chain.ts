@@ -308,6 +308,7 @@ export async function fetchMarketSnapshots({
     market: marketSnapshots,
     commitments: snapshotData.commitments,
     updates: snapshotData.updates,
+    blockNumber: snapshotData.blockNumber,
   }
 }
 
@@ -359,6 +360,7 @@ async function fetchMarketSnapshotsAfterSettle({
   })
 
   return {
+    blockNumber: lensRes.blockNumber,
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
     market: lensRes.postUpdate.marketSnapshots.map((s) => {
