@@ -349,6 +349,8 @@ export const ChainMarkets: {
   },
   [perennialSepolia.id]: {
     [SupportedMarket.eth]: getAddress('0xb1f5301294695d70eCDb27E5181E94eC41d809f0'),
+    [SupportedMarket.btc]: getAddress('0xD0fd5dff874Ecf9CE24c790831bAfDD70c30eeC9'),
+    [SupportedMarket.sol]: getAddress('0xA9F5376494b6770c788247921cB5aDB6a0343d0E'),
   },
 }
 
