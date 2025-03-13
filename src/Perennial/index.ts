@@ -1,6 +1,15 @@
 import { HermesClient } from '@pythnetwork/hermes-client'
 import { GraphQLClient } from 'graphql-request'
-import { Address, Chain, PublicClient, Transport, WalletClient, createPublicClient, http } from 'viem'
+import {
+  Address,
+  Chain,
+  PublicClient,
+  PublicClientConfig,
+  Transport,
+  WalletClient,
+  createPublicClient,
+  http,
+} from 'viem'
 
 import { ChainMarkets, SupportedChainId, SupportedMarket } from '..'
 import { BackupPythClient, DefaultChain, chainIdToChainMap } from '../constants/network'
@@ -24,6 +33,7 @@ export type SDKConfig = {
   walletClient?: WalletClient
   operatingFor?: Address
   supportedMarkets?: SupportedMarket[]
+  publicClientOpts?: Partial<Omit<PublicClientConfig, 'transport' | 'chain'>>
 }
 
 /**
@@ -70,6 +80,7 @@ export default class PerennialSDK {
       batch: {
         multicall: true,
       },
+      ...config.publicClientOpts,
     })
     this._oracleClients = {
       pyth: this.buildPythClients(config.pythUrl),
