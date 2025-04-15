@@ -231,6 +231,8 @@ export async function fetchActivePositionsPnl({
       positionId: userMarketSnapshot.local.currentId,
       startCollateral,
       startTransactionHash: null,
+      startReferrer: null,
+      endReferrer: null,
       totalPnl: pendingTradeImpactAsOffset,
       totalFees: pendingTradeFee + pendingOrderSettlementFee,
       totalNotional: calcNotional(userMarketSnapshot.oracleVersions[0].price, pendingDelta),
@@ -430,6 +432,7 @@ function processGraphPosition(
     totalPnl -= pnlAccumulations.offset // remove offset from total pnl
   }
 
+  const openOrder = graphPosition.openOrder.at(0)
   const closeOrder = graphPosition.closeOrder.at(0)
 
   const returnValue = {
@@ -443,10 +446,12 @@ function processGraphPosition(
     trades: BigInt(graphPosition.trades),
     // Position Starting Data
     startSize: magnitude(graphPosition.startMaker, graphPosition.startLong, graphPosition.startShort),
-    startPrice: BigInt(graphPosition?.openOrder.at(0)?.executionPrice ?? 0n),
+    startPrice: BigInt(openOrder?.executionPrice ?? 0n),
     startCollateral: BigInt(graphPosition.startCollateral),
     netDeposits,
-    startTransactionHash: graphPosition?.openOrder.at(0)?.transactionHashes.at(0) ?? null,
+    startTransactionHash: openOrder?.transactionHashes.at(0) ?? null,
+    startReferrer: openOrder?.referrer ?? null,
+    endReferrer: closeOrder?.referrer ?? null,
     // PNL
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
