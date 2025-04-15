@@ -8,14 +8,14 @@ export const PositionDataFragment = gql(`
       collateral_subAccumulation_funding, collateral_subAccumulation_interest, collateral_subAccumulation_makerPositionFee, collateral_subAccumulation_makerExposure, collateral_subAccumulation_priceOverride, fee_subAccumulation_settlement
       fee_subAccumulation_trade, fee_subAccumulation_additive, fee_subAccumulation_triggerOrder, fee_subAccumulation_liquidation
     }
-    openOrder: orders(first: 1, orderBy: orderId, orderDirection: asc) { executionPrice, transactionHashes }
-    closeOrder: orders(where: { newMaker: 0, newLong: 0, newShort: 0, oracleVersion_: { valid: true } }, first: 1, orderBy: orderId, orderDirection: asc) { oracleVersion { timestamp }, liquidation }
+    openOrder: orders(first: 1, orderBy: orderId, orderDirection: asc) { executionPrice, transactionHashes, referrer }
+    closeOrder: orders(where: { newMaker: 0, newLong: 0, newShort: 0, oracleVersion_: { valid: true } }, first: 1, orderBy: orderId, orderDirection: asc) { oracleVersion { timestamp }, liquidation, referrer }
   }
 `)
 
 export const OrderDataFragbment = gql(`
   fragment OrderData on Order {
-    orderId, market { id }, account { id }, maker, long, short, net, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal, guaranteePrice
+    orderId, market { id }, account { id }, maker, long, short, net, collateral, executionPrice, oracleVersion { timestamp, valid }, newMaker, newLong, newShort, liquidation, transactionHashes, startCollateral, depositTotal, withdrawalTotal, guaranteePrice, referrer
     position { startMaker, startLong, startShort }
     accumulation {
       collateral_accumulation, fee_accumulation, collateral_subAccumulation_offset, collateral_subAccumulation_pnl,
