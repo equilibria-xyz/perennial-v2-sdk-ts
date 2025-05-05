@@ -637,6 +637,24 @@ export const calcExecutionPriceWithImpact = ({
   return size !== 0n ? Big6Math.abs(Big6Math.div(numerator, size)) : 0n
 }
 
+export const orderDelta = ({
+  longPos,
+  shortPos,
+  longNeg,
+  shortNeg,
+  makerPos,
+  makerNeg,
+}: {
+  longPos: bigint
+  shortPos: bigint
+  longNeg: bigint
+  shortNeg: bigint
+  makerPos: bigint
+  makerNeg: bigint
+}) => {
+  return longPos - longNeg + (shortNeg - shortPos) + (makerPos - makerNeg)
+}
+
 export async function waitForOrderSettlement({
   publicClient,
   txHash,
