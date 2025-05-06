@@ -37,6 +37,7 @@ import {
   calcNotional,
   calcTradeFee,
   magnitude,
+  orderDelta,
   side as positionSide,
 } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
@@ -61,6 +62,7 @@ export async function fetchActivePositionsPnl({
   chainId,
   address,
   markToMarket = true,
+  includeFeesInRealtimePnl = true,
   oracleClients,
   publicClient,
   graphClient,
@@ -71,6 +73,7 @@ export async function fetchActivePositionsPnl({
   marketSnapshots?: MarketSnapshots
   marketOracles?: MarketOracles
   markToMarket?: boolean
+  includeFeesInRealtimePnl?: boolean
   chainId: SupportedChainId
   oracleClients: OracleClients
   publicClient: PublicClient
@@ -124,11 +127,7 @@ export async function fetchActivePositionsPnl({
       userMarketSnapshot.nextSide === 'none' ? userMarketSnapshot.side : userMarketSnapshot.nextSide,
       userMarketSnapshot.nextMagnitude,
     ]
-
-    const pendingDelta =
-      side !== 'none'
-        ? userMarketSnapshot.pendingOrder[`${side}Pos`] - userMarketSnapshot.pendingOrder[`${side}Neg`]
-        : 0n
+    const pendingDelta = orderDelta({ ...userMarketSnapshot.pendingOrder })
 
     // Estimate the Trade Impact given market pre position
     const pendingTradeFeeData = calcTradeFee({
@@ -142,12 +141,28 @@ export async function fetchActivePositionsPnl({
     const pendingOrderSettlementFee = marketSettlementFees[market].totalCost
     const pendingTradeFee = pendingTradeFeeData.tradeFee.total
     const pendingAdditiveFee = 0n
+    const totalPendingFees = pendingTradeFee + pendingOrderSettlementFee + pendingAdditiveFee
 
     const graphMarketAccount = marketAccounts.find((ma) => getAddress(ma.market.id) === marketAddress)
     const graphPosition = graphMarketAccount?.positions.at(0)
 
     // Pull position data from the graph if available
-    if (graphMarketAccount && graphPosition) {
+    if (
+      graphMarketAccount &&
+      graphPosition &&
+      // If the snapshot side is not none, ensure we're only returning a non-closed graph position
+      (side !== 'none' ? !graphPosition.closeOrder.length : true)
+    ) {
+      const graphHasProcessedLatestPosition =
+        BigInt(graphPosition.marketAccount.latestVersion) >= userMarketSnapshot.latestOrder.timestamp
+      const latestTradeFee = graphHasProcessedLatestPosition
+        ? 0n
+        : calcTradeFee({
+            positionDelta: orderDelta({ ...userMarketSnapshot.latestOrder }),
+            marketSnapshot,
+            side,
+            usePreGlobalPosition: false,
+          }).tradeFee.total
       const currentAccumulator = graphMarketAccount.accumulators.current.at(0)
       const startAccumulator = graphMarketAccount.accumulators.start.find(
         (sa) => BigInt(sa.fromVersion) === (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n),
@@ -196,14 +211,19 @@ export async function fetchActivePositionsPnl({
       const currentCollateral =
         userMarketSnapshot.local.collateral + // Snapshot collateral
         pendingTradeImpactAsOffset - // Pending offset from trade
-        (pendingOrderSettlementFee + pendingTradeFee + pendingAdditiveFee) // Pending fees from trade
-      const realtimePnl = currentCollateral - (processedGraphPosition.startCollateral + netDeposits)
+        totalPendingFees // Pending fees from trade
+      let realtimePnl = currentCollateral - (processedGraphPosition.startCollateral + netDeposits)
+      // If fees are not included in PnL, re-add them back to the collateral as a "rebate"
+      if (!includeFeesInRealtimePnl) realtimePnl += processedGraphPosition.totalFees + totalPendingFees + latestTradeFee
       const percentDenominator = processedGraphPosition.startCollateral + (netDeposits > 0n ? netDeposits : 0n)
+      const realtimePercent =
+        percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n
 
       return {
         ...processedGraphPosition,
         realtime: realtimePnl,
-        realtimePercent: percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n,
+        realtimePercent,
+        realtimePercentDenominator: percentDenominator,
         pendingMarkToMarketAccumulations: markToMarket ? null : pendingMarkToMarketAccumulations,
       }
     }
@@ -215,7 +235,10 @@ export async function fetchActivePositionsPnl({
       side,
     })
     const startCollateral = userMarketSnapshot.pre.local.collateral
-    const realtimePnl = userMarketSnapshot.local.collateral - (startCollateral + pendingOrderCollateral)
+    let realtimePnl = userMarketSnapshot.local.collateral - (startCollateral + pendingOrderCollateral)
+    // If fees are not included in PnL, re-add them back to the collateral as a "rebate"
+    if (!includeFeesInRealtimePnl) realtimePnl += totalPendingFees
+
     const percentDenominator = startCollateral + (pendingOrderCollateral > 0n ? pendingOrderCollateral : 0n)
     const realtimePercent = percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(realtimePnl, percentDenominator)) : 0n
 
@@ -234,7 +257,9 @@ export async function fetchActivePositionsPnl({
       startReferrer: null,
       endReferrer: null,
       totalPnl: pendingTradeImpactAsOffset,
-      totalFees: pendingTradeFee + pendingOrderSettlementFee,
+      totalPnlPercent:
+        percentDenominator !== 0n ? Big6Math.abs(Big6Math.div(pendingTradeImpactAsOffset, percentDenominator)) : 0n,
+      totalFees: totalPendingFees,
       totalNotional: calcNotional(userMarketSnapshot.oracleVersions[0].price, pendingDelta),
       pnlAccumulations: {
         offset: pendingTradeImpactAsOffset,
@@ -248,7 +273,7 @@ export async function fetchActivePositionsPnl({
       feeAccumulations: {
         settlement: pendingOrderSettlementFee,
         trade: pendingTradeFee,
-        additive: 0n,
+        additive: pendingAdditiveFee,
         liquidation: 0n,
         triggerOrder: 0n,
       },
@@ -259,8 +284,10 @@ export async function fetchActivePositionsPnl({
       liquidationFee: 0n,
       netPnl: realtimePnl,
       netPnlPercent: realtimePercent,
+      netPnlPercentDenominator: percentDenominator,
       realtime: realtimePnl,
       realtimePercent: realtimePercent,
+      realtimePercentDenominator: percentDenominator,
       pendingMarkToMarketAccumulations: markToMarket ? null : DefaultRealizedAccumulations,
     }
   })
@@ -455,8 +482,10 @@ function processGraphPosition(
     // PNL
     netPnl,
     netPnlPercent: percentDenominator !== 0n ? Big6Math.div(netPnl, percentDenominator) : 0n,
+    netPnlPercentDenominator: percentDenominator,
     // Accumulation Breakdowns
     totalPnl,
+    totalPnlPercent: percentDenominator !== 0n ? Big6Math.div(totalPnl, percentDenominator) : 0n,
     totalFees,
     pnlAccumulations,
     feeAccumulations,
