@@ -1,9 +1,19 @@
-import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
+import {
+  Address,
+  PublicClient,
+  decodeEventLog,
+  encodeFunctionData,
+  getAddress,
+  getContractAddress,
+  maxUint256,
+  zeroAddress,
+} from 'viem'
 
 import {
   Big6Math,
   Big18Math,
   DefaultChain,
+  MarketAbi,
   MaxUint256,
   PositionSide,
   PositionStatus,
@@ -480,4 +490,51 @@ export async function fetchMarketSettlementFees({
       totalCost: bigint
     }>,
   )
+}
+
+export async function simulateMarketSettles({
+  chainId,
+  markets,
+  address,
+  marketOracles,
+  publicClient,
+}: {
+  chainId: SupportedChainId
+  markets: SupportedMarket[]
+  address: Address
+  marketOracles?: MarketOracles
+  publicClient: PublicClient
+}) {
+  if (!marketOracles) {
+    marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
+  }
+  const marketAddresses = Object.values(marketOracles)
+    .filter(({ market }) => markets.includes(market))
+    .map(({ marketAddress }) => marketAddress)
+
+  const t = await publicClient.simulateCalls({
+    account: address,
+    calls: marketAddresses.map((marketAddress) => ({
+      to: marketAddress,
+      data: encodeFunctionData({
+        abi: MarketAbi,
+        functionName: 'settle',
+        args: [address],
+      }),
+      value: 0n,
+    })),
+  })
+
+  const logs = t.results
+    .map((t) => t.logs)
+    .flat()
+    .map((log) => {
+      if (!log) return
+      const topics = decodeEventLog({ abi: MarketAbi, data: log.data, topics: log.topics })
+      return topics
+    })
+    .filter(notEmpty)
+    .flat()
+
+  return logs
 }

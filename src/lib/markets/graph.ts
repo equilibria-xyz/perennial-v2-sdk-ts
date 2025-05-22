@@ -41,7 +41,13 @@ import {
   side as positionSide,
 } from '../../utils/positionUtils'
 import { OracleClients } from '../oracle'
-import { MarketOracles, MarketSnapshots, fetchMarketSettlementFees, fetchMarketSnapshots } from './chain'
+import {
+  MarketOracles,
+  MarketSnapshots,
+  fetchMarketSettlementFees,
+  fetchMarketSnapshots,
+  simulateMarketSettles,
+} from './chain'
 
 /**
  * Fetches position PnL for a given market and Address
@@ -106,6 +112,16 @@ export async function fetchActivePositionsPnl({
     marketOracles,
     publicClient,
   })
+
+  const settlementLogs = await simulateMarketSettles({
+    chainId,
+    markets,
+    address,
+    marketOracles,
+    publicClient,
+  })
+
+  // TODO apply settlement logs to accumulations
 
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const marketLatestVersions = marketsWithAddresses.map(({ market }) =>
