@@ -35,7 +35,13 @@ import {
   getStatusForSnapshot,
   sideFromPosition,
 } from '../../utils/positionUtils'
-import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
+import {
+  OracleClients,
+  UpdateDataRequest,
+  UpdateDataResponse,
+  marketOraclesToUpdateDataRequest,
+  oracleCommitmentsLatest,
+} from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -369,15 +375,25 @@ async function fetchMarketSnapshotsAfterSettle({
     ],
   })
 
+  const simulatedEvents = await simulateMarketSettles({
+    lensAddress,
+    priceCommitments,
+    marketAddresses,
+    address,
+    publicClient,
+  })
+
   return {
     blockNumber: lensRes.blockNumber,
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
     market: lensRes.postUpdate.marketSnapshots.map((s) => {
       const market = addressToMarket(chainId, getAddress(s.marketAddress))
+      const events = simulatedEvents.filter((event) => event.marketAddress === getAddress(s.marketAddress))
       return {
         ...s,
         market,
+        events,
       }
     }),
     marketPre: lensRes.preUpdate.marketSnapshots.map((s) => {
@@ -493,36 +509,38 @@ export async function fetchMarketSettlementFees({
 }
 
 export async function simulateMarketSettles({
-  chainId,
-  markets,
+  lensAddress,
   address,
-  marketOracles,
+  priceCommitments,
+  marketAddresses,
   publicClient,
 }: {
-  chainId: SupportedChainId
-  markets: SupportedMarket[]
+  lensAddress: Address
   address: Address
-  marketOracles?: MarketOracles
+  priceCommitments: UpdateDataResponse[]
+  marketAddresses: Address[]
   publicClient: PublicClient
 }) {
-  if (!marketOracles) {
-    marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
-  }
-  const marketAddresses = Object.values(marketOracles)
-    .filter(({ market }) => markets.includes(market))
-    .map(({ marketAddress }) => marketAddress)
-
   const t = await publicClient.simulateCalls({
     account: address,
-    calls: marketAddresses.map((marketAddress) => ({
-      to: marketAddress,
-      data: encodeFunctionData({
-        abi: MarketAbi,
-        functionName: 'settle',
-        args: [address],
-      }),
-      value: 0n,
-    })),
+    calls: [
+      {
+        to: lensAddress,
+        data: encodeFunctionData({
+          abi: LensAbi,
+          functionName: 'snapshot',
+          args: [priceCommitments, marketAddresses, address],
+        }),
+        value: 0n,
+      },
+    ],
+    stateOverrides: [
+      {
+        address: lensAddress,
+        code: LensDeployedBytecode,
+        balance: maxUint256,
+      },
+    ],
   })
 
   const logs = t.results
@@ -530,8 +548,8 @@ export async function simulateMarketSettles({
     .flat()
     .map((log) => {
       if (!log) return
-      const topics = decodeEventLog({ abi: MarketAbi, data: log.data, topics: log.topics })
-      return topics
+      const eventLog = decodeEventLog({ abi: MarketAbi, data: log.data, topics: log.topics })
+      return { ...eventLog, marketAddress: log.address }
     })
     .filter(notEmpty)
     .flat()
