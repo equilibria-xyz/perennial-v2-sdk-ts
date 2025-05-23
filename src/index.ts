@@ -232,7 +232,12 @@ export { BigOrZero, formatBig6, formatBig6Percent, formatBig6USDPrice, Big6Math 
 export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from './utils/big18Utils'
 
 // Contract Utils
-export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
+export {
+  getVaultAddressForType,
+  bufferGasLimit,
+  parseViemContractCustomError,
+  decodeAnyEvent,
+} from './utils/contractUtils'
 
 // Address Utils
 export { throwIfZeroAddress, addressForMarket } from './utils/addressUtils'
