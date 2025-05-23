@@ -201,6 +201,8 @@ export { PayoffAbi } from './abi/Payoff.abi'
 export { ManagerAbi } from './abi/Manager.abi'
 export { ControllerAbi } from './abi/Controller.abi'
 export { VerifierAbi } from './abi/Verifier.abi'
+export { AllErrorsAbi } from './abi/AllErrors.abi'
+export { AllEventsAbi } from './abi/AllEvents.abi'
 
 /* #################### Types #################### */
 
