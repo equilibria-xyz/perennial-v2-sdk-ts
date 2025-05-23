@@ -32,7 +32,7 @@ export function parseViemContractCustomError(err: unknown) {
   }
 }
 
-export async function decodeAnyEvent(log: Log) {
+export function decodeAnyEvent(log: Log) {
   try {
     const decoded = decodeEventLog({ abi: AllEventsAbi, data: log.data, topics: log.topics })
     return decoded
