@@ -13,7 +13,6 @@ import {
   Big6Math,
   Big18Math,
   DefaultChain,
-  MarketAbi,
   MaxUint256,
   PositionSide,
   PositionStatus,
@@ -24,6 +23,7 @@ import {
   chainMarketsWithAddress,
   notEmpty,
 } from '../..'
+import { AllEventsAbi } from '../../abi/AllEvents.abi'
 import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { MarketMetadataLensAbi, MarketMetadataLensDeployedBytecode } from '../../abi/MarketMetadataLens.abi'
@@ -35,13 +35,7 @@ import {
   getStatusForSnapshot,
   sideFromPosition,
 } from '../../utils/positionUtils'
-import {
-  OracleClients,
-  UpdateDataRequest,
-  UpdateDataResponse,
-  marketOraclesToUpdateDataRequest,
-  oracleCommitmentsLatest,
-} from '../oracle'
+import { OracleClients, UpdateDataResponse, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -325,6 +319,7 @@ export async function fetchMarketSnapshots({
     commitments: snapshotData.commitments,
     updates: snapshotData.updates,
     blockNumber: snapshotData.blockNumber,
+    events: snapshotData.events,
   }
 }
 
@@ -375,7 +370,7 @@ async function fetchMarketSnapshotsAfterSettle({
     ],
   })
 
-  const simulatedEvents = await simulateMarketSettles({
+  const events = await simulateMarketSettles({
     lensAddress,
     priceCommitments,
     marketAddresses,
@@ -387,13 +382,12 @@ async function fetchMarketSnapshotsAfterSettle({
     blockNumber: lensRes.blockNumber,
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
+    events,
     market: lensRes.postUpdate.marketSnapshots.map((s) => {
       const market = addressToMarket(chainId, getAddress(s.marketAddress))
-      const events = simulatedEvents.filter((event) => event.marketAddress === getAddress(s.marketAddress))
       return {
         ...s,
         market,
-        events,
       }
     }),
     marketPre: lensRes.preUpdate.marketSnapshots.map((s) => {
@@ -543,16 +537,22 @@ export async function simulateMarketSettles({
     ],
   })
 
-  const logs = t.results
-    .map((t) => t.logs)
-    .flat()
+  const logs = t.results.map((t) => t.logs).flat()
+
+  return logs
+}
+
+export async function decodeAllEventLogs({ logs }: { logs: Awaited<ReturnType<typeof simulateMarketSettles>> }) {
+  return logs
     .map((log) => {
       if (!log) return
-      const eventLog = decodeEventLog({ abi: MarketAbi, data: log.data, topics: log.topics })
-      return { ...eventLog, marketAddress: log.address }
+      try {
+        const eventLog = decodeEventLog({ abi: AllEventsAbi, data: log.data, topics: log.topics })
+        return { ...eventLog, address: log.address }
+      } catch (error) {
+        return
+      }
     })
     .filter(notEmpty)
     .flat()
-
-  return logs
 }

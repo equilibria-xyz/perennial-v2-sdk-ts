@@ -11,11 +11,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "rimraf dist cache artifacts",
-    "build": "pnpm run clean && pnpm run gen:lens-artifact && pnpm run gen:error-abi && pnpm run gen:gql-typings && pnpm exec tsc -p tsconfig.build.json",
+    "build": "pnpm run clean && pnpm run gen:lens-artifact && pnpm run gen:error-abi && pnpm run gen:event-abi && pnpm run gen:gql-typings && pnpm exec tsc -p tsconfig.build.json",
     "build:watch": "nodemon --exec 'pnpm exec tsc -p tsconfig.build.json' --watch src/ -e ts --ignore src/abi/",
     "prepublishOnly": "pnpm install && pnpm run build",
     "gen:lens-artifact": "pnpm exec hardhat compile && node ./scripts/lensAbiCopy.js && prettier --write ./src/abi/*Lens.abi.ts",
     "gen:error-abi": "ts-node ./scripts/genErrorAbi.ts && prettier --write ./src/abi/AllErrors.abi.ts",
+    "gen:event-abi": "ts-node ./scripts/genEventAbi.ts && prettier --write ./src/abi/AllEvents.abi.ts",
     "gen:gql-typings": "graphql-codegen --config graph-codegen.ts",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
@@ -67,7 +68,7 @@
     "graphql": "^16.6.0",
     "graphql-request": "^6.0.0",
     "json-bigint": "^1.0.0",
-    "viem": "2.9.9"
+    "viem": "2.30.0"
   },
   "lint-staged": {
     "*.ts": [
