@@ -22,7 +22,6 @@ import { OracleClients } from '../oracle'
 import {
   MarketOracles,
   MarketSnapshots,
-  decodeAllEventLogs,
   fetchMarketOracles,
   fetchMarketSettlementFees,
   fetchMarketSnapshots,
@@ -177,9 +176,6 @@ export class MarketsModule {
           markets: this.config.supportedMarkets,
           ...args,
         })
-      },
-      decodeAllEventLogs: (args: OmitBound<Parameters<typeof decodeAllEventLogs>[0]>) => {
-        return decodeAllEventLogs({ ...args })
       },
       /**
        * Fetches position PnL for a given market and Address

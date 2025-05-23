@@ -1,6 +1,7 @@
-import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from 'viem'
+import { BaseError, ContractFunctionRevertedError, Log, decodeErrorResult, decodeEventLog } from 'viem'
 
 import { AllErrorsAbi } from '../abi/AllErrors.abi'
+import { AllEventsAbi } from '../abi/AllEvents.abi'
 import { SupportedChainId } from '../constants/network'
 import { ChainVaults, PerennialVaultType } from '../constants/vaults'
 
@@ -28,5 +29,14 @@ export function parseViemContractCustomError(err: unknown) {
         return decodedData.errorName
       }
     }
+  }
+}
+
+export async function decodeAnyEvent(log: Log) {
+  try {
+    const decoded = decodeEventLog({ abi: AllEventsAbi, data: log.data as `0x${string}`, topics: log.topics as [] })
+    return decoded
+  } catch {
+    return
   }
 }

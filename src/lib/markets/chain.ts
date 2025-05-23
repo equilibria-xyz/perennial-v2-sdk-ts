@@ -1,7 +1,7 @@
 import {
   Address,
   PublicClient,
-  decodeEventLog,
+  decodeFunctionResult,
   encodeFunctionData,
   getAddress,
   getContractAddress,
@@ -23,7 +23,6 @@ import {
   chainMarketsWithAddress,
   notEmpty,
 } from '../..'
-import { AllEventsAbi } from '../../abi/AllEvents.abi'
 import { GasOracleAbi } from '../../abi/GasOracle.abi'
 import { LensAbi, LensDeployedBytecode } from '../../abi/Lens.abi'
 import { MarketMetadataLensAbi, MarketMetadataLensDeployedBytecode } from '../../abi/MarketMetadataLens.abi'
@@ -35,7 +34,7 @@ import {
   getStatusForSnapshot,
   sideFromPosition,
 } from '../../utils/positionUtils'
-import { OracleClients, UpdateDataResponse, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
+import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -319,7 +318,7 @@ export async function fetchMarketSnapshots({
     commitments: snapshotData.commitments,
     updates: snapshotData.updates,
     blockNumber: snapshotData.blockNumber,
-    events: snapshotData.events,
+    logs: snapshotData.logs,
   }
 }
 
@@ -356,12 +355,20 @@ async function fetchMarketSnapshotsAfterSettle({
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)
 
-  const { result: lensRes } = await publicClient.simulateContract({
-    address: lensAddress,
-    abi: LensAbi,
-    functionName: 'snapshot',
-    args: [priceCommitments, marketAddresses, address],
-    stateOverride: [
+  const calls = await publicClient.simulateCalls({
+    account: address,
+    calls: [
+      {
+        to: lensAddress,
+        data: encodeFunctionData({
+          abi: LensAbi,
+          functionName: 'snapshot',
+          args: [priceCommitments, marketAddresses, address],
+        }),
+        value: 0n,
+      },
+    ],
+    stateOverrides: [
       {
         address: lensAddress,
         code: LensDeployedBytecode,
@@ -370,19 +377,19 @@ async function fetchMarketSnapshotsAfterSettle({
     ],
   })
 
-  const events = await simulateMarketSettles({
-    lensAddress,
-    priceCommitments,
-    marketAddresses,
-    address,
-    publicClient,
+  const result = calls.results[0]
+
+  const lensRes = decodeFunctionResult({
+    abi: LensAbi,
+    functionName: 'snapshot',
+    data: result.data,
   })
 
   return {
     blockNumber: lensRes.blockNumber,
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
-    events,
+    logs: result.logs,
     market: lensRes.postUpdate.marketSnapshots.map((s) => {
       const market = addressToMarket(chainId, getAddress(s.marketAddress))
       return {
@@ -500,59 +507,4 @@ export async function fetchMarketSettlementFees({
       totalCost: bigint
     }>,
   )
-}
-
-export async function simulateMarketSettles({
-  lensAddress,
-  address,
-  priceCommitments,
-  marketAddresses,
-  publicClient,
-}: {
-  lensAddress: Address
-  address: Address
-  priceCommitments: UpdateDataResponse[]
-  marketAddresses: Address[]
-  publicClient: PublicClient
-}) {
-  const t = await publicClient.simulateCalls({
-    account: address,
-    calls: [
-      {
-        to: lensAddress,
-        data: encodeFunctionData({
-          abi: LensAbi,
-          functionName: 'snapshot',
-          args: [priceCommitments, marketAddresses, address],
-        }),
-        value: 0n,
-      },
-    ],
-    stateOverrides: [
-      {
-        address: lensAddress,
-        code: LensDeployedBytecode,
-        balance: maxUint256,
-      },
-    ],
-  })
-
-  const logs = t.results.map((t) => t.logs).flat()
-
-  return logs
-}
-
-export async function decodeAllEventLogs({ logs }: { logs: Awaited<ReturnType<typeof simulateMarketSettles>> }) {
-  return logs
-    .map((log) => {
-      if (!log) return
-      try {
-        const eventLog = decodeEventLog({ abi: AllEventsAbi, data: log.data, topics: log.topics })
-        return { ...eventLog, address: log.address }
-      } catch (error) {
-        return
-      }
-    })
-    .filter(notEmpty)
-    .flat()
 }
