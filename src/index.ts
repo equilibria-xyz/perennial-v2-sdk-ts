@@ -201,6 +201,8 @@ export { PayoffAbi } from './abi/Payoff.abi'
 export { ManagerAbi } from './abi/Manager.abi'
 export { ControllerAbi } from './abi/Controller.abi'
 export { VerifierAbi } from './abi/Verifier.abi'
+export { AllErrorsAbi } from './abi/AllErrors.abi'
+export { AllEventsAbi } from './abi/AllEvents.abi'
 
 /* #################### Types #################### */
 
@@ -232,7 +234,12 @@ export { BigOrZero, formatBig6, formatBig6Percent, formatBig6USDPrice, Big6Math 
 export { formatBig18, formatBig18Percent, formatBig18USDPrice, Big18Math } from './utils/big18Utils'
 
 // Contract Utils
-export { getVaultAddressForType, bufferGasLimit, parseViemContractCustomError } from './utils/contractUtils'
+export {
+  getVaultAddressForType,
+  bufferGasLimit,
+  parseViemContractCustomError,
+  decodePerennialEvent,
+} from './utils/contractUtils'
 
 // Address Utils
 export { throwIfZeroAddress, addressForMarket } from './utils/addressUtils'

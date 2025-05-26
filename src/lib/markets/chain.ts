@@ -1,4 +1,14 @@
-import { Address, PublicClient, getAddress, getContractAddress, maxUint256, zeroAddress } from 'viem'
+import {
+  Address,
+  PublicClient,
+  StateOverride,
+  decodeFunctionResult,
+  encodeFunctionData,
+  getAddress,
+  getContractAddress,
+  maxUint256,
+  zeroAddress,
+} from 'viem'
 
 import {
   Big6Math,
@@ -25,7 +35,7 @@ import {
   getStatusForSnapshot,
   sideFromPosition,
 } from '../../utils/positionUtils'
-import { OracleClients, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
+import { OracleClients, UpdateDataResponse, marketOraclesToUpdateDataRequest, oracleCommitmentsLatest } from '../oracle'
 
 export type MarketOracles = NonNullable<Awaited<ReturnType<typeof fetchMarketOracles>>>
 
@@ -309,6 +319,7 @@ export async function fetchMarketSnapshots({
     commitments: snapshotData.commitments,
     updates: snapshotData.updates,
     blockNumber: snapshotData.blockNumber,
+    logs: snapshotData.logs,
   }
 }
 
@@ -323,6 +334,7 @@ async function fetchMarketSnapshotsAfterSettle({
   oracleClients,
   onOracleError,
   resetOracleError,
+  useSimulate = false,
 }: {
   chainId: SupportedChainId
   address: Address
@@ -331,6 +343,7 @@ async function fetchMarketSnapshotsAfterSettle({
   oracleClients: OracleClients
   onOracleError?: () => void
   resetOracleError?: () => void
+  useSimulate?: boolean
 }) {
   const lensAddress = getContractAddress({ from: address, nonce: MaxUint256 })
 
@@ -344,25 +357,28 @@ async function fetchMarketSnapshotsAfterSettle({
   })
 
   const marketAddresses = Object.values(marketOracles).map(({ marketAddress }) => marketAddress)
-
-  const { result: lensRes } = await publicClient.simulateContract({
-    address: lensAddress,
-    abi: LensAbi,
-    functionName: 'snapshot',
-    args: [priceCommitments, marketAddresses, address],
-    stateOverride: [
-      {
-        address: lensAddress,
-        code: LensDeployedBytecode,
-        balance: maxUint256,
-      },
-    ],
-  })
+  const stateOverrides = [
+    {
+      address: lensAddress,
+      code: LensDeployedBytecode,
+      balance: maxUint256,
+    },
+  ]
+  const snapshotArgs = {
+    publicClient,
+    address,
+    lensAddress,
+    priceCommitments,
+    marketAddresses,
+    stateOverrides,
+  }
+  const lensRes = useSimulate ? await snapshotViaSimulate(snapshotArgs) : await snapshotViaCall(snapshotArgs)
 
   return {
     blockNumber: lensRes.blockNumber,
     commitments: lensRes.commitmentStatus,
     updates: lensRes.updateStatus,
+    logs: lensRes.logs,
     market: lensRes.postUpdate.marketSnapshots.map((s) => {
       const market = addressToMarket(chainId, getAddress(s.marketAddress))
       return {
@@ -392,6 +408,76 @@ async function fetchMarketSnapshotsAfterSettle({
         market,
       }
     }),
+  }
+}
+
+async function snapshotViaSimulate({
+  publicClient,
+  address,
+  lensAddress,
+  priceCommitments,
+  marketAddresses,
+  stateOverrides,
+}: {
+  publicClient: PublicClient
+  address: Address
+  lensAddress: Address
+  priceCommitments: UpdateDataResponse[]
+  marketAddresses: Address[]
+  stateOverrides: StateOverride
+}) {
+  const res = await publicClient.simulateCalls({
+    account: address,
+    calls: [
+      {
+        to: lensAddress,
+        data: encodeFunctionData({
+          abi: LensAbi,
+          functionName: 'snapshot',
+          args: [priceCommitments, marketAddresses, address],
+        }),
+        value: 0n,
+      },
+    ],
+    stateOverrides,
+  })
+
+  return {
+    ...decodeFunctionResult({
+      abi: LensAbi,
+      functionName: 'snapshot',
+      data: res.results[0].data,
+    }),
+    logs: res.results[0].logs,
+  }
+}
+
+async function snapshotViaCall({
+  publicClient,
+  address,
+  lensAddress,
+  priceCommitments,
+  marketAddresses,
+  stateOverrides,
+}: {
+  publicClient: PublicClient
+  address: Address
+  lensAddress: Address
+  priceCommitments: UpdateDataResponse[]
+  marketAddresses: Address[]
+  stateOverrides: StateOverride
+}) {
+  const { result } = await publicClient.simulateContract({
+    address: lensAddress,
+    abi: LensAbi,
+    functionName: 'snapshot',
+    args: [priceCommitments, marketAddresses, address],
+    stateOverride: stateOverrides,
+  })
+
+  return {
+    ...result,
+    logs: undefined,
   }
 }
 
