@@ -238,7 +238,7 @@ export {
   getVaultAddressForType,
   bufferGasLimit,
   parseViemContractCustomError,
-  decodeAnyEvent,
+  decodePerennialEvent,
 } from './utils/contractUtils'
 
 // Address Utils
