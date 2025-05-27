@@ -166,6 +166,7 @@ export async function fetchMarketSnapshots({
   markets,
   onError,
   onSuccess,
+  useSimulate,
 }: {
   publicClient: PublicClient
   oracleClients: OracleClients
@@ -175,6 +176,7 @@ export async function fetchMarketSnapshots({
   markets?: SupportedMarket[]
   onError?: () => void
   onSuccess?: () => void
+  useSimulate?: boolean
 }) {
   if (!marketOracles) {
     marketOracles = await fetchMarketOracles(chainId, publicClient, markets)
@@ -187,6 +189,7 @@ export async function fetchMarketSnapshots({
     oracleClients,
     onOracleError: onError,
     resetOracleError: onSuccess,
+    useSimulate,
   })
   if (snapshotData.commitments.some((commitment) => commitment !== '0x')) {
     const commitmentError = snapshotData.commitments.find((commitment) => commitment !== '0x')
