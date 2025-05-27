@@ -38,11 +38,11 @@ export const QueryLatestMarketAccountPosition = gql(`
 
       accumulators: market {
         current: accumulators(first: 1, orderBy: toVersion, orderDirection: desc) {
-          pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker
+          pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker, toVersion, fromVersion
         }
 
         start: accumulators(where: { fromVersion_in: $latestVersions }, orderBy: fromVersion, orderDirection: asc) {
-          pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker, fromVersion
+          pnlMaker, pnlLong, pnlShort, fundingMaker, fundingLong, fundingShort,, interestMaker, interestLong, interestShort, positionFeeMaker, exposureMaker, toVersion, fromVersion,
         }
       }
     }

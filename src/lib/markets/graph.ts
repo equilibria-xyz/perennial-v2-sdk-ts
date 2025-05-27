@@ -109,7 +109,7 @@ export async function fetchActivePositionsPnl({
 
   const marketsWithAddresses = chainMarketsWithAddress(chainId, markets)
   const marketLatestVersions = marketsWithAddresses.map(({ market }) =>
-    (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n).toString(),
+    (marketSnapshots?.user?.[market]?.pre.position.timestamp ?? 0n).toString(),
   )
   const { marketAccounts } = await graphClient.request(QueryLatestMarketAccountPosition, {
     account: address,
@@ -153,9 +153,9 @@ export async function fetchActivePositionsPnl({
       // If the snapshot side is not none, ensure we're only returning a non-closed graph position
       (side !== 'none' ? !graphPosition.closeOrder.length : true)
     ) {
-      const graphHasProcessedLatestPosition =
+      const graphHasProcessedLatestOrder =
         BigInt(graphPosition.marketAccount.latestVersion) >= userMarketSnapshot.latestOrder.timestamp
-      const latestTradeFee = graphHasProcessedLatestPosition
+      const latestTradeFee = graphHasProcessedLatestOrder
         ? 0n
         : calcTradeFee({
             positionDelta: orderDelta({ ...userMarketSnapshot.latestOrder }),
@@ -165,7 +165,7 @@ export async function fetchActivePositionsPnl({
           }).tradeFee.total
       const currentAccumulator = graphMarketAccount.accumulators.current.at(0)
       const startAccumulator = graphMarketAccount.accumulators.start.find(
-        (sa) => BigInt(sa.fromVersion) === (marketSnapshots?.user?.[market]?.latestOrder.timestamp ?? 0n),
+        (sa) => BigInt(sa.fromVersion) === (marketSnapshots?.user?.[market]?.pre.position.timestamp ?? 0n),
       )
 
       // Accumulate the portion of pnl from the latest account settlement to the latest global settlement
