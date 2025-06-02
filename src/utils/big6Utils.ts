@@ -42,22 +42,31 @@ export const formatBig6USDPrice = (
     compact = false,
     fromUsdc = false,
     fullPrecision = false,
-  }: { compact?: boolean; fromUsdc?: boolean; fullPrecision?: boolean } = {},
+    fractionDigits,
+    significantDigits,
+  }: {
+    compact?: boolean
+    fromUsdc?: boolean
+    fullPrecision?: boolean
+    significantDigits?: number
+    fractionDigits?: number
+  } = {},
 ) => {
   // Hardcoding this to return $0.00 because 'roundingPriority' option is not supported in node 18
   // resulting in a hydration error when the resolution occurs on first client render
   if (value === 0n) {
     return '$0.00'
   }
+
   const valueToFormat = fromUsdc ? Number(formatUnits(value, 6)) : Big6Math.toUnsafeFloat(value)
   return Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     notation: compact ? 'compact' : undefined,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: fullPrecision ? 6 : 2,
-    minimumSignificantDigits: compact ? 2 : 6,
-    maximumSignificantDigits: compact ? 2 : 6,
+    minimumFractionDigits: fractionDigits ?? 2,
+    maximumFractionDigits: fractionDigits ?? (fullPrecision ? 6 : 2),
+    minimumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
+    maximumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
     // @ts-ignore
     roundingPriority: 'morePrecision',
   }).format(valueToFormat)

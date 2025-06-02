@@ -26,7 +26,12 @@ export const formatBig18 = (
 // Formats an 18 decimal bigint as a USD price
 export const formatBig18USDPrice = (
   value: bigint = 0n,
-  { compact = false, fromUsdc = false }: { compact?: boolean; fromUsdc?: boolean } = {},
+  {
+    compact = false,
+    fromUsdc = false,
+    fractionDigits,
+    significantDigits,
+  }: { compact?: boolean; fromUsdc?: boolean; fractionDigits?: number; significantDigits?: number } = {},
 ) => {
   if (value === 0n) {
     return '$0.00'
@@ -36,10 +41,10 @@ export const formatBig18USDPrice = (
     style: 'currency',
     currency: 'USD',
     notation: compact ? 'compact' : undefined,
-    minimumFractionDigits: compact ? 1 : 2,
-    maximumFractionDigits: compact ? 1 : 2,
-    minimumSignificantDigits: compact ? 2 : 6,
-    maximumSignificantDigits: compact ? 2 : 6,
+    minimumFractionDigits: fractionDigits ?? (compact ? 1 : 2),
+    maximumFractionDigits: fractionDigits ?? (compact ? 1 : 2),
+    minimumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
+    maximumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
     // @ts-ignore
     roundingPriority: 'morePrecision',
   }).format(valueToFormat)
