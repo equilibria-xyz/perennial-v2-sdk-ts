@@ -46,10 +46,10 @@ export const formatBig6USDPrice = (
     significantDigits,
   }: {
     compact?: boolean
-    significantDigits?: number
-    fractionDigits?: number
     fromUsdc?: boolean
     fullPrecision?: boolean
+    significantDigits?: number
+    fractionDigits?: number
   } = {},
 ) => {
   // Hardcoding this to return $0.00 because 'roundingPriority' option is not supported in node 18
