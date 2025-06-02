@@ -42,8 +42,8 @@ export const formatBig6USDPrice = (
     compact = false,
     fromUsdc = false,
     fullPrecision = false,
-    fractionDigits = 2,
-    significantDigits = 6,
+    fractionDigits,
+    significantDigits,
   }: {
     compact?: boolean
     significantDigits?: number
@@ -63,10 +63,10 @@ export const formatBig6USDPrice = (
     style: 'currency',
     currency: 'USD',
     notation: compact ? 'compact' : undefined,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fullPrecision ? 6 : fractionDigits,
-    minimumSignificantDigits: compact ? 2 : significantDigits,
-    maximumSignificantDigits: compact ? 2 : significantDigits,
+    minimumFractionDigits: fractionDigits ?? 2,
+    maximumFractionDigits: fractionDigits ?? (fullPrecision ? 6 : 2),
+    minimumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
+    maximumSignificantDigits: significantDigits ?? (compact ? 2 : 6),
     // @ts-ignore
     roundingPriority: 'morePrecision',
   }).format(valueToFormat)
